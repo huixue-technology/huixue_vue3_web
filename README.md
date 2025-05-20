@@ -1,5 +1,5 @@
 # huixue_vue3_web
-
+在使用umi的openapi时需要更改request导入的位置，把umi改成plugin-request
 ## Project setup
 ```
 yarn install

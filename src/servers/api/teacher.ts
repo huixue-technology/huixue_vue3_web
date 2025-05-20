@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import { request } from "umi";
+import { request } from "@/plugin-request";
 
 /** 获取教师信息 GET /api/teacher/teacher */
 export async function getTeacher(

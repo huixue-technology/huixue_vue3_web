@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import { request } from "umi";
+import { request } from "@/plugin-request";
 
 /** 用户绑定身份 POST /api/user/bind_status */
 export async function postBindStatus(

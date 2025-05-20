@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import { request } from "@umijs/max";
+import { request } from "@/plugin-request";
 
 /** 获取学校信息 GET /api/school/school */
 export async function getSchool(
