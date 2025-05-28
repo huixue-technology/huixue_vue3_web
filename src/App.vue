@@ -1,12 +1,37 @@
 <template>
-  <nav>
-    <router-link to="/">Home</router-link> |
-    <router-link to="/about">About</router-link>
-  </nav>
-  <router-view/>
+<div class="index">
+    <NavBar v-if="$route.path !== '/user/login'" class="index-nav-bar" />
+    <div class="index-router-view">
+      <router-view />
+    </div>
+    
+</div>
+    
+  
 </template>
 
+
+<script setup lang="ts">
+import NavBar from '@/layout/NavBar.vue';
+</script>
 <style>
+
+
+.index {
+    .index-nav-bar {
+        position: fixed;
+        top:10px;
+        left: 20px;
+        min-width: 100vw;
+    }
+    .index-router-view {
+      position: fixed;
+      width: 100vw;
+      margin-top: 60px;
+      height: calc(100vh - 60px);
+  }
+}
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;

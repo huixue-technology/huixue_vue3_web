@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import { request } from "@/plugin-request";
+import request from "umi-request";
 
 /** 上传文件 POST /api/upload */
 export async function postUpload(

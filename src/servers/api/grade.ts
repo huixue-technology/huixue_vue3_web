@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import { request } from "@/plugin-request";
+import request from "umi-request";
 
 /** 获取学生成绩(支持过滤条件) GET /api/grade */
 export async function getGrade(
