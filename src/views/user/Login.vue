@@ -78,7 +78,7 @@ const onFinish = (values: any) => {
     });
     // 仍然保留token在localStorage中，方便API请求使用
     localStorage.setItem('token', res.data.token);
-    router.push('/index');
+    router.push('/grade');
   })
 }
 
