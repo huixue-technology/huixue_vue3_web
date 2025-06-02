@@ -1,13 +1,28 @@
 // @ts-ignore
 /* eslint-disable */
-import request from "umi-request";
+import request  from "umi-request";
 
-/** 用户绑定身份 POST /api/user/bind_status */
-export async function postBindStatus(
-  body: API.bindStatus,
+/** 获取用户列表，支持分页和条件过滤 GET /api/user/ */
+export async function getUserApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getUserApiParams,
   options?: { [key: string]: any }
 ) {
-  return request<any>("/api/user/bind_status", {
+  return request<any>("/api/user/", {
+    method: "GET",
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
+/** 用户注册 POST /api/user/ */
+export async function postUserApi(
+  body: API.User,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/user/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -17,17 +32,79 @@ export async function postBindStatus(
   });
 }
 
-/** 获取当前用户信息 POST /api/user/get_current_user */
-export async function postGetCurrentUser(options?: { [key: string]: any }) {
-  return request<any>("/api/user/get_current_user", {
-    method: "POST",
+/** 获取指定用户详情 GET /api/user/${param0} */
+export async function getUserDetailApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getUserDetailApiParams,
+  options?: { [key: string]: any }
+) {
+  const { user_id: param0, ...queryParams } = params;
+  return request<any>(`/api/user/${param0}`, {
+    method: "GET",
+    params: { ...queryParams },
     ...(options || {}),
   });
 }
 
-/** 此处后端没有提供注释 POST /api/user/login */
-export async function postLogin(
-  body: API.login,
+/** 更新指定用户信息 PUT /api/user/${param0} */
+export async function putUserDetailApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.putUserDetailApiParams,
+  body: API.User,
+  options?: { [key: string]: any }
+) {
+  const { user_id: param0, ...queryParams } = params;
+  return request<any>(`/api/user/${param0}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    params: { ...queryParams },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+/** 删除指定用户 DELETE /api/user/${param0} */
+export async function deleteUserDetailApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.deleteUserDetailApiParams,
+  options?: { [key: string]: any }
+) {
+  const { user_id: param0, ...queryParams } = params;
+  return request<any>(`/api/user/${param0}`, {
+    method: "DELETE",
+    params: { ...queryParams },
+    ...(options || {}),
+  });
+}
+
+/** 更新用户绑定状态 PUT /api/user/bind_status */
+export async function putUserBindStatus(
+  body: API.BindStatus,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/user/bind_status", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+/** 获取当前用户信息 GET /api/user/current */
+export async function getCurrentUser(options?: { [key: string]: any }) {
+  return request<any>("/api/user/current", {
+    method: "GET",
+    ...(options || {}),
+  });
+}
+
+/** 用户登录 POST /api/user/login */
+export async function postUserLogin(
+  body: API.Login,
   options?: { [key: string]: any }
 ) {
   return request<any>("/api/user/login", {
@@ -40,70 +117,10 @@ export async function postLogin(
   });
 }
 
-/** 用户登出 GET /api/user/out_login */
-export async function getOutLogin(options?: { [key: string]: any }) {
-  return request<any>("/api/user/out_login", {
-    method: "GET",
-    ...(options || {}),
-  });
-}
-
-/** 查询用户(支持过滤条件) GET /api/user/user */
-export async function getUser(
-  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.getUserParams,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/user/user", {
-    method: "GET",
-    params: {
-      ...params,
-    },
-    ...(options || {}),
-  });
-}
-
-/** 修改用户 PUT /api/user/user */
-export async function putUser(
-  body: API.modify,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/user/user", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    data: body,
-    ...(options || {}),
-  });
-}
-
-/** 用户注册 POST /api/user/user */
-export async function postUser(
-  body: API.register,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/user/user", {
+/** 用户登出 POST /api/user/logout */
+export async function postUserLogout(options?: { [key: string]: any }) {
+  return request<any>("/api/user/logout", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    data: body,
-    ...(options || {}),
-  });
-}
-
-/** 删除用户 DELETE /api/user/user */
-export async function deleteUser(
-  body: API.del,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/user/user", {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    data: body,
     ...(options || {}),
   });
 }

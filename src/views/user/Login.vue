@@ -48,8 +48,9 @@
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
 import { UserOutlined, LockOutlined } from '@ant-design/icons-vue';
-import { postLogin } from '@/servers/api/user';
+import { postUserLogin } from '@/servers/api/user';
 import router from '@/router';
+import { useUserStore } from '@/store';
 // 表单参数
 interface FormParams {
   email: string
@@ -65,12 +66,19 @@ const formparams = reactive<FormParams>({
   password: ''
 })
 
+const userStore = useUserStore();
+
 const onFinish = (values: any) => {
-   postLogin(values).then((res) => {
+   postUserLogin(values).then((res) => {
     console.log(res);
-    localStorage.setItem('user',res.data)
-    localStorage.setItem('token',res.data.token)
-    router.push('/index')
+    // 使用Pinia存储用户信息
+    userStore.setUserInfo({
+      ...res.data,
+      token: res.data.token
+    });
+    // 仍然保留token在localStorage中，方便API请求使用
+    localStorage.setItem('token', res.data.token);
+    router.push('/index');
   })
 }
 

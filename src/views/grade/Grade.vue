@@ -11,7 +11,7 @@
         <h4>选择查询考试：</h4>
        <a-select
             placeholder="请选择考试"
-            style="width: 120px"
+            style="width: auto"
             @change="handleChange"
             v-model:value="currentExamId"
         >
@@ -25,147 +25,189 @@
     >
 
     </a-table>
-
-        
     <a-row>
         <a-col :span="12" class="rank_chart_bar">
-            <h3 style="margin-left: 20px;margin-top: 20px;">排名统计图</h3>
-            <e-charts class="rankCharts" :option="rankOption" />    
+            <rank :gradeData="tableData"/> 
         </a-col>
-        <a-col :span="12">成绩统计图</a-col>
+        <a-col :span="12" class="rank_chart_bar">
+            <score :gradeData="tableData"/>
+        </a-col>
     </a-row>
  </div>
 </template>
 
 <script setup lang="ts">
-import { ref,computed } from 'vue';
-
+import { getGradeApi } from '@/servers/api/grade';
+import { getStudentExamApi } from '@/servers/api/student';
+import { ref,computed,onMounted } from 'vue';
+import { useUserStore } from '@/store';
+import rank from './components/Rank.vue'
+import score from './components/Score.vue'
 interface Exam {
     id:string,
     name:string
-} 
+}
+type TableData = {
+    name: string;
+    sum_: number;
+    sumB: number;
+    sumD: number;
+    maxB: number;
+    passLine: number;
+}; 
+const tableData = ref<TableData[]>([])
+const examList = ref<Exam[]>([])
+const currentExamId = ref<string>()
+onMounted(() => {
+    // 从store中获取用户信息
+    const userInfo = useUserStore().userInfo;
+    console.log(userInfo);
+    // 获取考试列表
+    getStudentExamApi({student_uid:userInfo.role},[]).then(res => {
+        console.log(res.data);
+        res.data[0].map((item:Exam) => {
+            examList.value.push({
+                id:item.id,
+                name:item.name
+            })
+        })
+        
+        // 默认选择第一个考试
+        currentExamId.value = examList.value[0].id;
+        // 获取考试成绩
+        getGradeApi({student_id:userInfo.role,exam_id:parseInt(currentExamId.value)}).then(res => {
+            const gradeData = res.data[0];
+            handleGradeDetail(gradeData)
+        })
+    })
+})
 
-const examList = ref<Exam[]>([
+const handleGradeDetail = (gradeData:API.Grade) => {
+    tableData.value = []
+    tableData.value = [
     {
-        id:'1',
-        name:'5.22周考'
+        name: '总分',
+        sum_: gradeData.sum_ || 0,
+        sumB: gradeData.sumB || 0,
+        sumD: gradeData.sumD || 0,
+        maxB: gradeData.sum_ || 0, // Assuming maxB is total score for now
+        passLine: 0,
     },
-])
-
-
-const tableColumns = [
     {
+        name: '语文',
+        sum_: gradeData.Yuwen || 0,
+        sumB: gradeData.YuwenB || 0,
+        sumD: gradeData.YuwenD || 0,
+        maxB: gradeData.Yuwen || 0,
+        passLine: 0,
+    },
+    {
+        name: '英语',
+        sum_: gradeData.Yingyu || 0,
+        sumB: gradeData.YingyuB || 0,
+        sumD: gradeData.YingyuD || 0,
+        maxB: gradeData.Yingyu || 0,
+        passLine: 0,
+    },
+    {
+        name: '数学',
+        sum_: gradeData.Shuxue || 0,
+        sumB: gradeData.ShuxueB || 0,
+        sumD: gradeData.ShuxueD || 0,
+        maxB: gradeData.Shuxue || 0,
+        passLine: 0,
+    }
+];
+if (gradeData.Wuli != null) {
+    tableData.value.push({
+        name: '物理',
+        sum_: gradeData.Wuli || 0,
+        sumB: gradeData.WuliB || 0,
+        sumD: gradeData.WuliD || 0,
+        maxB: gradeData.Wuli || 0,
+        passLine: 0,
+    });
+}
+if (gradeData.Huaxue != null) {
+    tableData.value.push({
+        name: '化学',
+        sum_: gradeData.Huaxue || 0,
+        sumB: gradeData.HuaxueB || 0,
+        sumD: gradeData.HuaxueD || 0,
+        maxB: gradeData.Huaxue || 0,
+        passLine: 0,
+    })
+}
+if (gradeData.Shengwu!= null) {
+    tableData.value.push({
+        name: '生物',
+        sum_: gradeData.Shengwu || 0,
+        sumB: gradeData.ShengwuB || 0,
+        sumD: gradeData.ShengwuD || 0,
+        maxB: gradeData.Shengwu || 0,
+        passLine: 0,
+    });
+}
+if (gradeData.Lishi != null) {
+    tableData.value.push({
+        name: '历史',
+        sum_: gradeData.Lishi || 0,
+        sumB: gradeData.LishiB || 0,
+        sumD: gradeData.LishiD || 0,
+        maxB: gradeData.Lishi || 0,
+        passLine: 0,
+    });
+}
+if (gradeData.Dili!= null) {
+    tableData.value.push({
+        name: '地理',
+        sum_: gradeData.Dili || 0,
+        sumB: gradeData.DiliB || 0,
+        sumD: gradeData.DiliD || 0,
+        maxB: gradeData.Dili || 0,
+        passLine: 0,
+    });
+}
+if (gradeData.Zhengzhi != null) {
+        tableData.value.push({
+        name: '政治',
+        sum_: gradeData.Zhengzhi || 0,
+        sumB: gradeData.ZhengzhiB || 0,
+        sumD: gradeData.ZhengzhiD || 0,
+        maxB: gradeData.Zhengzhi || 0,
+        passLine: 0,
+    });
+}
+}
+
+
+
+
+const  tableColumns = [{
         title:'科目',
         dataIndex:'name'
-    },
-    {
+    },{
         title: '成绩',
         dataIndex:'sum_'
-    },
-    {
+    },{
         title: '班级排名',
         dataIndex:'sumB',
     },{
         title: '年级排名',
         dataIndex: 'sumD',
-    },{
-        title : '班级最高分',
-        dataIndex: 'maxB',
-    },{
-        title: '一本线',
-        dataIndex: 'passLine',
     }
+    // ,{
+    //     title : '班级最高分',
+    //     dataIndex: 'maxB',
+    // },
+    // {
+    //     title: '一本线',
+    //     dataIndex: 'passLine',
+    // }
 ]
 
-const tableData = ref([
-    {
-        name:'总分',
-        sum_:'429.0',
-        sumB: '65',
-        sumD: '322',
-        maxB: '593.0',
-        passLine: '429.0',
-    },
-    {
-        name:'语文',
-        sum_:'101',
-        sumB: '11',
-        sumD: '16',
-        maxB: '111',
-        passLine: '90',
-    },
-    {
-        name:'英语',
-        sum_:'100',
-        sumB: '10',
-        sumD: '10',
-        maxB: '110',
-        passLine: '90',
-    },
-    {
-        name:'数学',
-        sum_:'100',
-        sumB: '10',
-        sumD: '10',
-        maxB: '110',
-        passLine: '90',
-    },
-    {
-        name:'物理',
-        sum_:'100',
-        sumB: '10',
-        sumD: '10',
-        maxB: '110',
-        passLine: '90',
-    },
-    {
-        name:'化学',
-        sum_:'100',
-        sumB: '10',
-        sumD: '10',
-        maxB: '110',
-        passLine: '90',
-    },
-    {
-        name:'生物',
-        sum_:'100',
-        sumB: '10',
-        sumD: '10',
-        maxB: '110',
-        passLine: '90',
-    },
-    
-])
-
-const currentExamId = ref<string>('1')
 
 
-//模拟数据value的字段对应Y轴，name字段对应X轴
-  const data=ref([
-    {value:11,name:'A'},
-    {value:31,name:'B'},
-    {value:75,name:'C'},
-    {value:25,name:'D'},
-    {value:16,name:'E'},
-  ])
-
-const rankOption = computed(() => {
-  return{
-    xAxis:{
-      type:'category',
-      data:data.value.map(v=>v.name)
-    },
-    yAxis:{
-      type:'value',
-    },
-    series:[
-      {
-        type:'line',
-        data:data.value.map(v=>v.value)
-      }
-    ]
-  }
-})
 const handleChange = (value:string) => {
     console.log(`selected ${value}`);
 }
@@ -175,7 +217,7 @@ const handleChange = (value:string) => {
 <style scoped lang="less">
 
 .container{
-    position:relative;
+
     height: 100vh;
     overflow:scroll;
     padding: 20px;
@@ -195,11 +237,8 @@ const handleChange = (value:string) => {
    
     }
 }
-.rankCharts {
-    height: 600px !important;
-
-}
 .rank_chart_bar {
     text-align: left;
-    }
+    width: 50%;
+}
 </style>

@@ -2,13 +2,13 @@
 /* eslint-disable */
 import request from "umi-request";
 
-/** 获取学校信息 GET /api/school/school */
-export async function getSchool(
+/** 获取学校记录列表，支持分页和条件过滤 GET /api/school/ */
+export async function getSchoolApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.getSchoolParams,
+  params: API.getSchoolApiParams,
   options?: { [key: string]: any }
 ) {
-  return request<any>("/api/school/school", {
+  return request<any>("/api/school/", {
     method: "GET",
     params: {
       ...params,
@@ -17,27 +17,12 @@ export async function getSchool(
   });
 }
 
-/** 修改学校信息 PUT /api/school/school */
-export async function putSchool(
-  body: API.modifySchool,
+/** 添加新的学校记录 POST /api/school/ */
+export async function postSchoolApi(
+  body: API.School,
   options?: { [key: string]: any }
 ) {
-  return request<any>("/api/school/school", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    data: body,
-    ...(options || {}),
-  });
-}
-
-/** 添加学校信息 POST /api/school/school */
-export async function postSchool(
-  body: API.addSchool,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/school/school", {
+  return request<any>("/api/school/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -47,17 +32,49 @@ export async function postSchool(
   });
 }
 
-/** 删除学校信息 DELETE /api/school/school */
-export async function deleteSchool(
-  body: API.delSchool,
+/** 获取指定的学校记录详情 GET /api/school/${param0} */
+export async function getSchoolDetailApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getSchoolDetailApiParams,
   options?: { [key: string]: any }
 ) {
-  return request<any>("/api/school/school", {
-    method: "DELETE",
+  const { school_id: param0, ...queryParams } = params;
+  return request<any>(`/api/school/${param0}`, {
+    method: "GET",
+    params: { ...queryParams },
+    ...(options || {}),
+  });
+}
+
+/** 更新指定的学校记录 PUT /api/school/${param0} */
+export async function putSchoolDetailApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.putSchoolDetailApiParams,
+  body: API.School,
+  options?: { [key: string]: any }
+) {
+  const { school_id: param0, ...queryParams } = params;
+  return request<any>(`/api/school/${param0}`, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
+    params: { ...queryParams },
     data: body,
+    ...(options || {}),
+  });
+}
+
+/** 删除指定的学校记录 DELETE /api/school/${param0} */
+export async function deleteSchoolDetailApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.deleteSchoolDetailApiParams,
+  options?: { [key: string]: any }
+) {
+  const { school_id: param0, ...queryParams } = params;
+  return request<any>(`/api/school/${param0}`, {
+    method: "DELETE",
+    params: { ...queryParams },
     ...(options || {}),
   });
 }

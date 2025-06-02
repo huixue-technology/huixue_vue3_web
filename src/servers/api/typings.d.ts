@@ -1,5 +1,186 @@
 declare namespace API {
-  type addGrade = {
+  type BindStatus = {
+    /** 绑定ID */
+    bind_id: string;
+    /** 用户ID */
+    id: string;
+  };
+
+  type deleteExamDetailApiParams = {
+    exam_id: number;
+  };
+
+  type deleteGradeDetailApiParams = {
+    grade_id: number;
+  };
+
+  type deleteSchoolDetailApiParams = {
+    school_id: string;
+  };
+
+  type deleteStudentDetailApiParams = {
+    student_uid: string;
+  };
+
+  type deleteTeacherDetailApiParams = {
+    teacher_tid: string;
+  };
+
+  type deleteUserDetailApiParams = {
+    user_id: string;
+  };
+
+  type delFile = {
+    /** 文件路径 */
+    file_path: string;
+  };
+
+  type Exam = {
+    /** 考试ID */
+    id?: number;
+    /** 考试名称 */
+    name: string;
+    /** 考试年份 */
+    year: string;
+    /** 考试类型：1代表高三的文理科，2代表高一、高二的选科 */
+    exam_type?: string;
+    /** 考试年级 */
+    student_grade?: string;
+    /** 考试试卷ID列表，以逗号分隔 */
+    exam_paper_ids?: string;
+  };
+
+  type getExamApiParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页记录数 */
+    size?: number;
+    /** 考试名称（可选） */
+    name?: string;
+    /** 考试年份（可选） */
+    year?: string;
+    /** 考试类型（可选） */
+    exam_type?: string;
+    /** 学生年级（可选） */
+    student_grade?: string;
+  };
+
+  type getExamDetailApiParams = {
+    exam_id: number;
+  };
+
+  type getGradeApiParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页记录数 */
+    size?: number;
+    /** 学生ID（可选） */
+    student_id?: number;
+    /** 学校ID（可选） */
+    school_id?: number;
+    /** 考试ID（可选） */
+    exam_id?: number;
+    /** 班级ID（可选） */
+    class_id?: number;
+  };
+
+  type getGradeDetailApiParams = {
+    grade_id: number;
+  };
+
+  type getSchoolApiParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页记录数 */
+    size?: number;
+    /** 学校ID（可选） */
+    school_id?: string;
+    /** 学校名称（可选） */
+    name?: string;
+  };
+
+  type getSchoolDetailApiParams = {
+    school_id: string;
+  };
+
+  type getStudentApiParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页记录数 */
+    size?: number;
+    /** 学生学号（可选） */
+    uid?: string;
+    /** 学生姓名（可选） */
+    name?: string;
+    /** 学生所属学校ID（可选） */
+    school_id?: number;
+    /** 学生年级（可选） */
+    grade?: string;
+    /** 学生班级ID（可选） */
+    class_id?: number;
+    /** 学生所属选课ID（可选） */
+    subject_selection_id?: number;
+    /** 学生是否在读（可选） */
+    state?: boolean;
+  };
+
+  type getStudentDetailApiParams = {
+    student_uid: string;
+  };
+
+  type getStudentExamApiParams = {
+    student_uid: string;
+  };
+
+  type getTeacherApiParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页记录数 */
+    size?: number;
+    /** 教师工号（可选） */
+    tid?: string;
+    /** 教师姓名（可选） */
+    name?: string;
+    /** 所教科目（可选） */
+    subject?: string;
+    /** 学校ID（可选） */
+    school_id?: string;
+  };
+
+  type getTeacherDetailApiParams = {
+    teacher_tid: string;
+  };
+
+  type getUserApiParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页记录数 */
+    size?: number;
+    /** 用户ID（可选） */
+    id?: string;
+    /** 用户名（可选） */
+    name?: string;
+    /** 手机号（可选） */
+    phone?: string;
+    /** 微信ID（可选） */
+    wxid?: string;
+    /** 学校ID（可选） */
+    school_id?: string;
+    /** 角色（可选） */
+    role?: string;
+    /** 邮箱（可选） */
+    email?: string;
+    /** 绑定状态（可选） */
+    bind_state?: boolean;
+  };
+
+  type getUserDetailApiParams = {
+    user_id: string;
+  };
+
+  type Grade = {
+    /** 成绩id */
+    id?: number;
     /** 学生id */
     student_id: number;
     /** 学校id */
@@ -15,212 +196,68 @@ declare namespace API {
     /** 总分段次 */
     sumD: number;
     /** 语文 */
-    yuwen?: number;
+    Yuwen?: number;
     /** 英语 */
-    yingyu?: number;
+    Yingyu?: number;
     /** 物理 */
-    wuli?: number;
+    Wuli?: number;
     /** 数学 */
-    shuxue?: number;
+    Shuxue?: number;
     /** 生物 */
-    shengwu?: number;
+    Shengwu?: number;
     /** 历史 */
-    lishi?: number;
+    Lishi?: number;
     /** 地理 */
-    dili?: number;
+    Dili?: number;
     /** 政治 */
-    zhengzhi?: number;
+    Zhengzhi?: number;
     /** 化学 */
-    huaxue?: number;
+    Huaxue?: number;
     /** 语文D */
-    yuwenD?: number;
+    YuwenD?: number;
     /** 英语D */
-    yingyuD?: number;
+    YingyuD?: number;
     /** 物理D */
-    wuliD?: number;
+    WuliD?: number;
     /** 数学D */
-    shuxueD?: number;
+    ShuxueD?: number;
     /** 生物D */
-    shengwuD?: number;
+    ShengwuD?: number;
     /** 历史D */
-    lishiD?: number;
+    LishiD?: number;
     /** 地理D */
-    diliD?: number;
+    DiliD?: number;
     /** 政治D */
-    zhengzhiD?: number;
+    ZhengzhiD?: number;
     /** 化学D */
-    huaxueD?: number;
+    HuaxueD?: number;
     /** 是否显示 */
     show?: boolean;
+    /** 语文班次 */
+    YuwenB?: number;
+    /** 英语班次 */
+    YingyuB?: number;
+    /** 物理班次 */
+    WuliB?: number;
+    /** 数学班次 */
+    ShuxueB?: number;
+    /** 生物班次 */
+    ShengwuB?: number;
+    /** 历史班次 */
+    LishiB?: number;
+    /** 地理班次 */
+    DiliB?: number;
+    /** 政治班次 */
+    ZhengzhiB?: number;
+    /** 化学班次 */
+    HuaxueB?: number;
   };
 
-  type addSchool = {
-    /** 学校id */
-    school_id: string;
-    /** 学校名称 */
-    name: string;
-  };
-
-  type addStudent = {
-    /** 学生学号 */
-    uid: string;
-    /** 学生姓名 */
-    name: string;
-    /** 学生所属学校 */
-    school_id?: string;
-    /** 学生年级 */
-    grade?: string;
-    /** 学生班级 */
-    class_id?: string;
-    /** 学生所属选课 */
-    subject_selection_id?: string;
-    /** 学生是否在读 */
-    state?: boolean;
-  };
-
-  type addTeacher = {
-    /** 教师id */
-    tid: string;
-    /** 教师姓名 */
-    name: string;
-    /** 所教科目 */
-    subject?: string;
-    /** 学校id */
-    school_id?: string;
-  };
-
-  type bindStatus = {
-    /** 绑定id */
-    bind_id: string;
-    /** 用户id */
-    id: string;
-  };
-
-  type del = {
-    /** 用户id */
-    id: string;
-  };
-
-  type delFile = {
-    /** 文件路径 */
-    file_path: string;
-  };
-
-  type delGrade = {
-    /** 成绩id */
-    id?: number;
-  };
-
-  type delSchool = {
-    /** 学校id */
-    school_id?: string;
-  };
-
-  type delStudent = {
-    /** 学生学号 */
-    uid: string;
-  };
-
-  type delTeacher = {
-    /** 教师id */
-    tid: string;
-  };
-
-  type getGradeParams = {
-    /** 过滤条件 */
-    filter?: string;
-    /** 页码 */
-    page?: number;
-    /** 每页数量 */
-    size?: number;
-  };
-
-  type getSchoolParams = {
-    /** 查询条件 */
-    filter?: string;
-    /** 页码 */
-    page?: number;
-    /** 每页数量 */
-    size?: number;
-  };
-
-  type getStudentParams = {
-    /** 查询条件 */
-    filter?: string;
-    /** 页数 */
-    page?: number;
-    /** 每页数量 */
-    page_size?: number;
-  };
-
-  type getTeacherParams = {
-    /** 筛选条件 */
-    filter?: string;
-    /** 页码 */
-    page?: number;
-    /** 每页数量 */
-    size?: number;
-  };
-
-  type getUserParams = {
-    /** 查询条件 */
-    filter?: string;
-    /** 页码 */
-    page?: number;
-    /** 每页数量 */
-    size?: number;
-  };
-
-  type login = {
+  type Login = {
     /** 用户邮箱 */
     email: string;
     /** 用户密码 */
     password: string;
-  };
-
-  type modify = {
-    /** 用户id */
-    id?: string;
-    /** 用户名 */
-    name?: string;
-    /** 微信id */
-    wxid?: string;
-    /** 角色 */
-    role?: string;
-    /** 学校id */
-    school_id?: string;
-    /** 手机号 */
-    phone?: string;
-    /** 邮箱 */
-    email?: string;
-    /** 密码 */
-    password?: string;
-    /** 绑定id */
-    bind_state?: boolean;
-  };
-
-  type modifySchool = {
-    /** 学校id */
-    school_id: string;
-    /** 学校名称 */
-    name: string;
-  };
-
-  type modifyStudent = {
-    /** 学生学号 */
-    uid: string;
-    /** 学生姓名 */
-    name?: string;
-    /** 学生所属学校 */
-    school_id?: string;
-    /** 学生年级 */
-    grade?: string;
-    /** 学生班级 */
-    class_id?: string;
-    /** 学生所属选课 */
-    subject_selection_id?: string;
-    /** 学生是否在读 */
-    state?: boolean;
   };
 
   type postUploadParams = {
@@ -228,90 +265,83 @@ declare namespace API {
     type: string;
   };
 
-  type register = {
-    /** 用户名 */
+  type putExamDetailApiParams = {
+    exam_id: number;
+  };
+
+  type putGradeDetailApiParams = {
+    grade_id: number;
+  };
+
+  type putSchoolDetailApiParams = {
+    school_id: string;
+  };
+
+  type putStudentDetailApiParams = {
+    student_uid: string;
+  };
+
+  type putTeacherDetailApiParams = {
+    teacher_tid: string;
+  };
+
+  type putUserDetailApiParams = {
+    user_id: string;
+  };
+
+  type School = {
+    /** 学校ID */
+    school_id: string;
+    /** 学校名称 */
     name: string;
-    /** 微信id */
-    wxid?: string;
-    /** 角色 */
-    role?: string;
-    /** 学校id */
-    school_id?: string;
-    /** 手机号 */
-    phone?: string;
-    /** 邮箱 */
-    email: string;
-    /** 密码 */
-    password: string;
-    /** 绑定状态 */
-    bind_state?: boolean;
   };
 
-  type updateGrade = {
-    /** 成绩id */
-    id?: number;
-    /** 学生id */
-    student_id?: number;
-    /** 学校id */
+  type Student = {
+    /** 学生学号 */
+    uid: string;
+    /** 学生姓名 */
+    name: string;
+    /** 学生所属学校ID */
     school_id?: number;
-    /** 考试id */
-    exam_id?: number;
-    /** 考试班级 */
+    /** 学生年级 */
+    grade?: string;
+    /** 学生班级ID */
     class_id?: number;
-    /** 总分 */
-    sum_?: number;
-    /** 总分班次 */
-    sumB?: number;
-    /** 总分段次 */
-    sumD?: number;
-    /** 是否显示 */
-    show?: boolean;
-    /** 语文 */
-    yuwen?: number;
-    /** 英语 */
-    yingyu?: number;
-    /** 物理 */
-    wuli?: number;
-    /** 数学 */
-    shuxue?: number;
-    /** 生物 */
-    shengwu?: number;
-    /** 历史 */
-    lishi?: number;
-    /** 地理 */
-    dili?: number;
-    /** 政治 */
-    zhengzhi?: number;
-    /** 化学 */
-    huaxue?: number;
-    /** 语文D */
-    yuwenD?: number;
-    /** 英语D */
-    yingyuD?: number;
-    /** 物理D */
-    wuliD?: number;
-    /** 数学D */
-    shuxueD?: number;
-    /** 生物D */
-    shengwuD?: number;
-    /** 历史D */
-    lishiD?: number;
-    /** 地理D */
-    diliD?: number;
-    /** 政治D */
-    zhengzhiD?: number;
-    /** 化学D */
-    huaxueD?: number;
+    /** 学生所属选课ID */
+    subject_selection_id?: number;
+    /** 学生是否在读 */
+    state?: boolean;
   };
 
-  type updateTeacher = {
-    /** 教师id */
+  type Teacher = {
+    /** 教师工号 */
     tid: string;
     /** 教师姓名 */
-    name?: string;
+    name: string;
     /** 所教科目 */
     subject?: string;
-    /** 学校id */
+    /** 学校ID */
     school_id?: string;
+  };
+
+  type User = {
+    /** 用户ID */
+    id?: string;
+    /** 用户名 */
+    name: string;
+    /** 手机号 */
+    phone?: string;
+    /** 密码 */
+    password: string;
+    /** 微信ID */
+    wxid?: string;
+    /** 学校ID */
+    school_id?: string;
+    /** 角色 */
+    role?: string;
+    /** 邮箱 */
+    email: string;
+    /** 绑定状态 */
+    bind_state?: boolean;
   };
 }

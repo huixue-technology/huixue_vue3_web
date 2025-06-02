@@ -7,12 +7,16 @@
 </template>
 
 <script setup lang="ts">
-import { h,ref } from 'vue'
-import { MailOutlined, AppstoreOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons-vue';
+import { h, ref } from 'vue'
+import { MailOutlined, AppstoreOutlined, SettingOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons-vue';
 import { MenuProps } from 'ant-design-vue';
 import router from '@/router';
+import { useLogout } from '@/composables/useLogout';
+import { useUserStore } from '@/store';
 
 const current = ref<string[]>(['grade']);
+const userStore = useUserStore();
+const { logout } = useLogout();
 
 const items = ref<MenuProps['items']>([
   {
@@ -33,21 +37,28 @@ const items = ref<MenuProps['items']>([
     label: '成绩分析',
     title: '成绩分析',
   },
+  {    key: 'user',    icon: () => h(UserOutlined),    label: '我的信息',    title: '我的信息',  },
   {
-    key: 'user',
-    icon: () => h(UserOutlined),
-    label: '我的信息',
-    title: '我的信息',
+    key: 'logout',
+    icon: () => h(LogoutOutlined),
+    label: '退出登录',
+    title: '退出登录',
   },
 ]);
 
 const handleClick = (e: any) => {
   console.log('click ', e);
+  
+  if (e.key === 'logout') {
+    // 处理退出登录
+    logout();
+    return;
+  }
+  
   // 添加路由
-  router.push(e.key)
+  router.push(e.key);
   // 重置当前选中项
-  current.value = [e.key]
-
+  current.value = [e.key];
 }
 </script>
 
