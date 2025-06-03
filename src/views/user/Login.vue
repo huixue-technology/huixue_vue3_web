@@ -71,6 +71,7 @@ const userStore = useUserStore();
 const onFinish = (values: any) => {
    postUserLogin(values).then((res) => {
     console.log(res);
+    localStorage.setItem('user', JSON.stringify(res.data));
     // 使用Pinia存储用户信息
     userStore.setUserInfo({
       ...res.data,
