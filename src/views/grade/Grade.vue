@@ -3,7 +3,7 @@
     <a-row>
          <a-col :span="12" :offset="6">
             <span style="font-size: 25px;">
-                ⏳距离高考还有<span style="font-size: 40px;font-weight: 800;">100</span>天
+                ⏳距离高考还有<span style="font-size: 40px;font-weight: 800;">{{ daysUntilExam }}</span>天
             </span>
          </a-col>
     </a-row>
@@ -27,10 +27,10 @@
     </a-table>
     <a-row>
         <a-col :span="12" class="rank_chart_bar">
-            <rank :gradeData="tableData"/> 
+            <rank :grade-data="tableData"/> 
         </a-col>
         <a-col :span="12" class="rank_chart_bar">
-            <score :gradeData="tableData"/>
+            <score :grade-data="tableData"  />
         </a-col>
     </a-row>
  </div>
@@ -39,10 +39,69 @@
 <script setup lang="ts">
 import { getGradeApi } from '@/servers/api/grade';
 import { getStudentExamApi } from '@/servers/api/student';
-import { ref,computed,onMounted } from 'vue';
-import { useUserStore } from '@/store';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import rank from './components/Rank.vue'
 import score from './components/Score.vue'
+
+// 计算距离高考的天数
+/**
+ * 计算当前日期距离下一次高考的天数
+ * @returns {number} 返回剩余天数（向上取整）
+ */
+const calculateDaysUntilExam = () => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    
+    // 创建今年的高考日期（6月7日）
+    let examDate = new Date(currentYear, 5, 7); // 月份从0开始，所以5代表6月
+    
+    // 如果今年的高考已经过去，就计算到明年的高考
+    if (today > examDate) {
+        examDate = new Date(currentYear + 1, 5, 7);
+    }
+    
+    // 计算天数差
+    const diffTime = examDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
+};
+
+const daysUntilExam = ref(calculateDaysUntilExam());
+
+// 每天更新倒计时
+let timer: number;
+onMounted(() => {
+    // 立即计算一次
+    daysUntilExam.value = calculateDaysUntilExam();
+    
+    // 设置每天凌晨更新倒计时
+    const updateAtMidnight = () => {
+        const now = new Date();
+        const night = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate() + 1, // 第二天
+            0, 0, 0 // 0点0分0秒
+        );
+        const msUntilMidnight = night.getTime() - now.getTime();
+        
+        // 设置定时器在凌晨触发
+        timer = window.setTimeout(() => {
+            daysUntilExam.value = calculateDaysUntilExam();
+            updateAtMidnight(); // 重新设置下一天的定时器
+        }, msUntilMidnight);
+    };
+    
+    updateAtMidnight();
+});
+
+// 组件卸载时清除定时器
+onUnmounted(() => {
+    if (timer) {
+        clearTimeout(timer);
+    }
+});
 interface Exam {
     id:string,
     name:string
@@ -55,20 +114,18 @@ type TableData = {
     maxB: number;
     passLine: number;
 }; 
-const tableData = ref<TableData[]>([])
 const examList = ref<Exam[]>([])
 const currentExamId = ref<string>()
 onMounted(() => {
-    // 从store中获取用户信息
-    const userInfo = useUserStore().userInfo;
-    console.log(userInfo);
+    // 获取当前用户信息
+    const userInfo = JSON.parse(localStorage.getItem('user') as string);
     // 获取考试列表
     getStudentExamApi({student_uid:userInfo.role},[]).then(res => {
         console.log(res.data);
-        res.data[0].map((item:Exam) => {
+        res.data.map((item:Exam[]) => {
             examList.value.push({
-                id:item.id,
-                name:item.name
+                id:item[0].id,
+                name:item[0].name
             })
         })
         
@@ -207,9 +264,16 @@ const  tableColumns = [{
 ]
 
 
-
+const tableData = ref<TableData[]>([])
 const handleChange = (value:string) => {
     console.log(`selected ${value}`);
+    // 获取当前用户信息
+    const userInfo = JSON.parse(localStorage.getItem('user') as string);
+    // 获取考试成绩
+    getGradeApi({student_id:userInfo.role,exam_id:parseInt(currentExamId.value || '0')}).then(res => {
+        const gradeData = res.data[0];
+        handleGradeDetail(gradeData)
+    })
 }
 
 </script>
@@ -217,7 +281,7 @@ const handleChange = (value:string) => {
 <style scoped lang="less">
 
 .container{
-
+    position:relative;
     height: 100vh;
     overflow:scroll;
     padding: 20px;
@@ -239,6 +303,5 @@ const handleChange = (value:string) => {
 }
 .rank_chart_bar {
     text-align: left;
-    width: 50%;
 }
 </style>

@@ -42,7 +42,7 @@ const rankOption = computed(() => {
     yAxis:{
       type:'value',
       inverse: true, // 排名越小越好，所以Y轴反向
-      min: 1, // 排名从1开始
+      min: 0, // 排名从1开始
     },
     series:[
       {
