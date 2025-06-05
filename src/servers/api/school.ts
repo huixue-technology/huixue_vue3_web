@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from "umi-request";
+import request  from "umi-request";
 
 /** 获取学校记录列表，支持分页和条件过滤 GET /api/school/ */
 export async function getSchoolApi(

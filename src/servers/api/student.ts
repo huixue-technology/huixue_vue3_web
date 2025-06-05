@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request  from "umi-request";
+import  request  from "umi-request";
 
 /** 获取学生记录列表，支持分页和条件过滤 GET /api/student/ */
 export async function getStudentApi(
@@ -86,7 +86,6 @@ export async function getStudentExamApi(
   options?: { [key: string]: any }
 ) {
   const { student_uid: param0, ...queryParams } = params;
-  console.log(`/api/student/${param0}/exam`)
   return request<any>(`/api/student/${param0}/exam`, {
     method: "GET",
     params: { ...queryParams },

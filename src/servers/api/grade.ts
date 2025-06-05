@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request  from "umi-request";
+import request from "umi-request";
 
 /** 获取学生成绩列表，支持分页和条件过滤 GET /api/grade/ */
 export async function getGradeApi(
@@ -75,6 +75,21 @@ export async function deleteGradeDetailApi(
   return request<any>(`/api/grade/${param0}`, {
     method: "DELETE",
     params: { ...queryParams },
+    ...(options || {}),
+  });
+}
+
+/** 获取班级成绩(根据考试分数排名) GET /api/grade/class_grade */
+export async function getClassGrade(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getClassGradeParams,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/grade/class_grade", {
+    method: "GET",
+    params: {
+      ...params,
+    },
     ...(options || {}),
   });
 }

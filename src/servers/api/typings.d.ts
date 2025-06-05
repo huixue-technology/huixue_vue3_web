@@ -50,6 +50,22 @@ declare namespace API {
     exam_paper_ids?: string;
   };
 
+  type getClassGradeParams = {
+    /** 班级id */
+    class_id: string;
+    /** 选中考试id */
+    selected_exam_id: string;
+  };
+
+  type getCompareWithStudentParams = {
+    /** 学生id */
+    student_id: string;
+    /** 对比学生id */
+    compare_student_id: string;
+    /** 选中考试id */
+    selected_exam_id: string;
+  };
+
   type getExamApiParams = {
     /** 页码 */
     page?: number;
@@ -86,6 +102,18 @@ declare namespace API {
 
   type getGradeDetailApiParams = {
     grade_id: number;
+  };
+
+  type getPassLineAnalysisParams = {
+    /** 学生id */
+    student_id: number;
+    /** 最近几次成绩 */
+    nums: number;
+  };
+
+  type getPassLineParams = {
+    /** 考试id */
+    exam_id: number;
   };
 
   type getSchoolApiParams = {
@@ -149,6 +177,13 @@ declare namespace API {
 
   type getTeacherDetailApiParams = {
     teacher_tid: string;
+  };
+
+  type getUpDownDetailAnalysisParams = {
+    /** 学生id */
+    student_id: number;
+    /** 最近几次成绩 */
+    nums: number;
   };
 
   type getUserApiParams = {
@@ -258,6 +293,15 @@ declare namespace API {
     email: string;
     /** 用户密码 */
     password: string;
+  };
+
+  type postCompareRankMultiExamParams = {
+    /** 学生id */
+    student_id: number;
+    /** 选中考试id */
+    selected_exam_id: number;
+    /** 需要对比的考试id列表 */
+    compare_exam_ids: string;
   };
 
   type postUploadParams = {

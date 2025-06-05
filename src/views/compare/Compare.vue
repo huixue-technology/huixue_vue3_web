@@ -1,23 +1,6 @@
 <template>
   <div class="compare-container">
     <div class="filter-bar">
-      <a-select
-        v-model:value="selectedClass"
-        placeholder="班级"
-        style="width:120px"
-        :options="classList.map(item => ({ label: item.name, value: item.id }))"
-        @change="onClassChange"
-      />
-      <a-select
-        v-model:value="selectedTerm"
-        placeholder="学期"
-        style="width:120px"
-        :options="termList.map(item => ({ label: item.name, value: item.id }))"
-        @change="onTermChange"
-      />
-      <a-select v-model:value="selectedStudent" placeholder="姓名" style="width:120px">
-        <a-select-option v-for="item in studentList" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
-      </a-select>
       <a-radio-group v-model:value="mode" style="margin:0 12px">
         <a-radio value="rank">按段/次数生成</a-radio>
         <a-radio value="score">按分数生成</a-radio>
@@ -25,13 +8,9 @@
       <a-button type="primary" @click="fetchData">查询</a-button>
     </div>
     <div class="charts-area scrollable-area">
-      <div class="chart-block">
-        <div class="chart-title">{{ studentName }}总分折线图</div>
-        <v-chart :option="totalOption" autoresize style="height:300px;" />
-      </div>
-      <div v-for="subject in subjects" :key="subject" class="chart-block">
+      <div v-for="(subject, index) in subjects" :key="subject" class="chart-block">
         <div class="chart-title">{{ studentName }}{{ subject }}折线图</div>
-        <v-chart :option="getSubjectOption(subject)" autoresize style="height:300px;" />
+        <v-chart :option="options[index]" autoresize style="height:300px;" />
       </div>
     </div>
   </div>
@@ -40,16 +19,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
-import { useUserStore } from '@/store'
 import VChart from 'vue-echarts'
+import { getPassLine, getUpDownDetailAnalysis } from '@/servers/api/analysis'
 
 // 1. 班级、学期、学生列表
-const classList = ref<any[]>([])
-const termList = ref<any[]>([])
 const studentList = ref<any[]>([])
-const selectedClass = ref()
-const selectedTerm = ref()
+const options = ref<any[]>([])
 const selectedStudent = ref()
+const messageReturn = ref<any[]>([])
 const studentName = computed(() => {
   const stu = studentList.value.find(s => s.id === selectedStudent.value)
   return stu ? stu.name : ''
@@ -58,139 +35,156 @@ const studentName = computed(() => {
 // 2. 查询方式
 const mode = ref<'rank'|'score'>('rank')
 
+type tableRuleProp = {
+  score: number,
+  line: number
+}
+
 // 3. 科目列表
-const subjects = ['语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治']
+const subjects = ['总分','语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治']
+const fieldMappingRank = {
+    '语文': 'YuwenD',
+    '数学': 'ShuxueD',
+    '英语': 'YingyuD',
+    '物理': 'WuliD',
+    '化学': 'HuaxueD',
+    '生物': 'ShengwuD',
+    '历史': 'LishiD',
+    '地理': 'DiliD',
+    '政治': 'ZhengzhiD'
+  }
+  // 字段映射
+const fieldMappingScore = {
+    '语文': 'Yuwen',
+    '数学': 'Shuxue',
+    '英语': 'Yingyu',
+    '物理': 'Wuli',
+    '化学': 'Huaxue',
+    '生物': 'Shengwu',
+    '历史': 'Lishi',
+    '地理': 'Dili',
+    '政治': 'Zhengzhi'
+  }
+// 定义类型接口
+interface ScoreItem {
+  score: number | null;
+  line: number | null;
+}
+
+interface SubjectData {
+  x_name: string[];
+  y_score: ScoreItem[];
+}
+
+interface TempDataType {
+  [key: string]: SubjectData;
+}
 
 // 4. 查询结果
-const examNames = ref<string[]>([])
-const totalData = ref<any[]>([])
-const subjectData = ref<Record<string, any[]>>({})
+const totalData = ref<TempDataType>({} as TempDataType)
 
 // 5. 获取班级、学期、学生
 onMounted(async () => {
-  // 假设有接口获取班级、学期、学生列表
-  // 这里用静态数据模拟
-  classList.value = [{ id: 1, name: '班级' }]
-  termList.value = [{ id: 1, name: '学期' }]
-  // 获取学生列表
-  const res = await getStudentApi({ class_id: classList.value[0].id })
-  studentList.value = res.data || []
-  selectedClass.value = classList.value[0].id
-  selectedTerm.value = termList.value[0].id
-  selectedStudent.value = studentList.value[0]?.id
+  // 从localStorage中获取用户信息
+  const userInfo = JSON.parse(localStorage.getItem('user') as string)
+  // 查询学生近几次考试的成绩
+  const recent_result = await getUpDownDetailAnalysis({'student_id':userInfo.role,'nums':9999})
+  if (recent_result.data !== null) {
+    messageReturn.value = recent_result.data
+  }
+  console.log(recent_result)
+  if(recent_result.data) {
+    generateTable(recent_result.data,fieldMappingScore)
+  }
 })
 
-// 6. 选择班级/学期时刷新学生
-const onClassChange = async () => {
-  const res = await getStudentApi({ class_id: selectedClass.value })
-  studentList.value = res.data || []
-  selectedStudent.value = studentList.value[0]?.id
-}
-const onTermChange = () => {
-  // 如有学期相关逻辑可补充
+
+
+const generateTable = async (examData : any[], types: Object)=>{
+  // 分开获取总分和各科成绩数组已经对应的考试名称
+
+  const tempData: TempDataType = {
+    '总分': {'x_name': [], 'y_score': []},
+    '语文': {'x_name': [], 'y_score': []},
+    '数学': {'x_name': [], 'y_score': []},
+    '英语': {'x_name': [], 'y_score': []},
+    '物理': {'x_name': [], 'y_score': []},
+    '化学': {'x_name': [], 'y_score': []},
+    '生物': {'x_name': [], 'y_score': []},
+    '历史': {'x_name': [], 'y_score': []},
+    '地理': {'x_name': [], 'y_score': []},
+    '政治': {'x_name': [], 'y_score': []}
+  }
+
+
+
+  for(let item of examData) {
+    const examName = item.exam[0].name;
+    console.log(item)
+    // 获取该考试的一本线分数
+    const passLine = await getPassLine({'exam_id':item.exam[0].id})
+    console.log(passLine.data)
+    // 处理总分
+    tempData['总分']['x_name'].push(examName);
+    tempData['总分']['y_score'].push({
+      score: item.sum_,
+      line: passLine.data.sum_, // 如果有一本线数据，可以在这里添加
+    });
+
+    // 处理各科目成绩
+    for(const [subject, field] of Object.entries(types)) {
+      tempData[subject]['x_name'].push(examName);
+      tempData[subject]['y_score'].push({
+        score: item[field] || null,
+        line: passLine.data[field], // 如果有一本线数据，可以在这里添加
+      });
+    }
+  }
+  totalData.value = tempData
+  // 为每个科目生成图表配置
+  options.value = subjects.map(subject => getSubjectOption(subject))
 }
 
 // 7. 查询成绩
 const fetchData = async () => {
-  if (!selectedStudent.value) return
-  // 假设 getGradeApi 支持按学生、班级、学期、模式查询
-  const res = await getGradeApi({
-    student_id: selectedStudent.value,
-    class_id: selectedClass.value
-  })
-  // 假设返回格式如下
-  // res.data = [{ exam: '2.11开学考', sum_: 600, sumD: 100, sumLine: 550, Yuwen: 120, YuwenLine: 110, ... }, ...]
-  const exams = res.data || []
-  examNames.value = exams.map((e: any) => e.exam)
-  totalData.value = exams.map((e: any) => ({
-    score: e.sum_,
-    line: e.sumLine,
-    rank: e.sumD
-  }))
-  // 各科
-  subjectData.value = {}
-  for (const subject of subjects) {
-    subjectData.value[subject] = exams.map((e: any) => ({
-      score: e[subject],
-      line: e[subject + 'Line'],
-      rank: e[subject + 'D']
-    }))
+  console.log(options.value)
+  if (mode.value === 'rank') {
+    // 获取所有考试的一本线分数
+    if (messageReturn.value) {
+      generateTable(messageReturn.value,fieldMappingRank)
+    }
+  }
+  else {
+    // 获取所有考试的一本线分数
+    if (messageReturn.value) {
+      generateTable(messageReturn.value,fieldMappingScore)
+    }
   }
 }
 
-// 8. ECharts 配置
-const totalOption = computed(() => ({
-  tooltip: { trigger: 'axis' },
-  legend: { data: ['总分', '一本线'] },
-  xAxis: { type: 'category', data: examNames.value },
-  yAxis: { type: 'value' },
-  series: [
-    {
-      name: '总分',
-      type: 'line',
-      data: totalData.value.map(d => d.score),
-      itemStyle: { color: '#5470C6' }
-    },
-    {
-      name: '一本线',
-      type: 'line',
-      data: totalData.value.map(d => d.line),
-      itemStyle: { color: '#EE6666' }
-    }
-  ]
-}))
-
-const getSubjectOption = (subject: string) => ({
-  tooltip: { trigger: 'axis' },
-  legend: { data: [subject, '一本线'] },
-  xAxis: { type: 'category', data: examNames.value },
-  yAxis: { type: 'value' },
-  series: [
-    {
-      name: subject,
-      type: 'line',
-      data: subjectData.value[subject]?.map(d => d.score) || [],
-      itemStyle: { color: '#5470C6' }
-    },
-    {
-      name: '一本线',
-      type: 'line',
-      data: subjectData.value[subject]?.map(d => d.line) || [],
-      itemStyle: { color: '#EE6666' }
-    }
-  ]
-})
-
-const getGradeApi = async (params: any) => {
-  const res = await axios.get('/api/grade/', { params })
-  return res.data
+const getSubjectOption = (subject: string) => {
+  return {
+    tooltip: { trigger: 'axis' },
+    legend: { data: [subject, '一本线'] },
+    xAxis: { type: 'category', data: totalData.value[subject]['x_name'] },
+    yAxis: { type: 'value' },
+    series: [
+      {
+        name: subject,
+        type: 'line',
+        data: totalData.value[subject]['y_score']?.map(d => d.score) || [],
+        itemStyle: { color: '#5470C6' }
+      },
+      {
+        name: '一本线',
+        type: 'line',
+        data: totalData.value[subject]['y_score']?.map(d => d.line) || [],
+        itemStyle: { color: '#EE6666' }
+      }
+    ]
+  };
 }
 
-const getStudentApi = async (params: any) => {
-  const res = await axios.get('/api/student/', { params })
-  return res.data
-}
-
-const getStudentExamApi = async (student_uid: string) => {
-  const res = await axios.get(`/api/student/${student_uid}/exam`)
-  return res.data
-}
-
-const fetchStudents = async (classId: any) => {
-  const res = await getStudentApi({ class_id: classId })
-  studentList.value = res.data || []
-}
-
-const examList = ref([])
-const fetchExams = async (studentUid: any) => {
-  const res = await getStudentExamApi(studentUid)
-  examList.value = res.data || []
-}
-
-const fetchGrades = async (studentUid: any, examId: any) => {
-  const res = await getGradeApi({ student_id: studentUid, exam_id: examId })
-  // 处理成绩数据
-}
 </script>
 
 <style scoped lang="less">

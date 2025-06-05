@@ -56,7 +56,7 @@ const handleClick = (e: any) => {
   }
   
   // 添加路由
-  router.push(e.key);
+  router.replace('/'+e.key);
   // 重置当前选中项
   current.value = [e.key];
 }
