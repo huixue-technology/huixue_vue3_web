@@ -11,9 +11,9 @@
       <router-link to="/student-challenge" class="analysis-button">
         <span>学生挑战</span>
       </router-link>
-      <button class="analysis-button">
+      <router-link to="/rank-details" class="analysis-button">
         <span>名次详情</span>
-      </button>
+      </router-link>
       <button class="analysis-button">
         <span>成绩模拟</span>
       </button>

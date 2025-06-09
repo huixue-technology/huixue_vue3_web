@@ -28,5 +28,10 @@ export default [
         path: '/student-challenge',
         name: 'studentChallenge',
         component: () => import('@/views/StudentChallengePage.vue')
+    },
+    {
+        path: '/rank-details',
+        name: 'rankDetails',
+        component: () => import('@/views/RankDetailsPage.vue')
     }
 ]

@@ -12,11 +12,11 @@ import * as echarts from 'echarts'
 import { createPinia } from 'pinia'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers' // 导入渲染器
-import { LineChart, BarChart } from 'echarts/charts'          // 按需导入图表类型
+import { LineChart, BarChart, RadarChart } from 'echarts/charts'          // 按需导入图表类型
 import { GridComponent, TitleComponent, TooltipComponent, LegendComponent } from 'echarts/components'  // 导入布局组件
 
 // 初始化 ECharts 核心模块
-use([CanvasRenderer, LineChart, BarChart, GridComponent, TitleComponent, TooltipComponent, LegendComponent])
+use([CanvasRenderer, LineChart, BarChart, RadarChart, GridComponent, TitleComponent, TooltipComponent, LegendComponent])
 const pinia = createPinia()
 const app = createApp(App)
 app.use(pinia)
