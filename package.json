@@ -16,9 +16,9 @@
     "pinia": "^3.0.2",
     "umi": "^4.4.11",
     "umi-request": "^1.4.0",
-    "vue": "^3.2.13",
+    "vue": "^3.4.21",
     "vue-echarts": "^7.0.3",
-    "vue-router": "^4.0.3"
+    "vue-router": "^4.3.0"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.4.0",
@@ -32,6 +32,8 @@
     "@vue/eslint-config-typescript": "^9.1.0",
     "eslint": "^7.32.0",
     "eslint-plugin-vue": "^8.0.3",
+    "less": "^4.3.0",
+    "less-loader": "^12.3.0",
     "ts-node": "^10.9.2",
     "typescript": "~4.5.5"
   },

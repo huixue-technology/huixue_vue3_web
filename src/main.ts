@@ -27,4 +27,7 @@ initStore()
 
 // 全局挂载echarts
 app.config.globalProperties.$echarts = echarts
-app.use(Antd).use(router).mount('#app')
+app.use(Antd).use(router)
+app.provide('router', router); // Explicitly provide the router instance
+app.config.globalProperties.$router = router; // Expose router on global properties
+app.mount('#app')

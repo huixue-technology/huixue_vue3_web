@@ -14,9 +14,9 @@
       <router-link to="/rank-details" class="analysis-button">
         <span>名次详情</span>
       </router-link>
-      <button class="analysis-button">
+      <router-link to="/grade-simulation" class="analysis-button">
         <span>成绩模拟</span>
-      </button>
+      </router-link>
       <button class="analysis-button">
         <span>错题合集</span>
       </button>

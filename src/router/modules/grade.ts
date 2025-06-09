@@ -33,5 +33,10 @@ export default [
         path: '/rank-details',
         name: 'rankDetails',
         component: () => import('@/views/RankDetailsPage.vue')
+    },
+    {
+        path: '/grade-simulation',
+        name: 'gradeSimulation',
+        component: () => import('@/views/GradeSimulationPage.vue')
     }
 ]

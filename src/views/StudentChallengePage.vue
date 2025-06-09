@@ -132,7 +132,7 @@ const runComparison = () => {
   top: 10px;
   left: 10px;
   padding: 5px 10px;
-  background-color: #f0f0f0;
+  background-color: #ccc;
   border: 1px solid #ccc;
   border-radius: 4px;
   cursor: pointer;
