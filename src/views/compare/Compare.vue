@@ -86,19 +86,52 @@ const totalData = ref<TempDataType>({} as TempDataType)
 // 5. 获取班级、学期、学生
 onMounted(async () => {
   // 从localStorage中获取用户信息
-  const userInfo = JSON.parse(localStorage.getItem('user') as string)
-  // 查询学生近几次考试的成绩
-  const recent_result = await getUpDownDetailAnalysis({'student_id':userInfo.role,'nums':9999})
-  if (recent_result.data !== null) {
-    messageReturn.value = recent_result.data
+  const userString = localStorage.getItem('user');
+  if (!userString) {
+    console.error('localStorage中没有找到用户信息。');
+    messageReturn.value = [];
+    return;
   }
-  console.log(recent_result)
-  if(recent_result.data) {
-    generateTable(recent_result.data,fieldMappingScore)
+  let userInfo: any;
+  try {
+    userInfo = JSON.parse(userString);
+  } catch (e) {
+    console.error('解析用户信息失败:', e);
+    messageReturn.value = [];
+    return;
+  }
+
+  if (!userInfo || !userInfo.role) {
+    console.error('用户信息不完整或角色ID缺失。', userInfo);
+    messageReturn.value = [];
+    return;
+  }
+
+  const studentId = parseInt(userInfo.role);
+  if (isNaN(studentId)) {
+    console.error('学生ID无效:', userInfo.role);
+    messageReturn.value = [];
+    return;
+  }
+
+  // 查询学生近几次考试的成绩
+  try {
+    console.log('调用 getUpDownDetailAnalysis, student_id:', studentId);
+    const recent_result = await getUpDownDetailAnalysis({'student_id':studentId,'nums':9999})
+    console.log('getUpDownDetailAnalysis 响应:', recent_result);
+
+    if (!recent_result || !recent_result.data) {
+      console.warn('getUpDownDetailAnalysis did not return any data or returned null/undefined.');
+      messageReturn.value = []; // Initialize to empty array if no data
+      return;
+    }
+    messageReturn.value = recent_result.data;
+    generateTable(recent_result.data,fieldMappingScore);
+  } catch (error) {
+    console.error('获取学生近期考试成绩失败:', error);
+    messageReturn.value = []; // Ensure messageReturn is empty on error
   }
 })
-
-
 
 const generateTable = async (examData : any[], types: Object)=>{
   // 分开获取总分和各科成绩数组已经对应的考试名称
@@ -116,14 +149,25 @@ const generateTable = async (examData : any[], types: Object)=>{
     '政治': {'x_name': [], 'y_score': []}
   }
 
-
-
   for(let item of examData) {
     const examName = item.exam[0].name;
     console.log(item)
     // 获取该考试的一本线分数
-    const passLine = await getPassLine({'exam_id':item.exam[0].id})
-    console.log(passLine.data)
+    let passLine = null;
+    const examId = item.exam[0].id;
+    if (typeof examId !== 'number' || isNaN(examId)) {
+      console.warn('Invalid exam ID in item:', item);
+      continue; // Skip this item if exam ID is invalid
+    }
+
+    try {
+      console.log('调用 getPassLine, exam_id:', examId);
+      passLine = await getPassLine({'exam_id':examId});
+      console.log('getPassLine 响应:', passLine);
+    } catch (error) {
+      console.error('获取一本线数据失败，考试ID:', examId, error);
+    }
+    
     // 处理总分
     tempData['总分']['x_name'].push(examName);
     tempData['总分']['y_score'].push({
