@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request  from "umi-request";
+import request from "@/utils/request";
 
 /** 与多次考试成绩排名对比分析 POST /api/analysis/compare_rank_multi_exam */
 export async function postCompareRankMultiExam(

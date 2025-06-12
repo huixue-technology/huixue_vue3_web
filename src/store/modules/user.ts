@@ -19,7 +19,7 @@ export const useUserStore = defineStore('user', () => {
 
   // 初始化用户信息，从localStorage获取
   function initUserInfo() {
-    const storedUserInfo = localStorage.getItem('userInfo')
+    const storedUserInfo = localStorage.getItem('user')
     if (storedUserInfo) {
       userInfo.value = JSON.parse(storedUserInfo)
       isLogin.value = true
@@ -31,20 +31,20 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = info
     isLogin.value = true
     // 同时保存到localStorage
-    localStorage.setItem('userInfo', JSON.stringify(info))
+    localStorage.setItem('user', JSON.stringify(info))
   }
 
   // 更新用户信息
   function updateUserInfo(info: Partial<UserInfo>) {
     userInfo.value = { ...userInfo.value, ...info }
-    localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
+    localStorage.setItem('user', JSON.stringify(userInfo.value))
   }
 
   // 清除用户信息
   function clearUserInfo() {
     userInfo.value = {}
     isLogin.value = false
-    localStorage.removeItem('userInfo')
+    localStorage.removeItem('user')
   }
 
   return {

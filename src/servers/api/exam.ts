@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from "umi-request";
+import request from "@/utils/request";
 
 /** 获取考试记录列表，支持分页和条件过滤 GET /api/exam/ */
 export async function getExamApi(

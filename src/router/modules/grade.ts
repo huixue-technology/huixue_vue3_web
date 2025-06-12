@@ -12,31 +12,31 @@ export default [
     {
         path: '/analysis',
         name: 'analysis',
-        component: () => import('@/views/AnalysisPage.vue')
+        component: () => import('@/views/gradeanalysis/AnalysisPage.vue')
     },
     {
         path: '/analysis/student',
         name: 'studentAnalysis',
-        component: () => import('@/views/StudentAnalysisPage.vue')
+        component: () => import('@/views/gradeanalysis/StudentAnalysisPage.vue')
     },
     {
         path: '/elevate-analytics',
         name: 'elevateAnalytics',
-        component: () => import('@/views/ElevateAnalyticsPage.vue')
+        component: () => import('@/views/gradeanalysis/ElevateAnalyticsPage.vue')
     },
     {
         path: '/student-challenge',
         name: 'studentChallenge',
-        component: () => import('@/views/StudentChallengePage.vue')
+        component: () => import('@/views/gradeanalysis/StudentChallengePage.vue')
     },
     {
         path: '/rank-details',
         name: 'rankDetails',
-        component: () => import('@/views/RankDetailsPage.vue')
+        component: () => import('@/views/gradeanalysis/RankDetailsPage.vue')
     },
     {
         path: '/grade-simulation',
         name: 'gradeSimulation',
-        component: () => import('@/views/GradeSimulationPage.vue')
+        component: () => import('@/views/gradeanalysis/GradeSimulationPage.vue')
     }
 ]

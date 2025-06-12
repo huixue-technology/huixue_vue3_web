@@ -4,12 +4,12 @@ import App from './App.vue'
 import router from './router'
 import 'ant-design-vue/dist/reset.css';
 import { initStore } from './store';
+import { createPinia } from 'pinia'
 
 
 // 引入echarts
 import Echarts from 'vue-echarts'
 import * as echarts from 'echarts'
-import { createPinia } from 'pinia'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers' // 导入渲染器
 import { LineChart, BarChart, RadarChart } from 'echarts/charts'          // 按需导入图表类型
