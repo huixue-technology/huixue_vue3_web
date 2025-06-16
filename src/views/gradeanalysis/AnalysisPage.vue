@@ -17,9 +17,9 @@
       <router-link to="/grade-simulation" class="analysis-button">
         <span>成绩模拟</span>
       </router-link>
-      <button class="analysis-button">
+      <router-link to="/gradeanalysis/mistakes" class="analysis-button">
         <span>错题合集</span>
-      </button>
+      </router-link>
     </div>
   </div>
 </template>

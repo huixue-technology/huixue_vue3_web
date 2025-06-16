@@ -256,6 +256,8 @@ const goBack = (): void => {
 h2 {
   color: #333;
   margin: 0;
+  flex-grow: 1;
+  text-align: center;
 }
 
 .filter-section {
