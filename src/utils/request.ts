@@ -2,8 +2,12 @@ import { extend } from 'umi-request';
 
 const request = extend({
   // 默认请求前缀
-  prefix: 'http://127.0.0.1:5000',
+  prefix: 'http://101.200.240.100:5000',
   timeout: 10000,
+  changeOrigin: true,
+  pathRewrite: {
+          '^': '' // 修改为正确的路径重写规则，如果需要的话
+        }
 });
 
 // 请求拦截器
