@@ -2,7 +2,7 @@ import { extend } from 'umi-request';
 
 const request = extend({
   // 默认请求前缀
-  prefix: 'http://101.200.240.100:5000',
+  prefix: 'https://monitor.xipinkj.cn/api',
   timeout: 10000,
   changeOrigin: true,
   pathRewrite: {

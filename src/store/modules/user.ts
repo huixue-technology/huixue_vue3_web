@@ -1,3 +1,4 @@
+import router from '@/router'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
@@ -23,7 +24,17 @@ export const useUserStore = defineStore('user', () => {
     if (storedUserInfo) {
       userInfo.value = JSON.parse(storedUserInfo)
       isLogin.value = true
+    }else {
+      router.push('/user/login')
     }
+  }
+
+  // 获取用户信息
+  function getUserInfo() {
+    if (!isLogin.value) {
+      initUserInfo()
+    }
+    return userInfo.value
   }
 
   // 设置用户信息
@@ -51,6 +62,7 @@ export const useUserStore = defineStore('user', () => {
     userInfo,
     isLogin,
     initUserInfo,
+    getUserInfo,
     setUserInfo,
     updateUserInfo,
     clearUserInfo

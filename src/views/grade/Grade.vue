@@ -25,14 +25,9 @@
     >
 
     </a-table>
-    <a-row>
-        <a-col :span="12" class="rank_chart_bar">
-            <rank :grade-data="tableData"/> 
-        </a-col>
-        <a-col :span="12" class="rank_chart_bar">
-            <score :grade-data="tableData"  />
-        </a-col>
-    </a-row>
+    <rank :grade-data="tableData"/> 
+    <br>
+    <score :grade-data="tableData"  />
  </div>
 </template>
 
@@ -42,12 +37,11 @@ import { getStudentExamApi } from '@/servers/api/student';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import rank from './components/Rank.vue'
 import score from './components/Score.vue'
+import { useUserStore } from '@/store/modules/user';
+import router from '@/router';
+
 
 // 计算距离高考的天数
-/**
- * 计算当前日期距离下一次高考的天数
- * @returns {number} 返回剩余天数（向上取整）
- */
 const calculateDaysUntilExam = () => {
     const today = new Date();
     const currentYear = today.getFullYear();
@@ -68,7 +62,7 @@ const calculateDaysUntilExam = () => {
 };
 
 const daysUntilExam = ref(calculateDaysUntilExam());
-
+const userStore = useUserStore();
 // 每天更新倒计时
 let timer: number;
 onMounted(() => {
@@ -117,9 +111,15 @@ type TableData = {
 const examList = ref<Exam[]>([])
 const currentExamId = ref<string>()
 onMounted(() => {
-    // 获取当前用户信息
-    const userInfo = JSON.parse(localStorage.getItem('user') as string);
-    // 获取考试列表
+
+
+    if (!userStore.isLogin) {
+        router.push('/user/login');
+        return
+    }
+
+    const userInfo = userStore.getUserInfo();
+
     getStudentExamApi({student_uid:userInfo.role},[]).then(res => {
         console.log(res.data);
         res.data.map((item:Exam[]) => {
