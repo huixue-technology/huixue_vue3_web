@@ -18,7 +18,8 @@
     "umi-request": "^1.4.0",
     "vue": "^3.4.21",
     "vue-echarts": "^7.0.3",
-    "vue-router": "^4.3.0"
+    "vue-router": "^4.3.0",
+    "yarn": "^1.22.22"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.4.0",
