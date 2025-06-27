@@ -1,46 +1,18 @@
 <template>
   <div class="elevate-analytics-page">
     <button class="back-button" @click="goBack">返回</button>
-    <h2>一本能力值</h2> <!-- Title based on the image -->
+    <h2>进退步对比</h2> <!-- Title based on the image -->
 
     <!-- Filter/Info Area -->
     <div class="info-filter-container">
       <div class="filter-row">
         <div class="filter-item">
-          <span class="label">班级</span>
-          <select class="filter-select">
-            <option value="">请选择班级</option>
-            <option value="class1">高三 2238</option>
-            <option value="class2">高三 2239</option>
-            <!-- Add more class options as needed -->
-          </select>
-        </div>
-        <div class="filter-item">
-          <span class="label">学期</span>
-          <select class="filter-select">
-            <option value="">请选择学期</option>
-            <option value="current">本学期</option>
-            <option value="previous">上学期</option>
-            <!-- Add more semester options as needed -->
-          </select>
-        </div>
-        <div class="filter-item">
           <span class="label">考试</span>
-          <select class="filter-select">
+          <select class="filter-select" v-model="currentExamId">
             <option value="">请选择考试</option>
-            <option value="exam1">5.28周考</option>
-            <option value="exam2">5.26湘豫联考</option>
-            <option value="exam3">5.24周考</option>
-            <!-- Add more exam options as needed -->
-          </select>
-        </div>
-        <div class="filter-item">
-          <span class="label">姓名</span>
-          <select class="filter-select">
-            <option value="">请选择姓名</option>
-            <option value="student1">刘艺飞</option>
-            <option value="student2">其他学生</option>
-            <!-- Add more student options as needed -->
+            <option v-for="exam in examList" :key="exam.id" :value="exam.id">
+              {{ exam.name }}
+            </option>
           </select>
         </div>
       </div>
@@ -48,8 +20,6 @@
       <p class="description">
         说明：需要有两场考试成绩才能进行对比，默认基准考试选择上一次考试，对比本学期所有考试成绩，您也可以选择其他基准考试，其他学期进行学生成绩对比。
       </p>
-
-      <button class="compare-button">对比</button>
 
       <p class="description">说明：第一列为基准考试段次，后续列数红色表较基准考试退步的段次名次，绿色表明较基准进步的段次名次。</p>
     </div>
@@ -60,22 +30,20 @@
         <thead>
           <tr>
             <th>学科/考试</th>
-            <th>5.28周考</th>
-            <th>5.26湘豫联考</th>
-            <th>5.24周考</th>
-            <th>5.22周考</th>
-            <!-- More exam columns as needed -->
+            <th>{{ currentExamName }}</th>
+            <th v-for="header in compareExamHeaders" :key="header">{{ header }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td>总分</td><td>376</td><td class="red">-10</td><td class="red">-57</td><td class="red">-52</td></tr>
-          <tr><td>语文</td><td>373</td><td class="green">153</td><td class="red">-15</td><td class="green">15</td></tr>
-          <tr><td>数学</td><td>413</td><td class="green">10</td><td class="red">-9</td><td class="red">-6</td></tr>
-          <tr><td>外语</td><td>188</td><td class="green">181</td><td class="red">-221</td><td class="red">-197</td></tr>
-          <tr><td>历史</td><td>279</td><td class="red">-67</td><td class="green">102</td><td class="red">-96</td></tr>
-          <tr><td>政治</td><td>419</td><td class="green">36</td><td class="red">-36</td><td class="red">-50</td></tr>
-          <tr><td>地理</td><td>318</td><td class="green">78</td><td class="green">33</td><td class="red">-14</td></tr>
-          <!-- Add rows for other subjects if needed -->
+          <tr v-for="subject in currentSubjects" :key="subject">
+            <td>{{ subject }}</td>
+            <td>{{ baseExamScore[subject] }}</td>
+            <td v-for="(diff, i) in compareExamDiffs" :key="i">
+              <span :class="{ red: diff[subject] < 0, green: diff[subject] > 0 }">
+                {{ diff[subject] > 0 ? '+' : '' }}{{ diff[subject] }}
+              </span>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -87,10 +55,207 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
+import { getPassLine, getUpDownDetailAnalysis } from '@/servers/api/analysis'
+import { getGradeApi } from '@/servers/api/grade';
+import { getStudentExamApi } from '@/servers/api/student';
+import { ref, onMounted, computed, watch } from 'vue';
+import { Button as AButton, Table as ATable, Card as ACard } from 'ant-design-vue';
+import type { ColumnType } from 'ant-design-vue/es/table';
+import VChart from 'vue-echarts';
+import { useUserStore } from '@/store';
+import api from '@/servers/api';
+
+const userStore = useUserStore();
+
+console.log('User store info at component setup:', userStore.userInfo);
+const messageReturn = ref<any[]>([])
+// 5. 获取班级、学期、学生
+onMounted(async () => {
+  // 从localStorage中获取用户信息
+  const userString = localStorage.getItem('user');
+  if (!userString) {
+    console.error('localStorage中没有找到用户信息。');
+    messageReturn.value = [];
+    return;
+  }
+  let userInfo: any;
+  try {
+    userInfo = JSON.parse(userString);
+  } catch (e) {
+    console.error('解析用户信息失败:', e);
+    messageReturn.value = [];
+    return;
+  }
+
+  if (!userInfo || !userInfo.role) {
+    console.error('用户信息不完整或角色ID缺失。', userInfo);
+    messageReturn.value = [];
+    return;
+  }
+
+  const studentId = parseInt(userInfo.role);
+  if (isNaN(studentId)) {
+    console.error('学生ID无效:', userInfo.role);
+    messageReturn.value = [];
+    return;
+  }
+
+  // 查询学生近几次考试的成绩
+  try {
+    console.log('调用 getUpDownDetailAnalysis, student_id:', studentId);
+    const recent_result = await getUpDownDetailAnalysis({'student_id':studentId,'nums':9999})
+    console.log('getUpDownDetailAnalysis 响应:', recent_result);
+
+    if (!recent_result || !recent_result.data) {
+      console.warn('getUpDownDetailAnalysis did not return any data or returned null/undefined.');
+      messageReturn.value = []; // Initialize to empty array if no data
+      return;
+    }
+    messageReturn.value = recent_result.data;
+    //generateTable(recent_result.data,fieldMappingScore);
+  } catch (error) {
+    console.error('获取学生近期考试成绩失败:', error);
+    messageReturn.value = []; // Ensure messageReturn is empty on error
+  }
+})
+interface Exam {
+    id:string,
+    name:string
+}
+
+const examList = ref<Exam[]>([])
+const currentExamId = ref<string>()
+onMounted(() => {
+
+
+    if (!userStore.isLogin) {
+        router.push('/user/login');
+        return
+    }
+
+    const userInfo = userStore.getUserInfo();
+    
+
+    getStudentExamApi({student_uid:userInfo.role},[]).then(res => {
+        examList.value = res.data.map((item: Exam[]) => ({
+            id: item[0].id,
+            name: item[0].name
+        }));
+        
+        // 默认选择第一个考试
+        currentExamId.value = examList.value[0].id;
+        // 获取考试成绩
+        getGradeApi({student_id:userInfo.role,exam_id:parseInt(currentExamId.value)}).then(res => {
+            const gradeData = res.data[0];
+            handleGradeDetail(gradeData)
+        })
+    })
+})
+
+const selectedExamScore = ref<Record<string, number>>({});
+const allExamScores = ref<any[]>([]); // 保存所有考试成绩
+
+const baseSubjects = ['总分', '语文', '数学', '外语'];
+const scienceSubjects = ['物理', '化学', '生物'];
+const artsSubjects = ['政治', '历史', '地理'];
+const subjectFieldMap: Record<string, string> = {
+  '总分': 'sum_',
+  '语文': 'Yuwen',
+  '数学': 'Shuxue',
+  '外语': 'Yingyu',
+  '物理': 'Wuli',
+  '化学': 'Huaxue',
+  '生物': 'Shengwu',
+  '政治': 'Zhengzhi',
+  '历史': 'Lishi',
+  '地理': 'Dili'
+};
+const currentSubjects = ref<string[]>(baseSubjects);
+
+function handleGradeDetail(gradeData: any) {
+  // 判断文理科
+  if (gradeData.Wuli != null || gradeData.Huaxue != null || gradeData.Shengwu != null) {
+    currentSubjects.value = [...baseSubjects, ...scienceSubjects];
+  } else if (gradeData.Zhengzhi != null || gradeData.Lishi != null || gradeData.Dili != null) {
+    currentSubjects.value = [...baseSubjects, ...artsSubjects];
+  } else {
+    currentSubjects.value = baseSubjects;
+  }
+  selectedExamScore.value = {};
+  currentSubjects.value.forEach(sub => {
+    const field = subjectFieldMap[sub];
+    selectedExamScore.value[sub] = gradeData[field] ?? 0;
+  });
+}
+
+// 获取所有考试成绩
+function fetchAllExamScores(studentId: number) {
+  const promises = examList.value.map(exam =>
+    getGradeApi({ student_id: studentId, exam_id: parseInt(exam.id) })
+      .then(res => ({ examId: Number(exam.id), examName: exam.name, grade: res.data[0] }))
+  );
+  Promise.all(promises).then(results => {
+    allExamScores.value = results;
+  });
+}
+
+// 监听考试列表和登录状态，拉取所有考试成绩
+watch([examList, userStore], ([newExamList, newUserStore]) => {
+  if (examList.value.length && userStore.isLogin) {
+    const userInfo = userStore.getUserInfo();
+    fetchAllExamScores(Number(userInfo.role));
+  }
+}, { immediate: true });
+
+const compareExamHeaders = computed(() => {
+  return allExamScores.value.filter(e => e.examId !== Number(currentExamId.value)).map(e => e.examName);
+});
+const compareExamDiffs = computed(() => {
+  const base = allExamScores.value.find(e => e.examId === Number(currentExamId.value))?.grade || {};
+  return allExamScores.value.filter(e => e.examId !== Number(currentExamId.value)).map(e => {
+    const diff: Record<string, number> = {};
+    currentSubjects.value.forEach(sub => {
+      const field = subjectFieldMap[sub];
+      diff[sub] = (e.grade?.[field] ?? 0) - (base?.[field] ?? 0);
+    });
+    return diff;
+  });
+});
+const baseExamScore = computed(() => {
+  const base = allExamScores.value.find(e => e.examId === Number(currentExamId.value))?.grade || {};
+  const result: Record<string, number> = {};
+  currentSubjects.value.forEach(sub => {
+    const field = subjectFieldMap[sub];
+    result[sub] = base?.[field] ?? 0;
+  });
+  return result;
+});
+
 const goBack = () => {
   // Assuming the previous page is analysis page, adjust if needed
   router.push('/analysis');
 };
+
+const currentExamName = computed(() => {
+  const exam = examList.value.find(e => e.id === currentExamId.value);
+  return exam ? exam.name : '';
+});
+
+const allExamScoresMap = computed(() => {
+  // 以 currentSubjects 为主，生成每场考试每科的分数
+  return allExamScores.value.map(e => {
+    const row: Record<string, number> = {};
+    currentSubjects.value.forEach(sub => {
+      const field = subjectFieldMap[sub];
+      row[sub] = e.grade?.[field] ?? 0;
+    });
+    return {
+      examId: e.examId,
+      examName: e.examName,
+      scores: row
+    };
+  });
+});
 </script>
 
 <style scoped>
@@ -131,6 +296,7 @@ h2 {
   gap: 15px; /* Space between filter items */
   margin-bottom: 15px;
   align-items: center;
+  justify-content: center; /* 水平居中 */
 }
 
 .filter-item {
@@ -183,17 +349,6 @@ h2 {
   font-size: 0.8em;
   margin-right: 5px;
   flex-shrink: 0; /* Prevent icon from shrinking */
-}
-
-.compare-button {
-  padding: 10px 30px; /* Larger padding for a more prominent button */
-  background: linear-gradient(to bottom, #007bff, #0056b3); /* Gradient background */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1.1em;
-  margin-bottom: 20px; /* Space below the button */
 }
 
 .table-container {

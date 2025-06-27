@@ -812,7 +812,8 @@ const fetchCurrentExamData = async () => {
 
         console.log('雷达图指标最大值和名称已更新:', chartOption.value.radar.indicator);
       }
-
+      // getCurrentUser
+      // const Current = await api.getCurrentUser(["options":"token",])
     // 4. 获取本次考试的成绩
     const grades = await api.grade.getGradeApi({
       student_id: Number(studentInfo.value.uid),
