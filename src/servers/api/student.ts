@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from "@/utils/request";
+import request from "umi-request";
 
 /** 获取学生记录列表，支持分页和条件过滤 GET /api/student/ */
 export async function getStudentApi(
@@ -11,6 +11,11 @@ export async function getStudentApi(
   return request<any>("/api/student/", {
     method: "GET",
     params: {
+      // page has a default value: 1
+      page: "1",
+      // size has a default value: 20
+      size: "20",
+
       ...params,
     },
     ...(options || {}),

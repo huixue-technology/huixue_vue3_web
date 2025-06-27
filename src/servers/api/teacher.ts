@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from "@/utils/request";
+import request from "umi-request";
 
 /** 获取教师记录列表，支持分页和条件过滤 GET /api/teacher/ */
 export async function getTeacherApi(
@@ -38,7 +38,7 @@ export async function getTeacherDetailApi(
   params: API.getTeacherDetailApiParams,
   options?: { [key: string]: any }
 ) {
-  const { teacher_tid: param0, ...queryParams } = params;
+  const { teacher_uid: param0, ...queryParams } = params;
   return request<any>(`/api/teacher/${param0}`, {
     method: "GET",
     params: { ...queryParams },
@@ -53,7 +53,7 @@ export async function putTeacherDetailApi(
   body: API.Teacher,
   options?: { [key: string]: any }
 ) {
-  const { teacher_tid: param0, ...queryParams } = params;
+  const { teacher_uid: param0, ...queryParams } = params;
   return request<any>(`/api/teacher/${param0}`, {
     method: "PUT",
     headers: {
@@ -71,7 +71,7 @@ export async function deleteTeacherDetailApi(
   params: API.deleteTeacherDetailApiParams,
   options?: { [key: string]: any }
 ) {
-  const { teacher_tid: param0, ...queryParams } = params;
+  const { teacher_uid: param0, ...queryParams } = params;
   return request<any>(`/api/teacher/${param0}`, {
     method: "DELETE",
     params: { ...queryParams },

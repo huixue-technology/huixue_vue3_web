@@ -23,7 +23,7 @@ declare namespace API {
   };
 
   type deleteTeacherDetailApiParams = {
-    teacher_tid: string;
+    teacher_uid: string;
   };
 
   type deleteUserDetailApiParams = {
@@ -85,6 +85,15 @@ declare namespace API {
     exam_id: number;
   };
 
+  type getExamSmallPointParams = {
+    /** 考试id */
+    exam_id: string;
+    /** 科目 */
+    subject: string;
+    /** 学生id */
+    student_id: string;
+  };
+
   type getGradeApiParams = {
     /** 页码 */
     page?: number;
@@ -113,7 +122,11 @@ declare namespace API {
 
   type getPassLineParams = {
     /** 考试id */
-    exam_id: number;
+    exam_id?: number;
+    /** 页码 */
+    page?: number;
+    /** 每页记录数 */
+    size?: number;
   };
 
   type getSchoolApiParams = {
@@ -141,13 +154,13 @@ declare namespace API {
     /** 学生姓名（可选） */
     name?: string;
     /** 学生所属学校ID（可选） */
-    school_id?: number;
+    school?: string;
     /** 学生年级（可选） */
     grade?: string;
     /** 学生班级ID（可选） */
     class_id?: number;
-    /** 学生所属选课ID（可选） */
-    subject_selection_id?: number;
+    /** 学生所属选课（可选） */
+    subject_selection?: string;
     /** 学生是否在读（可选） */
     state?: boolean;
   };
@@ -166,7 +179,7 @@ declare namespace API {
     /** 每页记录数 */
     size?: number;
     /** 教师工号（可选） */
-    tid?: string;
+    uid?: string;
     /** 教师姓名（可选） */
     name?: string;
     /** 所教科目（可选） */
@@ -176,7 +189,7 @@ declare namespace API {
   };
 
   type getTeacherDetailApiParams = {
-    teacher_tid: string;
+    teacher_uid: string;
   };
 
   type getUpDownDetailAnalysisParams = {
@@ -295,6 +308,58 @@ declare namespace API {
     password: string;
   };
 
+  type PassLine = {
+    /** 考试id */
+    exam_id: number;
+    /** 学校id */
+    school_id: number;
+    /** 总分 */
+    sum_: number;
+    /** 总分排名 */
+    sumD: number;
+    /** 语文 */
+    Yuwen: number;
+    /** 语文排名 */
+    YuwenD: number;
+    /** 英语 */
+    Yingyu: number;
+    /** 英语排名 */
+    YingyuD: number;
+    /** 物理 */
+    Wuli: number;
+    /** 物理排名 */
+    WuliD: number;
+    /** 数学 */
+    Shuxue: number;
+    /** 数学排名 */
+    ShuxueD: number;
+    /** 生物 */
+    Shengwu: number;
+    /** 生物排名 */
+    ShengwuD: number;
+    /** 历史 */
+    Lishi: number;
+    /** 历史排名 */
+    LishiD: number;
+    /** 地理 */
+    Dili: number;
+    /** 地理排名 */
+    DiliD: number;
+    /** 政治 */
+    Zhengzhi: number;
+    /** 政治排名 */
+    ZhengzhiD: number;
+    /** 化学 */
+    Huaxue: number;
+    /** 化学排名 */
+    HuaxueD: number;
+  };
+
+  type PassLineDelete = {
+    /** 考试id */
+    exam_id: number;
+  };
+
   type postCompareRankMultiExamParams = {
     /** 学生id */
     student_id: number;
@@ -307,6 +372,8 @@ declare namespace API {
   type postUploadParams = {
     /** 请选择上传类型 */
     type: string;
+    /** 附加信息JSON格式（可选）{"exam_id": 1, "subject": 2}（可选） */
+    additional_info?: string;
   };
 
   type putExamDetailApiParams = {
@@ -326,7 +393,7 @@ declare namespace API {
   };
 
   type putTeacherDetailApiParams = {
-    teacher_tid: string;
+    teacher_uid: string;
   };
 
   type putUserDetailApiParams = {
@@ -346,20 +413,20 @@ declare namespace API {
     /** 学生姓名 */
     name: string;
     /** 学生所属学校ID */
-    school_id?: number;
+    school?: number;
     /** 学生年级 */
     grade?: string;
     /** 学生班级ID */
     class_id?: number;
     /** 学生所属选课ID */
-    subject_selection_id?: number;
+    subject_selection?: number;
     /** 学生是否在读 */
     state?: boolean;
   };
 
   type Teacher = {
     /** 教师工号 */
-    tid: string;
+    uid: string;
     /** 教师姓名 */
     name: string;
     /** 所教科目 */
