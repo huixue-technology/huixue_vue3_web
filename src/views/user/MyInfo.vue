@@ -29,8 +29,16 @@
       </a-descriptions-item>
     </a-descriptions>
     <div>
-    <a-modal v-model:open="open" title="Basic Modal" @ok="handleOk">
-      
+    <a-modal v-model:open="open" title="修改信息" @ok="handleOk">
+      <a-form >
+        <a-form-item label="个人邮箱">
+          <a-input v-model:value="email" placeholder="请输入个人邮箱" />
+        </a-form-item>
+        <a-form-item  label="联系方式">
+          <a-input v-model:value="phone" placeholder="请输入联系方式" />
+        </a-form-item>
+      </a-form>
+
     </a-modal>
   </div>
  
@@ -42,8 +50,11 @@
 
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from 'vue';
-import type { DescriptionsProps } from 'ant-design-vue';
+import { message, type DescriptionsProps,type Form, type FormItem, type Input } from 'ant-design-vue';
 import { useUserStore } from '@/store';
+// 导入putUserDetailApi
+import { putUserDetailApi } from '@/servers/api/user';
+import { useLogout } from '@/composables/useLogout';
 const size = ref<DescriptionsProps['size']>('default');
 const onChange = (e: any) => {
   console.log('size checked', e.target.value);
@@ -51,12 +62,40 @@ const onChange = (e: any) => {
 };
 
 const open = ref<boolean>(false);
-const showModal = () => {
-  open.value = true;
-};
+const email = ref('');
+const phone = ref('');
+
 
 const userStore = useUserStore();
 const userData = userStore.userInfo;
+const showModal = () => {
+  open.value = true;
+  email.value = userData.email??'';
+  phone.value = userData.phone??'';
+};
+const handleOk = () =>{
+  // 构造包含user_id的params对象和用户信息对象
+  const params = { user_id: String(userData.id) };
+  const userInfo = {
+    phone: phone.value,
+    email: email.value,
+    name: userData.name,
+    password: userData.password
+  };
+  const { logout } = useLogout();
+  
+  // 调用putUserDetailApi并传递正确的参数
+  putUserDetailApi(params, userInfo).then((res: any)=>{
+    console.log(res);
+    // 刷新用户信息
+    message.success('修改成功,请重新登录');
+    logout();
+    return;
+    
+  });
+  
+  open.value = false;
+}
 </script>
 
 <style scoped>
