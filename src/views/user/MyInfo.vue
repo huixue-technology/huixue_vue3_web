@@ -10,8 +10,14 @@
     <br />
     <a-descriptions bordered title="个人信息展示" :size="size" class = "my-info-container">
       <template #extra>
-        <a-button type="primary" @click="showModal">修改信息</a-button>
+        <div>
+          <a-button type="dashed" @click="showBindModal">绑定学生信息</a-button>
+        </div>
+        <div class = "my-info-button">
+          <a-button type="primary" @click="showModifyModal">修改信息</a-button>
+        </div>
       </template>
+      
       <a-descriptions-item label="用户姓名">{{ userData.name }}</a-descriptions-item>
       <a-descriptions-item label="学生姓名">{{ userData?.student?.name }}</a-descriptions-item>
       <a-descriptions-item label="考号">{{ userData?.student?.uid }}</a-descriptions-item>
@@ -28,8 +34,11 @@
        
       </a-descriptions-item>
     </a-descriptions>
-    <div>
-    <a-modal v-model:open="open" title="修改信息" @ok="handleOk">
+    
+ 
+  </div>
+  <div>
+    <a-modal v-model:open="open" title="修改信息" @ok="handleOk1">
       <a-form >
         <a-form-item label="个人邮箱">
           <a-input v-model:value="email" placeholder="请输入个人邮箱" />
@@ -41,7 +50,22 @@
 
     </a-modal>
   </div>
- 
+
+  <div>
+    <a-modal v-model:open="bindOpen" title="绑定学生信息" @ok="handleOk2" >
+      <a-form >
+        <a-form-item label="姓名">
+          <a-input v-model:value="name" placeholder="" disabled />
+        </a-form-item>
+        <a-form-item  label="邮箱">
+          <a-input v-model:value="email" placeholder="" disabled />
+        </a-form-item>
+        <a-form-item  label="学生考号">
+          <a-input v-model:value="role" placeholder="" required />
+        </a-form-item>
+      </a-form>
+
+    </a-modal>
   </div>
   </div>
 </template>
@@ -50,10 +74,10 @@
 
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from 'vue';
-import { message, type DescriptionsProps,type Form, type FormItem, type Input } from 'ant-design-vue';
+import { message, type DescriptionsProps,type Form, type FormItem, type Input,Modal } from 'ant-design-vue';
 import { useUserStore } from '@/store';
 // 导入putUserDetailApi
-import { putUserDetailApi } from '@/servers/api/user';
+import { putUserBindStatus, putUserDetailApi } from '@/servers/api/user';
 import { useLogout } from '@/composables/useLogout';
 const size = ref<DescriptionsProps['size']>('default');
 const onChange = (e: any) => {
@@ -61,19 +85,27 @@ const onChange = (e: any) => {
   size.value = e.target.value;
 };
 
-const open = ref<boolean>(false);
+const open = ref<boolean>(false);//控制修改页面弹出
+const bindOpen = ref<boolean>(false);//控制绑定页面弹出
 const email = ref('');
 const phone = ref('');
+const name = ref('');
+const role = ref('');
 
 
 const userStore = useUserStore();
 const userData = userStore.userInfo;
-const showModal = () => {
+const showModifyModal = () => {
   open.value = true;
   email.value = userData.email??'';
   phone.value = userData.phone??'';
 };
-const handleOk = () =>{
+const showBindModal = () => {
+  bindOpen.value = true;
+  name.value = userData.name??'';
+  email.value = userData.email??'';
+};
+const handleOk1 = () =>{
   // 构造包含user_id的params对象和用户信息对象
   const params = { user_id: String(userData.id) };
   const userInfo = {
@@ -82,6 +114,7 @@ const handleOk = () =>{
     name: userData.name,
     password: userData.password
   };
+  
   const { logout } = useLogout();
   
   // 调用putUserDetailApi并传递正确的参数
@@ -95,6 +128,20 @@ const handleOk = () =>{
   });
   
   open.value = false;
+};
+const handleOk2 = () =>{
+  // 构造包含user_id的params对象和用户信息对象
+  const params = { id: String(userData.id),bind_id: String(role.value) };
+  
+  const { logout } = useLogout();
+  putUserBindStatus(params).then((res: any)=>{
+    if(res.code === 200){
+      message.success('绑定成功');
+      logout();
+    }else{
+      message.error('绑定失败');
+    }
+});
 }
 </script>
 
@@ -105,6 +152,9 @@ const handleOk = () =>{
 }
 ::v-deep(.ant-descriptions-item-label) {
   font-weight: bold;
+}
+.my-info-button{
+  margin-top: 16px;
 }
 
 </style>

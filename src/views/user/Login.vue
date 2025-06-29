@@ -85,7 +85,7 @@ const onFinish = (values: any) => {
 
 const onFinishFailed = (errorInfo: any) => {
   console.log('Failed:', errorInfo)
-  router.push('/user/login');
+  router.push('/grade');
 }
 
 </script>

@@ -129,7 +129,5 @@ const onFinishFailed = (errorInfo: any) => {
    left: 40%;
    width: 20%;
 }
-.register-form {
-  
-}
+
 </style>
