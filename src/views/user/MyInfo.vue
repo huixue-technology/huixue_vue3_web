@@ -13,13 +13,13 @@
         <a-button type="primary" @click="showModal">修改信息</a-button>
       </template>
       <a-descriptions-item label="用户姓名">{{ userData.name }}</a-descriptions-item>
-      <a-descriptions-item label="学生姓名">{{ userData.student.name }}</a-descriptions-item>
-      <a-descriptions-item label="考号">{{ userData.student.uid }}</a-descriptions-item>
-      <a-descriptions-item label="学校">{{ userData.student.school }}</a-descriptions-item>
-      <a-descriptions-item label="班级编号">{{ userData.student.class_id }}</a-descriptions-item>
-      <a-descriptions-item label="年级">{{ userData.student.grade }}</a-descriptions-item>
-      <a-descriptions-item label="选科情况">{{ userData.student.subject_selection }}</a-descriptions-item>
-      <a-descriptions-item label="是否在读">{{userData.student.state==1?'在读':'不在读'}}</a-descriptions-item>
+      <a-descriptions-item label="学生姓名">{{ userData?.student?.name }}</a-descriptions-item>
+      <a-descriptions-item label="考号">{{ userData?.student?.uid }}</a-descriptions-item>
+      <a-descriptions-item label="学校">{{ userData?.student?.school }}</a-descriptions-item>
+      <a-descriptions-item label="班级编号">{{ userData?.student?.class_id }}</a-descriptions-item>
+      <a-descriptions-item label="年级">{{ userData?.student?.grade }}</a-descriptions-item>
+      <a-descriptions-item label="选科情况">{{ userData?.student?.subject_selection }}</a-descriptions-item>
+      <a-descriptions-item label="是否在读">{{userData?.student?.state==1?'在读':'不在读'}}</a-descriptions-item>
       <a-descriptions-item label="个人邮箱">{{ userData.email }}</a-descriptions-item>
       <a-descriptions-item label="联系方式">{{ userData.phone }}</a-descriptions-item>
       <a-descriptions-item label="个人简介">

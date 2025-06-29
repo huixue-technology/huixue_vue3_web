@@ -38,7 +38,7 @@
          登录
          </a-button>
          或者
-         <a href="">注册</a>
+         <router-link to="/user/register">注册</router-link>
       </a-form-item>
    </a-form>
 </div>
@@ -85,6 +85,7 @@ const onFinish = (values: any) => {
 
 const onFinishFailed = (errorInfo: any) => {
   console.log('Failed:', errorInfo)
+  router.push('/user/login');
 }
 
 </script>

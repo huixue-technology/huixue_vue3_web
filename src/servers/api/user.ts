@@ -94,9 +94,9 @@ export async function putUserBindStatus(
   });
 }
 
-/** 获取当前用户信息 GET /user/current */
+/** 获取当前用户信息 GET /api/user/current */
 export async function getCurrentUser(options?: { [key: string]: any }) {
-  return request<any>("/user/current", {
+  return request<any>("/api/user/current", {
     method: "GET",
     ...(options || {}),
   });

@@ -22,10 +22,11 @@
         :columns="tableColumns"
         :data-source="tableData"
         :pagination="false"
+        
     >
 
     </a-table>
-    <rank :grade-data="tableData"/> 
+    <rank :grade-data="tableData"  /> 
     <br>
     <score :grade-data="tableData"  />
  </div>
@@ -122,20 +123,29 @@ onMounted(() => {
 
     getStudentExamApi({student_uid:userInfo.role},[]).then(res => {
         console.log(res.data);
-        res.data.map((item:Exam[]) => {
-            examList.value.push({
-                id:item[0].id,
-                name:item[0].name
-            })
+        if (res.data) {
+            res.data.map((item:Exam[]) => {
+            if (Array.isArray(item) && item[0] && item[0].id && item[0].name) {
+                examList.value.push({
+                id: item[0].id,
+                name: item[0].name
+      });
+    }
         })
+        }
+        
         
         // 默认选择第一个考试
-        currentExamId.value = examList.value[0].id;
-        // 获取考试成绩
-        getGradeApi({student_id:userInfo.role,exam_id:parseInt(currentExamId.value)}).then(res => {
+        if(examList.value.length > 0){
+            currentExamId.value = examList.value[0].id;
+            getGradeApi({student_id:userInfo.role,exam_id:parseInt(currentExamId.value)}).then(res => {
             const gradeData = res.data[0];
             handleGradeDetail(gradeData)
         })
+        }
+        
+        // 获取考试成绩
+        
     })
 })
 

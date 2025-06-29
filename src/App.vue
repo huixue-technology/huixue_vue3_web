@@ -1,6 +1,6 @@
 <template>
 <div class="index">
-    <NavBar v-if="$route.path !== '/user/login'" class="index-nav-bar" />
+    <NavBar v-if="!['/user/login', '/user/register'].includes($route.path)" />
     <div class="index-router-view">
       <router-view />
     </div>
