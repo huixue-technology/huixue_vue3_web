@@ -10,6 +10,21 @@ declare namespace API {
     stuName: string;
   };
 
+  type Classes = {
+    /** 班级ID */
+    id?: number;
+    /** 班级名称 */
+    name: string;
+    /** 班主任ID */
+    header: number;
+    /** 学校ID */
+    school_id: number;
+  };
+
+  type deleteClassesDetailApiParams = {
+    class_id: number;
+  };
+
   type deleteExamDetailApiParams = {
     exam_id: number;
   };
@@ -52,6 +67,23 @@ declare namespace API {
     student_grade?: string;
     /** 考试试卷ID列表，以逗号分隔 */
     exam_paper_ids?: string;
+  };
+
+  type getClassesApiParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页记录数 */
+    size?: number;
+    /** 班级名称（可选） */
+    name?: string;
+    /** 班主任（可选） */
+    header?: number;
+    /** 学校ID（可选） */
+    school_id?: number;
+  };
+
+  type getClassesDetailApiParams = {
+    class_id: number;
   };
 
   type getClassGradeParams = {
@@ -378,6 +410,10 @@ declare namespace API {
     type: string;
     /** 附加信息JSON格式（可选）{"exam_id": 1, "subject": 2}（可选） */
     additional_info?: string;
+  };
+
+  type putClassesDetailApiParams = {
+    class_id: number;
   };
 
   type putExamDetailApiParams = {

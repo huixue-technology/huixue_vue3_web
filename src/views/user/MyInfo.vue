@@ -60,14 +60,41 @@
         <a-form-item  label="邮箱">
           <a-input v-model:value="email" placeholder="" disabled />
         </a-form-item>
-        <a-form-item  label="学校名称">
-          <a-input v-model:value="school" placeholder="" required />
+        <a-form-item label="所在学校">
+          <a-select
+            v-model:value="schoolName"
+            @change="onSchoolChange"
+            style="width: 100%"
+            placeholder="请选择学校"
+          >
+            <a-select-option v-for="school in schoolList" :key="school.name" :value="school.id">
+              {{ school.name }}
+            </a-select-option>
+          </a-select>
         </a-form-item>
-        <a-form-item  label="班级名称">
-          <a-input v-model:value="class_id" placeholder="" required />
+        <a-form-item label="所在班级">
+          <a-select
+            v-model:value="classId"
+            @change="onClassChange"
+            style="width: 100%"
+            placeholder="请选择班级"
+          >
+            <a-select-option v-for="cls in classList" :key="cls.id">
+              {{ cls.name }}
+            </a-select-option>
+          </a-select>
         </a-form-item>
-        <a-form-item  label="学生姓名">
-          <a-input v-model:value="stuName" placeholder="" required />
+        <a-form-item label="姓名">
+          <a-select
+            v-model:value="stuName"
+            style="width: 100%"
+            @change="onStudentChange"
+            placeholder="请选择学生"
+          >
+            <a-select-option v-for="student in studentList" :key="student.id" :value="student.name">
+              {{ student.name }}
+            </a-select-option>
+          </a-select>
         </a-form-item>
       </a-form>
 
@@ -84,8 +111,18 @@ import { message, type DescriptionsProps,type Form, type FormItem, type Input,Mo
 import { useUserStore } from '@/store';
 // 导入putUserDetailApi
 import { putUserBindStatus, putUserDetailApi } from '@/servers/api/user';
+import { getSchoolApi } from '@/servers/api/school'; // 新增
+import { getClassesApi } from '@/servers/api/classes'; // 新增
+import { getStudentApi } from '@/servers/api/student'; // 新增
 import { useLogout } from '@/composables/useLogout';
 const size = ref<DescriptionsProps['size']>('default');
+const schoolList = ref<any[]>([]); // 新增 学校列表
+const classList = ref<any[]>([]); // 新增 班级列表
+const studentList = ref<any[]>([]); // 新增 学生列表
+const schoolId = ref(); // 新增 当前选中学校
+const schoolName = ref();
+const classId = ref(0); // 新增 当前选中班级
+
 const onChange = (e: any) => {
   console.log('size checked', e.target.value);
   size.value = e.target.value;
@@ -139,7 +176,7 @@ const handleOk1 = () =>{
 };
 const handleOk2 = () =>{
   // 构造包含user_id的params对象和用户信息对象
-  const params = { id: String(userData.id),school: String(school.value),class_id: String(class_id.value),stuName: String(stuName.value)};
+  const params = { id: String(userData.id),school: String(schoolName.value),class_id: String(classId.value),stuName: String(stuName.value)};
   
   const { logout } = useLogout();
   putUserBindStatus(params).then((res: any)=>{
@@ -150,6 +187,58 @@ const handleOk2 = () =>{
       message.error('绑定失败');
     }
 });
+}
+
+onMounted(() => {
+  getSchoolApi({}).then((res: any) => {
+    schoolList.value = res.data;
+    schoolId.value = schoolList.value[0].id;
+    schoolName.value = schoolList.value[0].name;
+    getClassesApi({ school_id: schoolId.value }).then((res: any) => {
+      classList.value = res.data;
+      classId.value = classList.value[0].id;
+      getStudentApi({ class_id: classId.value,school:schoolName.value,size:100 }).then((res: any) => {
+        studentList.value = res.data;
+        stuName.value = studentList.value[0].name;
+      });
+    });
+  });
+});
+
+
+
+// 新增学校选择事件处理
+const onSchoolChange = async (value: number) => {
+  schoolId.value = value;
+  schoolName.value = schoolList.value.find((item: any) => item.id === value).name;
+  const res = await getClassesApi({ school_id: value });
+  if (res.code === 200){
+    classList.value = res.data;
+    classId.value = classList.value ? classList.value[0].id : null;
+    if(!classId.value){
+      studentList.value = [];
+      stuName.value = '';
+    }
+  }else{
+    message.error(res.message);
+  }
+};
+
+// 新增班级选择事件处理
+const onClassChange = async (value: number) => {
+  console.log(`selected ${schoolName.value}`);
+  classId.value = value;
+  const res = await getStudentApi({ class_id: value,school: schoolName.value,size:100 });
+  if (res.code === 200){
+    studentList.value = res.data;
+    stuName.value = studentList.value[0]?.name;
+  }else{
+    message.error(res.message);
+  }
+};
+
+const onStudentChange = (value:string) =>{
+  stuName.value = value;
 }
 </script>
 

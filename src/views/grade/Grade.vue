@@ -152,14 +152,14 @@ onMounted(() => {
 const handleGradeDetail = (gradeData:API.Grade) => {
     tableData.value = []
     tableData.value = [
-    {
-        name: '总分',
-        sum_: gradeData.sum_ || 0,
-        sumB: gradeData.sumB || 0,
-        sumD: gradeData.sumD || 0,
-        maxB: gradeData.sum_ || 0, // Assuming maxB is total score for now
-        passLine: 0,
-    },
+    // {
+    //     name: '总分',
+    //     sum_: gradeData.sum_ || 0,
+    //     sumB: gradeData.sumB || 0,
+    //     sumD: gradeData.sumD || 0,
+    //     maxB: gradeData.sum_ || 0, // Assuming maxB is total score for now
+    //     passLine: 0,
+    // },
     {
         name: '语文',
         sum_: gradeData.Yuwen || 0,

@@ -27,7 +27,6 @@ import NavBar from '@/layout/NavBar.vue';
     .index-router-view {
       position: fixed;
       width: 100vw;
-      margin-top: 60px;
       height: calc(100vh - 60px);
   }
 }
