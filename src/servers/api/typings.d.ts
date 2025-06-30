@@ -1,9 +1,13 @@
 declare namespace API {
   type BindStatus = {
-    /** 绑定ID */
-    bind_id: string;
     /** 用户ID */
     id: string;
+    /** 绑定的学校 */
+    school: string;
+    /** 绑定的班级 */
+    class_id: string;
+    /** 绑定的学生 */
+    stuName: string;
   };
 
   type deleteExamDetailApiParams = {

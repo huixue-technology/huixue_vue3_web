@@ -60,8 +60,14 @@
         <a-form-item  label="邮箱">
           <a-input v-model:value="email" placeholder="" disabled />
         </a-form-item>
-        <a-form-item  label="学生考号">
-          <a-input v-model:value="role" placeholder="" required />
+        <a-form-item  label="学校名称">
+          <a-input v-model:value="school" placeholder="" required />
+        </a-form-item>
+        <a-form-item  label="班级名称">
+          <a-input v-model:value="class_id" placeholder="" required />
+        </a-form-item>
+        <a-form-item  label="学生姓名">
+          <a-input v-model:value="stuName" placeholder="" required />
         </a-form-item>
       </a-form>
 
@@ -91,7 +97,9 @@ const email = ref('');
 const phone = ref('');
 const name = ref('');
 const role = ref('');
-
+const class_id = ref('');
+const stuName = ref('');
+const school = ref('');
 
 const userStore = useUserStore();
 const userData = userStore.userInfo;
@@ -131,7 +139,7 @@ const handleOk1 = () =>{
 };
 const handleOk2 = () =>{
   // 构造包含user_id的params对象和用户信息对象
-  const params = { id: String(userData.id),bind_id: String(role.value) };
+  const params = { id: String(userData.id),school: String(school.value),class_id: String(class_id.value),stuName: String(stuName.value)};
   
   const { logout } = useLogout();
   putUserBindStatus(params).then((res: any)=>{
