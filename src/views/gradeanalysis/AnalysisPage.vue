@@ -5,9 +5,9 @@
       <router-link to="/analysis/student" class="analysis-button">
         <span>学生分析</span>
       </router-link>
-      <router-link to="/elevate-analytics" class="analysis-button">
+      <!-- <router-link to="/elevate-analytics" class="analysis-button">
         <span>进退对比</span>
-      </router-link>
+      </router-link> -->
       <router-link to="/student-challenge" class="analysis-button">
         <span>学生挑战</span>
       </router-link>

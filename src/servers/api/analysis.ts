@@ -2,7 +2,7 @@
 /* eslint-disable */
 import request from "umi-request";
 
-/** 与多次考试成绩排名对比分析 POST /api/analysis/compare_rank_multi_exam */
+/** 与多次考试成绩排名对比分析例： POST /api/analysis/compare_rank_multi_exam */
 export async function postCompareRankMultiExam(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postCompareRankMultiExamParams,

@@ -401,7 +401,7 @@ declare namespace API {
     student_id: number;
     /** 选中考试id */
     selected_exam_id: number;
-    /** 需要对比的考试id列表 */
+    /** 需要对比的考试id列表例："20250522,20250524" */
     compare_exam_ids: string;
   };
 

@@ -9,7 +9,7 @@
     </div>
     <div class="charts-area scrollable-area">
       <div v-for="(subject, index) in subjects" :key="subject" class="chart-block">
-        <div class="chart-title">{{ studentName }}{{ subject }}折线图</div>
+        <div class="chart-title">{{ studentName }}{{ subject }}{{ mode == 'rank' ? '历次排名':'成绩' }}</div>
         <v-chart :option="options[index]" autoresize style="height:300px;" />
       </div>
     </div>

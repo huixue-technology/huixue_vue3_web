@@ -8,7 +8,7 @@
          </a-col>
     </a-row>
     <div class="select">
-        <h4>选择查询考试：</h4>
+        <h2>选择查询考试：</h2>
        <a-select
             placeholder="请选择考试"
             style="width: auto"
@@ -24,24 +24,22 @@
         :pagination="false"
         
     >
-
     </a-table>
-    <rank :grade-data="tableData"  /> 
-    <br>
-    <score :grade-data="tableData"  />
+    <exam-analysis 
+    :exam-list="examList" 
+    :student_id="parseInt(studentId)" 
+    :selected_id="parseInt(currentExamId)" 
+    style="padding: 0;margin: 0;" />
  </div>
 </template>
 
 <script setup lang="ts">
 import { getGradeApi } from '@/servers/api/grade';
 import { getStudentExamApi } from '@/servers/api/student';
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import rank from './components/Rank.vue'
-import score from './components/Score.vue'
+import { ref, computed, onMounted, onUnmounted, onBeforeMount } from 'vue';
+import examAnalysis from './components/ExamAnalysis.vue'
 import { useUserStore } from '@/store/modules/user';
 import router from '@/router';
-
-
 // 计算距离高考的天数
 const calculateDaysUntilExam = () => {
     const today = new Date();
@@ -62,6 +60,7 @@ const calculateDaysUntilExam = () => {
     return diffDays;
 };
 
+const studentId = ref('');
 const daysUntilExam = ref(calculateDaysUntilExam());
 const userStore = useUserStore();
 // 每天更新倒计时
@@ -110,8 +109,8 @@ type TableData = {
     passLine: number;
 }; 
 const examList = ref<Exam[]>([])
-const currentExamId = ref<string>()
-onMounted(() => {
+const currentExamId = ref<string>('')
+onBeforeMount(() => {
 
 
     if (!userStore.isLogin) {
@@ -120,21 +119,21 @@ onMounted(() => {
     }
 
     const userInfo = userStore.getUserInfo();
-
+    studentId.value = userInfo.role
     getStudentExamApi({student_uid:userInfo.role},[]).then(res => {
         console.log(res.data);
         if (res.data) {
             res.data.map((item:Exam[]) => {
-            if (Array.isArray(item) && item[0] && item[0].id && item[0].name) {
-                examList.value.push({
-                id: item[0].id,
-                name: item[0].name
-      });
-    }
-        })
+                if (Array.isArray(item) && item[0] && item[0].id && item[0].name) {
+                    examList.value.push({
+                    id: item[0].id,
+                    name: item[0].name
+                    });
+                }
+            })
         }
         
-        
+        // 倒叙排列examList
         // 默认选择第一个考试
         if(examList.value.length > 0){
             currentExamId.value = examList.value[0].id;
