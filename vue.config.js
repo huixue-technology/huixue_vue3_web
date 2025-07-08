@@ -19,7 +19,10 @@ module.exports = defineConfig({
         pathRewrite: {
           '^': '' // 去掉前缀 `/api`
         }
-      }
-    }
+      },
+    },
+    client: {
+      overlay: false
+    },
   }
 })

@@ -19,16 +19,18 @@
         </a-select> 
     </div>
     <a-table
+        size="large"
         :columns="tableColumns"
         :data-source="tableData"
         :pagination="false"
-        
+        style="font-size: larger;"
     >
     </a-table>
     <exam-analysis 
-    :exam-list="examList" 
+    :exam-list="examList.slice(1)" 
     :student_id="parseInt(studentId)" 
     :selected_id="parseInt(currentExamId)" 
+    :current-exam="currentExamData"
     style="padding: 0;margin: 0;" />
  </div>
 </template>
@@ -36,7 +38,7 @@
 <script setup lang="ts">
 import { getGradeApi } from '@/servers/api/grade';
 import { getStudentExamApi } from '@/servers/api/student';
-import { ref, computed, onMounted, onUnmounted, onBeforeMount } from 'vue';
+import { ref, onMounted, onUnmounted, onBeforeMount } from 'vue';
 import examAnalysis from './components/ExamAnalysis.vue'
 import { useUserStore } from '@/store/modules/user';
 import router from '@/router';
@@ -59,7 +61,7 @@ const calculateDaysUntilExam = () => {
     
     return diffDays;
 };
-
+const currentExamData = ref<API.Grade>();
 const studentId = ref('');
 const daysUntilExam = ref(calculateDaysUntilExam());
 const userStore = useUserStore();
@@ -150,6 +152,7 @@ onBeforeMount(() => {
 
 const handleGradeDetail = (gradeData:API.Grade) => {
     tableData.value = []
+    currentExamData.value = gradeData
     tableData.value = [
     // {
     //     name: '总分',
@@ -251,16 +254,20 @@ if (gradeData.Zhengzhi != null) {
 
 const  tableColumns = [{
         title:'科目',
-        dataIndex:'name'
+        dataIndex:'name',
+        align: 'center',
     },{
         title: '成绩',
-        dataIndex:'sum_'
+        dataIndex:'sum_',
+        align: 'center',
     },{
         title: '班级排名',
         dataIndex:'sumB',
+        align: 'center',
     },{
         title: '年级排名',
         dataIndex: 'sumD',
+        align: 'center',
     }
     // ,{
     //     title : '班级最高分',
@@ -313,4 +320,5 @@ const handleChange = (value:string) => {
 .rank_chart_bar {
     text-align: left;
 }
+
 </style>
