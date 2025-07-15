@@ -9,9 +9,12 @@
       @finishFailed="onFinishFailed"
    >
          <a-form-item
-         label=" 邮 箱 "
+         label=" 手 机 号 "
          name="email"
-         :rules="[{ required: true, message: '请输入用户邮箱!' }]"
+         :rules="[
+            { required: true, message: '请输入用户邮箱!' },
+            {pattern: /^1[3456789]\d{9}$/,message: '请输入正确的手机号格式'}
+            ]"
       >
          <a-input v-model:value="formparams.email">
          <template #prefix>
