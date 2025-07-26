@@ -2,15 +2,15 @@
   <div class="compare-container">
     <div class="filter-bar">
       <a-radio-group v-model:value="mode" style="margin:0 12px">
-        <a-radio value="rank">按段/次数生成</a-radio>
-        <a-radio value="score">按分数生成</a-radio>
+        <a-radio value="rank">按名次</a-radio>
+        <a-radio value="score">按分数</a-radio>
       </a-radio-group>
       <a-button type="primary" @click="fetchData">查询</a-button>
     </div>
     <div class="charts-area scrollable-area">
       <div v-for="(subject, index) in subjects" :key="subject" class="chart-block">
         <div class="chart-title">{{ studentName }}{{ subject }}{{ mode == 'rank' ? '历次排名':'成绩' }}</div>
-        <v-chart :option="options[index]" autoresize style="height:300px;" />
+        <v-chart :option="options[index]" autoresize style="height:300px;font-size: larger;" />
       </div>
     </div>
   </div>
@@ -33,7 +33,7 @@ const studentName = computed(() => {
 })
 
 // 2. 查询方式
-const mode = ref<'rank'|'score'>('rank')
+const mode = ref<'rank'|'score'>('score')
 
 type tableRuleProp = {
   score: number,
@@ -209,12 +209,20 @@ const fetchData = async () => {
 const getSubjectOption = (subject: string) => {
   return {
     tooltip: { trigger: 'axis' },
-    legend: { data: [subject, '一本线'] },
-    xAxis: { type: 'category', data: totalData.value[subject]['x_name'] },
+    //legend: { data: [subject, '一本线'] },
+    legend: { data: ['本人成绩', '一本线'] },
+    xAxis: { 
+      type: 'category', 
+      data: totalData.value[subject]['x_name'],
+      axisLabel: { 
+        textStyle: {fontSize: 18,fontFamily: 'SimHei'}
+      }
+     },
     yAxis: { type: 'value' },
     series: [
       {
-        name: subject,
+        // name : subject,
+        name: '本人成绩',
         type: 'line',
         data: totalData.value[subject]['y_score']?.map(d => d.score) || [],
         itemStyle: { color: '#5470C6' }
@@ -237,7 +245,7 @@ const getSubjectOption = (subject: string) => {
   height: 100vh;
   overflow: scroll;
   padding: 20px;
- 
+  font-size: larger;
   margin: auto;
   padding-bottom: 0;
 }

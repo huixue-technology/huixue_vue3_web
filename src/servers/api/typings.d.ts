@@ -149,13 +149,6 @@ declare namespace API {
     grade_id: number;
   };
 
-  type getPassLineAnalysisParams = {
-    /** 学生id */
-    student_id: number;
-    /** 最近几次成绩 */
-    nums: number;
-  };
-
   type getPassLineParams = {
     /** 考试id */
     exam_id?: number;
@@ -389,6 +382,13 @@ declare namespace API {
     Huaxue: number;
     /** 化学排名 */
     HuaxueD: number;
+  };
+
+  type PassLineAnalysis = {
+    /** 学生id */
+    student_id: number;
+    /** 考试id列表 */
+    exam_ids: number[];
   };
 
   type PassLineDelete = {

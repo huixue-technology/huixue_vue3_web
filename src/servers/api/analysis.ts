@@ -96,17 +96,17 @@ export async function deletePassLine(
   });
 }
 
-/** 进一本线分析 GET /api/analysis/pass_line_analysis */
-export async function getPassLineAnalysis(
-  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.getPassLineAnalysisParams,
+/** 进一本线分析 POST /api/analysis/pass_line_analysis */
+export async function postPassLineAnalysis(
+  body: API.PassLineAnalysis,
   options?: { [key: string]: any }
 ) {
   return request<any>("/api/analysis/pass_line_analysis", {
-    method: "GET",
-    params: {
-      ...params,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
+    data: body,
     ...(options || {}),
   });
 }

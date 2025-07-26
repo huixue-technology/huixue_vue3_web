@@ -28,8 +28,8 @@ const items = ref<MenuProps['items']>([
   {
     key: 'compare',
     icon: () => h(AppstoreOutlined),
-    label: '进退步',
-    title: '进退步',
+    label: '历次排名',
+    title: '历次排名',
   },
   {
     key: 'analysis',

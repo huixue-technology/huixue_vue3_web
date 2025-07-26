@@ -3,7 +3,7 @@
     <div class="tables-container" v-if="!isLoading">
       <div class="table-section">
         <div style="display: flex;">
-            <h2 class="exam-title">进退步分析：</h2>
+            <h2 class="exam-title">对比：</h2>
             <a-select
                 placeholder="请选择考试"
                 style="min-width: 100px;"
