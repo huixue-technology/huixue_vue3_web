@@ -111,6 +111,36 @@ export async function postPassLineAnalysis(
   });
 }
 
+/** 获取某次考试班级的各科最高分 GET /api/analysis/simulate_grade */
+export async function getSimulateGrade(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getSimulateGradeParams,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/analysis/simulate_grade", {
+    method: "GET",
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
+/** 获取模拟成绩的班次和名次 POST /api/analysis/simulate_grade */
+export async function postSimulateGrade(
+  body: API.SimulateGrade,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/analysis/simulate_grade", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
 /** 学生成绩进退步分析 GET /api/analysis/up_down_detail */
 export async function getUpDownDetailAnalysis(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

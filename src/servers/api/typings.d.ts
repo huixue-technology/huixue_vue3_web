@@ -173,6 +173,15 @@ declare namespace API {
     school_id: string;
   };
 
+  type getSimulateGradeParams = {
+    /** 考试id */
+    exam_id: number;
+    /** 考试班级 */
+    class_id: number;
+    /** 考试学校 */
+    school_id: number;
+  };
+
   type getStudentApiParams = {
     /** 页码 */
     page?: number;
@@ -445,6 +454,35 @@ declare namespace API {
     school_id: string;
     /** 学校名称 */
     name: string;
+  };
+
+  type SimulateGrade = {
+    /** 考试id */
+    exam_id: number;
+    /** 班级id */
+    class_id: string;
+    /** 学校id */
+    school_id: string;
+    /** 语文 */
+    Yuwen: number;
+    /** 英语 */
+    Yingyu: number;
+    /** 物理 */
+    Wuli: number;
+    /** 数学 */
+    Shuxue: number;
+    /** 生物 */
+    Shengwu: number;
+    /** 历史 */
+    Lishi: number;
+    /** 地理 */
+    Dili: number;
+    /** 政治 */
+    Zhengzhi: number;
+    /** 化学 */
+    Huaxue: number;
+    /** 总分 */
+    sum_: number;
   };
 
   type Student = {
