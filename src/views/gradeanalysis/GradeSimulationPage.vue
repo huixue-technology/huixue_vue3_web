@@ -4,31 +4,30 @@
         <button class="back-button" @click="goBack">返回</button>
       <h2>成绩模拟</h2>
     </div>
-
-    <div class="filter-section">
-      
-    <div class="filter-item">
-        <label>学期:</label>
-        <select v-model="selectedSemester" class="input-select">
-          <option value="">请选择学期</option>
-          <option value="本学期">本学期</option>
-          <option value="上学期">上学期</option>
-        </select>
+    <div class="filter">
+      <div class="filter-section">
+        <div class="filter-item">
+            <label>学期:</label>
+            <!-- <select v-model="selectedSemester" >
+              <option value="">请选择学期</option>
+              <option value="本学期">本学期</option>
+              <option value="上学期">上学期</option>
+            </select> -->
+            <a-select v-model:value="selectedSemester" class="input-select" :options="examOptions"></a-select>
+          </div>
+          <div class="filter-item">
+            <label>考试:</label>
+            <a-select v-if="examOptions" class="input-select" :options="examOptions[selectedSemester].list" v-model:value="selectedExam"></a-select>
+          </div>
+        </div>
+      <div>
+        <p class="description red-text">
+          说明：点击铅笔符号修改分数，点击复位按钮将所有科目改为原成绩
+        </p>
+        <button @click="inquiry" class="query-button">查询</button>
       </div>
-      <div class="filter-item">
-        <label>考试:</label>
-        <select v-model="selectedExam" class="input-select">
-          <option value="">请选择考试</option>
-          <option v-for="exam in examOptions" :key="exam.value" :value="exam.value">{{ exam.label }}</option>
-        </select>
-      </div>
-     
-      <p class="description red-text">
-        说明：点击铅笔符号修改分数，点击复位按钮将所有科目改为原成绩
-      </p>
-      <button @click="inquiry" class="query-button">查询</button>
     </div>
-
+    
     <div v-if="showTable" class="score-table-section">
       <div class="table-title">5.22周考</div>
       <table class="score-table">
@@ -91,15 +90,24 @@
           </tr>
         </tbody>
       </table>
-      <a-button @click="submit" type="primary">模拟</a-button>
-      <button @click="resetScores" class="reset-button">复位</button>
+      <a-space>
+        <a-button @click="submit" type="primary">模拟</a-button>
+        <a-button @click="resetScores" type="primary" danger >复位</a-button>
+      </a-space>
+      
+    </div>
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-content">
+        <a-spin size="large" />
+        <p style="margin-top: 16px; color: white;">正在模拟成绩，请稍等...</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { getPassLine, postSimulateGrade } from '@/servers/api/analysis';
-import { Button as AButton, message } from 'ant-design-vue';
+import { Button as AButton, message, Spin } from 'ant-design-vue';
 import { getExamApi } from '@/servers/api/exam';
 import { getGradeApi } from '@/servers/api/grade';
 import { useUserStore } from '@/store/modules/user';
@@ -116,6 +124,7 @@ interface ScoreItem {
   classHighest?: number;
   firstLine?: number;
 }
+const loading = ref(false)
 const userStore = useUserStore();
 const userInfo = ref()
 const router = useRouter();
@@ -126,26 +135,25 @@ const studentClassId = JSON.parse(student?? '{}').student.class_id;
 //锁定学生学号
 const studentId = JSON.parse(student?? '{}').student.uid;
 
-const selectedSemester = ref<string>('');
+const selectedSemester = ref<number>(0);
 
 const selectedExam = ref<string>('');//选中的考试
-const examOptions = ref<{value: string, label: string}[]>([]);//考试下拉框
+const examOptions = ref<{value:number,label:string,list:{value:string,label:string}[]}[]>();//考试下拉框
 
 const showTable = ref<boolean>(false);
 const editingIndex = ref<number>(-1);
 const editingScore = ref<number>(0);
 
 // 原始成绩数据
-const originalScores = ref<ScoreItem[]>([
-  
-]);
+const originalScores = ref<ScoreItem[]>([]);
 
 
 // 模拟成绩数据（深拷贝原始数据）
 const simulatedScores = ref<ScoreItem[]>(JSON.parse(JSON.stringify(originalScores.value)));
-onMounted(() => {
-  fetchExamOption();
+onMounted(async () => {
+  await fetchExamOption();
   userInfo.value = userStore.userInfo;
+  await inquiry();
 })
 // 开始编辑成绩
 const startEdit = (index: number): void => {
@@ -220,67 +228,89 @@ const goBack = (): void => {
 };
 
 //定义考试下拉框的选项
-const fetchExamOption = () => {
-  getExamApi({}).then((res) => {
-    console.log(res);
-    for (let i = 0; i < res.data.length; i++) {
-      examOptions.value.push({
-        value: res.data[i].id,
-        label: res.data[i].name,
-    });
-  };
-  })};
+const fetchExamOption = async () => {
+  const res = await getExamApi({});
+  console.log(res);
+  examOptions.value = []
+  const terms:{[key:string]:{label:string,value:string}[]} = {}
+
+  for(let item of res.data) {
+    terms[item.year] = []
+  }
+  let i = 0
+  for(let item in terms) {
+    examOptions.value.push({
+      label: item,
+      value: i,
+      list: []
+    })
+    i++
+  }
+  for(let item of res.data) {
+    for(let i in examOptions.value) {
+      if(examOptions.value[i].label === item.year) {
+        examOptions.value[i].list.push({
+          label: item.name,
+          value: item.id
+        })
+      }
+    }
+  }
+  console.log(examOptions.value);
+  if(res.data.length > 0){
+    selectedExam.value = res.data[0].id;
+  }
+}
 //定义查询功能score: 429.0, classRank: 72, gradeRank: 428, classHighest: 593, firstLine: 500 },
 const inquiry = async() => {
     originalScores.value = []
     await getGradeApi({student_id:studentId,exam_id:Number(selectedExam.value),class_id:studentClassId}).then((res:{code:number,data:any}) => { 
-      console.log(res);
 
-      originalScores.value.push({show:true,subject:'总分',label:'sum_',score:res.data[0]?.sum_,classRank:res.data[0].sumB,gradeRank:res.data[0].sumD })
-      originalScores.value.push({show:true,subject:'语文',label:'Yuwen',score:res.data[0]?.Yuwen,classRank:res.data[0].YuwenB,gradeRank:res.data[0].YuwenD })
-      originalScores.value.push({show:true,subject:'数学',label:'Shuxue',score:res.data[0]?.Shuxue,classRank:res.data[0].ShuxueB,gradeRank:res.data[0].ShuxueD })
-      originalScores.value.push({show:true,subject:'英语',label:'Yingyu',score:res.data[0]?.Yingyu,classRank:res.data[0].YingyuB,gradeRank:res.data[0].YingyuD })
+      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'总分',label:'sum_',score:res.data[0]?.sum_,classRank:res.data[0].sumB,gradeRank:res.data[0].sumD })
+      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'语文',label:'Yuwen',score:res.data[0]?.Yuwen,classRank:res.data[0].YuwenB,gradeRank:res.data[0].YuwenD })
+      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'数学',label:'Shuxue',score:res.data[0]?.Shuxue,classRank:res.data[0].ShuxueB,gradeRank:res.data[0].ShuxueD })
+      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'英语',label:'Yingyu',score:res.data[0]?.Yingyu,classRank:res.data[0].YingyuB,gradeRank:res.data[0].YingyuD })
       const selected_subject = userInfo.value.student.subject_selection
       if(selected_subject.indexOf('物') === -1) {
-        originalScores.value.push({show:false,subject:'物理',label:'Wuli',score:res.data[0]?.Wuli,classRank:res.data[0].WuliB,gradeRank:res.data[0].WuliD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'物理',label:'Wuli',score:res.data[0]?.Wuli,classRank:res.data[0].WuliB,gradeRank:res.data[0].WuliD })
       }else {
-        originalScores.value.push({show:true,subject:'物理',label:'Wuli',score:res.data[0]?.Wuli,classRank:res.data[0].WuliB,gradeRank:res.data[0].WuliD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'物理',label:'Wuli',score:res.data[0]?.Wuli,classRank:res.data[0].WuliB,gradeRank:res.data[0].WuliD })
       }
 
       if(selected_subject.indexOf('化') === -1) {
-        originalScores.value.push({show:false,subject:'化学',label:'Huaxue',score:res.data[0]?.Huaxue,classRank:res.data[0].HuaxueB,gradeRank:res.data[0].HuaxueD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'化学',label:'Huaxue',score:res.data[0]?.Huaxue,classRank:res.data[0].HuaxueB,gradeRank:res.data[0].HuaxueD })
       }else{
-        originalScores.value.push({show:true,subject:'化学',label:'Huaxue',score:res.data[0]?.Huaxue,classRank:res.data[0].HuaxueB,gradeRank:res.data[0].HuaxueD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'化学',label:'Huaxue',score:res.data[0]?.Huaxue,classRank:res.data[0].HuaxueB,gradeRank:res.data[0].HuaxueD })
       }
 
       if(selected_subject.indexOf('生') === -1) {
-        originalScores.value.push({show:false,subject:'生物',label:'Shengwu',score:res.data[0]?.Shengwu,classRank:res.data[0].ShengwuB,gradeRank:res.data[0].ShengwuD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'生物',label:'Shengwu',score:res.data[0]?.Shengwu,classRank:res.data[0].ShengwuB,gradeRank:res.data[0].ShengwuD })
       }else{
-        originalScores.value.push({show:true,subject:'生物',label:'Shengwu',score:res.data[0]?.Shengwu,classRank:res.data[0].ShengwuB,gradeRank:res.data[0].ShengwuD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'生物',label:'Shengwu',score:res.data[0]?.Shengwu,classRank:res.data[0].ShengwuB,gradeRank:res.data[0].ShengwuD })
       }
       
 
       if(selected_subject.indexOf('政') === -1) {
-        originalScores.value.push({show:false,subject:'政治',label:'Zhengzhi',score:res.data[0]?.Zhengzhi,classRank:res.data[0].ZhengzhiB,gradeRank:res.data[0].ZhengzhiD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'政治',label:'Zhengzhi',score:res.data[0]?.Zhengzhi,classRank:res.data[0].ZhengzhiB,gradeRank:res.data[0].ZhengzhiD })
       }else{
-        originalScores.value.push({show:true,subject:'政治',label:'Zhengzhi',score:res.data[0]?.Zhengzhi,classRank:res.data[0].ZhengzhiB,gradeRank:res.data[0].ZhengzhiD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'政治',label:'Zhengzhi',score:res.data[0]?.Zhengzhi,classRank:res.data[0].ZhengzhiB,gradeRank:res.data[0].ZhengzhiD })
       }
 
       if(selected_subject.indexOf('史') === -1) {
-        originalScores.value.push({show:false,subject:'历史',label:'Lishi',score:res.data[0]?.Lishi,classRank:res.data[0].LishiB,gradeRank:res.data[0].LishiD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'历史',label:'Lishi',score:res.data[0]?.Lishi,classRank:res.data[0].LishiB,gradeRank:res.data[0].LishiD })
       }else{
-        originalScores.value.push({show:true,subject:'历史',label:'Lishi',score:res.data[0]?.Lishi,classRank:res.data[0].LishiB,gradeRank:res.data[0].LishiD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'历史',label:'Lishi',score:res.data[0]?.Lishi,classRank:res.data[0].LishiB,gradeRank:res.data[0].LishiD })
       }
 
       if(selected_subject.indexOf('地') === -1) {
-        originalScores.value.push({show:false,subject:'地理',label:'Dili',score:res.data[0]?.Dili,classRank:res.data[0].DiliB,gradeRank:res.data[0].DiliD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'地理',label:'Dili',score:res.data[0]?.Dili,classRank:res.data[0].DiliB,gradeRank:res.data[0].DiliD })
       }else{
-        originalScores.value.push({show:true,subject:'地理',label:'Dili',score:res.data[0]?.Dili,classRank:res.data[0].DiliB,gradeRank:res.data[0].DiliD })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'地理',label:'Dili',score:res.data[0]?.Dili,classRank:res.data[0].DiliB,gradeRank:res.data[0].DiliD })
       }
       showTable.value = true;
     })
     
-    getPassLine({exam_id:Number(selectedExam.value)}).then((res) => {
+    getPassLine({exam_id:Number(selectedExam.value)}).then(async (res) => {
       if(res.data.length > 1) {
         if(userInfo.value.student.subject_selection.indexOf('物') !== -1) {
           for(let item of res.data) {
@@ -302,15 +332,19 @@ const inquiry = async() => {
         originalScores.value[item].firstLine = pass_line.value[originalScores.value[item].label]
       }
 
-      console.log(originalScores.value)
-
+      resetScores();
+      await submit();
+      for(let item in simulatedScores.value) {
+        originalScores.value[item].classHighest = simulatedScores.value[item].classHighest
+      }
     }) 
 };
 // 提交
-const submit = () =>{
-  message.loading('正在模拟成绩，请稍等').then(()=>{
-    postSimulateGrade({
-      exam_id:  Number(selectedExam.value),
+const submit = async () => {
+  loading.value = true;
+  try {
+    const res = await postSimulateGrade({
+      exam_id: Number(selectedExam.value),
       class_id: studentClassId,
       school_id: userInfo.value.student.school,
       Yuwen: simulatedScores.value[1].score,
@@ -321,7 +355,7 @@ const submit = () =>{
       /** 数学 */
       Shuxue: simulatedScores.value[2].score,
       /** 生物 */
-      Shengwu: simulatedScores.value[5].score,
+      Shengwu: simulatedScores.value[6].score,
       /** 历史 */
       Lishi: simulatedScores.value[8].score,
       /** 地理 */
@@ -329,34 +363,54 @@ const submit = () =>{
       /** 政治 */
       Zhengzhi: simulatedScores.value[7].score,
       /** 化学 */
-      Huaxue: simulatedScores.value[6].score,
+      Huaxue: simulatedScores.value[5].score,
       /** 总分 */
       sum_: simulatedScores.value[0].score,
-    }).then((res)=> {
-      console.log(res)
-      for(let item in simulatedScores.value) {
-        
-        simulatedScores.value[item].classRank = res.data[simulatedScores.value[item].label].class_rank
-        simulatedScores.value[item].gradeRank = res.data[simulatedScores.value[item].label].school_rank
-        simulatedScores.value[item].classHighest = res.data[simulatedScores.value[item].label].top_score
+    });
+    // 更新数据
+    for(let item in simulatedScores.value) {
+      if(simulatedScores.value[item].show) {
+        simulatedScores.value[item].classRank = res.data[simulatedScores.value[item].label].class_rank;
+        simulatedScores.value[item].gradeRank = res.data[simulatedScores.value[item].label].school_rank;
+        simulatedScores.value[item].classHighest = res.data[simulatedScores.value[item].label].top_score;
       }
-    })
-  }).then(()=>message.success('模拟成绩完成！', 2.5))
-
+      
+    }
+    message.success('模拟考试成绩获取成功');
+  } catch (error) {
+    message.error('模拟考试成绩获取失败'+error);
+  }finally {
+    loading.value = false;
+  }
 }
 </script>
 
 <style scoped>
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-content {
+  text-align: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+}
 .grade-simulation-page {
   padding: 20px;
   background-color: #f5f5f5;
   height: 100vh;
-  overflow-y: auto;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  overflow-x: auto; /* 添加这行 */
+
 }
 
 .header {
@@ -385,20 +439,26 @@ h2 {
   flex-grow: 1;
   text-align: center;
 }
-
-.filter-section {
+.filter {
+  min-width: 300px;
   background-color: white;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
+  overflow: auto;
+  
+}
+.filter-section {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  flex-wrap:wrap;
 }
 
 .filter-item {
   display: flex;
+  flex: auto;
   align-items: center;
   gap: 10px;
 }
@@ -425,9 +485,7 @@ h2 {
 .input-select {
   flex-grow: 1;
   padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-sizing: border-box;
+
   text-align: center; /* 居中处理 */
 }
 
@@ -453,6 +511,7 @@ h2 {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
+  overflow-x: auto;
   width: 100%;
 }
 

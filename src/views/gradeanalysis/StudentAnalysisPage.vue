@@ -1,15 +1,13 @@
 <template>
   <div class="student-analysis-page">
     <a-button class="back-button" @click="goBack">返回</a-button>
-    <div class="selector">
-      <div class="exam-list-container">
-        <span style="">考试选择：</span>
-        <a-checkbox-group  v-model:value="examListSelected" :options="examList" class="exam-list-group" />
-        
+    <a-space class="selector">
+      <div class="select-item">
+        <span style="">学期选择：</span>
+        <a-select :options="termList" v-model:value="termSelected"></a-select>
       </div>
       <a-button type="primary" style="display: flex;" @click="submit">确定</a-button>  
-    </div>
-    
+    </a-space>
     <div class="tables-container" v-if="!isLoading">
       <!-- 考试统计表格区域 -->
       <div class="table-section">
@@ -96,6 +94,12 @@ const examStatsColumns: ColumnType[] = [
     }
   }
 ];
+
+const default_term = [{label:'所有成绩',value:'all'}]
+const termList = ref<{label:string,value:string}[]>(default_term)
+const termSelected = ref(default_term[0].label)
+
+
 // 获取学生信息
 const fetchStudentInfo = async () => {
   try {
@@ -122,7 +126,7 @@ const fetchStudentInfo = async () => {
 };
 
 const fetchExamList = async () => { 
-  console.log(userInfo.value)
+
   const studentId = userInfo.value.role;
   if(!studentId) {
     message.error('用户绑定的学生id不存在')
@@ -131,14 +135,28 @@ const fetchExamList = async () => {
   const res = await getStudentExamApi({student_uid: studentId})
   
   examList.value = []
-
+  termList.value = default_term
   if (res.code === 200) {
     for(let item in res.data) {
       examList.value.push({
         value: res.data[item][0].id,
-        label: res.data[item][0].name
+        label: res.data[item][0].name,
+        year: res.data[item][0].year,
       })
       examListSelected.value.push(res.data[item][0].id)
+    }
+    // 统计学生有几个学期的成绩，放在termList.value中
+    for(let item of res.data) {
+      const year = item[0].year
+      if(!termList.value.some(term => term.value === year)) {
+        termList.value.push({
+          value: year,
+          label: year
+        })
+      }
+      if(termList.value.length > 0) {
+        termSelected.value = termList.value[0].value
+      }
     }
   } else {
     message.error(res.message);
@@ -151,9 +169,11 @@ const submit = () => {
     message.error('获取学生id失败！');
     return
   }
-  console.log(examListSelected.value)
+  examListSelected.value = []
+
+  termSelected.value === 'all' ? examListSelected.value = examList.value.map(item => item.value):examListSelected.value = examList.value.filter(item => item.year === termSelected.value).map(item => item.value)
+  
   postPassLineAnalysis({ student_id: userInfo.value.role, exam_ids: examListSelected.value}).then((res)=>{
-    console.log(res.data)
     examAnalysisList.value = []
     for(let item in res.data) {
       if(item in subjects_map.value) {
@@ -165,7 +185,6 @@ const submit = () => {
         })
       }
     }
-    console.log(examAnalysisList.value)
   })
 }
 
@@ -212,6 +231,7 @@ onMounted(async() => {
   height: 100%; /* Make the container fill the height */
   overflow-y: auto; /* Add vertical scrolling */
   box-sizing: border-box; /* Include padding in height calculation */
+  background-color: #f5f5f5;
 }
 
 .back-button {
@@ -227,6 +247,10 @@ onMounted(async() => {
   display: flex; /* 使用 flexbox 实现并列布局 */
   gap: 20px; /* 表格之间的间隔 */
   margin-top: 40px; /* Add margin to prevent overlap with button */
+  background-color: white;
+  padding: 20px;
+  min-width: 300px;
+  border-radius: 10px;
 }
 
 .table-section {
@@ -263,7 +287,11 @@ onMounted(async() => {
 
 .selector {
   margin-top: 30px;
-
+  min-width: 300px;
+  background-color: white;
+  width: 100%;
+  padding: 20px;
+  border-radius: 10px;
 }
 .exam-list-container {
   display: flex;
