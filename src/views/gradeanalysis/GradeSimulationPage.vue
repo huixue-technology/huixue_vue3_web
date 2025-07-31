@@ -8,11 +8,6 @@
       <div class="filter-section">
         <div class="filter-item">
             <label>学期:</label>
-            <!-- <select v-model="selectedSemester" >
-              <option value="">请选择学期</option>
-              <option value="本学期">本学期</option>
-              <option value="上学期">上学期</option>
-            </select> -->
             <a-select v-model:value="selectedSemester" class="input-select" :options="examOptions"></a-select>
           </div>
           <div class="filter-item">

@@ -192,7 +192,7 @@ const handleOk2 = () =>{
 onMounted(() => {
   getSchoolApi({}).then((res: any) => {
     schoolList.value = res.data;
-    schoolId.value = schoolList.value[0].id;
+    schoolId.value = schoolList.value[0].school_id;
     schoolName.value = schoolList.value[0].name;
     getClassesApi({ school_id: schoolId.value }).then((res: any) => {
       classList.value = res.data;
