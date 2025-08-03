@@ -37,6 +37,21 @@ export async function postStudentApi(
   });
 }
 
+/** 批量删除学生 DELETE /api/student/ */
+export async function deleteStudentApi(
+  body: API.BatchDeleteStudent,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/student/", {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
 /** 获取指定的学生记录详情 GET /api/student/${param0} */
 export async function getStudentDetailApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
@@ -66,20 +81,6 @@ export async function putStudentDetailApi(
     },
     params: { ...queryParams },
     data: body,
-    ...(options || {}),
-  });
-}
-
-/** 删除指定的学生记录 DELETE /api/student/${param0} */
-export async function deleteStudentDetailApi(
-  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.deleteStudentDetailApiParams,
-  options?: { [key: string]: any }
-) {
-  const { student_uid: param0, ...queryParams } = params;
-  return request<any>(`/api/student/${param0}`, {
-    method: "DELETE",
-    params: { ...queryParams },
     ...(options || {}),
   });
 }

@@ -1,4 +1,23 @@
 declare namespace API {
+  type BatchDelete = {
+    /** 要删除的学校ID */
+    school_id: string;
+    /** 要删除的考试ID */
+    exam_id: number;
+    /** 要删除的ID列表 */
+    student_ids: number[];
+  };
+
+  type BatchDeleteStudent = {
+    /** 要删除的学生ID列表 */
+    student_ids: number[];
+  };
+
+  type BatchDeleteTeacher = {
+    /** 教师ID列表 */
+    teacher_ids: string[];
+  };
+
   type BindStatus = {
     /** 用户ID */
     id: string;
@@ -37,12 +56,9 @@ declare namespace API {
     school_id: string;
   };
 
-  type deleteStudentDetailApiParams = {
-    student_uid: string;
-  };
-
-  type deleteTeacherDetailApiParams = {
-    teacher_uid: string;
+  type deleteTeacherBindApiParams = {
+    /** 班级id */
+    class: number;
   };
 
   type deleteUserDetailApiParams = {
@@ -79,10 +95,15 @@ declare namespace API {
     /** 班主任（可选） */
     header?: number;
     /** 学校ID（可选） */
-    school_id?: number;
+    school_id?: string;
   };
 
   type getClassesDetailApiParams = {
+    class_id: number;
+  };
+
+  type getClassExamParams = {
+    /** 班级ID */
     class_id: number;
   };
 
@@ -209,6 +230,15 @@ declare namespace API {
 
   type getStudentExamApiParams = {
     student_uid: string;
+  };
+
+  type getStudentGradeRankParams = {
+    /** 班级id */
+    class_id: string;
+    /** 选中考试id */
+    selected_exam_id: string;
+    /** 学生id */
+    student_id: string;
   };
 
   type getTeacherApiParams = {
@@ -401,8 +431,8 @@ declare namespace API {
   };
 
   type PassLineDelete = {
-    /** 考试id */
-    exam_id: number;
+    /** 考试id列表 */
+    exam_ids: number[];
   };
 
   type postCompareRankMultiExamParams = {
@@ -412,6 +442,13 @@ declare namespace API {
     selected_exam_id: number;
     /** 需要对比的考试id列表例："20250522,20250524" */
     compare_exam_ids: string;
+  };
+
+  type postTeacherBindApiParams = {
+    /** 教师ID */
+    teacher_id: number;
+    /** 班级id */
+    class_id: number;
   };
 
   type postUploadParams = {
@@ -513,6 +550,15 @@ declare namespace API {
     school_id?: string;
   };
 
+  type UpdateTeacher = {
+    /** 教师姓名 */
+    name?: string;
+    /** 所教科目 */
+    subject?: string;
+    /** 学校ID */
+    school_id?: string;
+  };
+
   type User = {
     /** 用户ID */
     id?: string;
@@ -521,7 +567,7 @@ declare namespace API {
     /** 手机号 */
     phone?: string;
     /** 密码 */
-    password: string;
+    password?: string;
     /** 微信ID */
     wxid?: string;
     /** 学校ID */

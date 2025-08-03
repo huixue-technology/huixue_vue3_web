@@ -81,7 +81,7 @@ export async function putPassLine(
   });
 }
 
-/** 删除对应考试的一本线 DELETE /api/analysis/pass_line */
+/** 批量删除对应考试的分数线 DELETE /api/analysis/pass_line */
 export async function deletePassLine(
   body: API.PassLineDelete,
   options?: { [key: string]: any }
