@@ -94,6 +94,21 @@ export async function deleteGradeDetailApi(
   });
 }
 
+/** 班级pk，返回前三名，各科平均分，各科最高分，一本线通过率 GET /api/grade/class_compare */
+export async function getClassCompare(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getClassCompareParams,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/grade/class_compare", {
+    method: "GET",
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
 /** 获取指定班级的考试列表 GET /api/grade/class_exam */
 export async function getClassExam(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
@@ -116,6 +131,36 @@ export async function getClassGrade(
   options?: { [key: string]: any }
 ) {
   return request<any>("/api/grade/class_grade", {
+    method: "GET",
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
+/** 获取指定班级指定考试分数列表 GET /api/grade/class_score */
+export async function getClassScore(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getClassScoreParams,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/grade/class_score", {
+    method: "GET",
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
+/** 获取指定年级的班级列表 GET /api/grade/same_grade_class_list */
+export async function getSameGradeClassList(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getSameGradeClassListParams,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/grade/same_grade_class_list", {
     method: "GET",
     params: {
       ...params,

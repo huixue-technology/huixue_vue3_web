@@ -2,6 +2,21 @@
 /* eslint-disable */
 import request from "umi-request";
 
+/** 获取班级分析 GET /api/analysis/class_analysis */
+export async function getClassAnalysis(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getClassAnalysisParams,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/analysis/class_analysis", {
+    method: "GET",
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
 /** 与多次考试成绩排名对比分析例： POST /api/analysis/compare_rank_multi_exam */
 export async function postCompareRankMultiExam(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
@@ -107,21 +122,6 @@ export async function postPassLineAnalysis(
       "Content-Type": "application/json",
     },
     data: body,
-    ...(options || {}),
-  });
-}
-
-/** 获取某次考试班级的各科最高分 GET /api/analysis/simulate_grade */
-export async function getSimulateGrade(
-  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.getSimulateGradeParams,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/analysis/simulate_grade", {
-    method: "GET",
-    params: {
-      ...params,
-    },
     ...(options || {}),
   });
 }

@@ -85,6 +85,22 @@ declare namespace API {
     exam_paper_ids?: string;
   };
 
+  type getClassAnalysisParams = {
+    /** 班级id */
+    class_id: number;
+    /** 考试id */
+    exam_id: number;
+  };
+
+  type getClassCompareParams = {
+    /** 班级ID */
+    class_id: number;
+    /** 考试ID */
+    exam_id: number;
+    /** 需要对比的班级ID */
+    compare_class_id: string;
+  };
+
   type getClassesApiParams = {
     /** 页码 */
     page?: number;
@@ -112,6 +128,13 @@ declare namespace API {
     class_id: string;
     /** 选中考试id */
     selected_exam_id: string;
+  };
+
+  type getClassScoreParams = {
+    /** 班级ID */
+    class_id: number;
+    /** 考试ID */
+    exam_id: number;
   };
 
   type getCompareWithStudentParams = {
@@ -179,6 +202,13 @@ declare namespace API {
     size?: number;
   };
 
+  type getSameGradeClassListParams = {
+    /** 学校id */
+    school_id: string;
+    /** 对应年级 */
+    grade: string;
+  };
+
   type getSchoolApiParams = {
     /** 页码 */
     page?: number;
@@ -192,15 +222,6 @@ declare namespace API {
 
   type getSchoolDetailApiParams = {
     school_id: string;
-  };
-
-  type getSimulateGradeParams = {
-    /** 考试id */
-    exam_id: number;
-    /** 考试班级 */
-    class_id: number;
-    /** 考试学校 */
-    school_id: number;
   };
 
   type getStudentApiParams = {
