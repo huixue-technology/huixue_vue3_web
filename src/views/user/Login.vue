@@ -80,7 +80,7 @@ const onFinish = (values: any) => {
     // 仍然保留token在localStorage中，方便API请求使用
     localStorage.setItem('token', res.data.token);
      const user = userStore.getUserInfo()
-     console.log()
+     console.log(user)
      if(user['teacher'] !== null) {
        router.push('/teacher_info')
      }else{
