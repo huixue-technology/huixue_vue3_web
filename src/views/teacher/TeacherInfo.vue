@@ -94,11 +94,7 @@ const unbind = async () => {
 
 <template>
   <div class="teacher-info-container">
-    <br/>
-    <br/>
-    <h3>教师信息展示</h3>
-    <br/>
-    <br/>
+    <h3 style="margin-top: 50px;">教师信息展示</h3>
     <a-descriptions bordered size="middle" style="min-width: 350px">
       <template #extra>
 

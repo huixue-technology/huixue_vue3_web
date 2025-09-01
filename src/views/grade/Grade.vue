@@ -11,7 +11,7 @@
         <h2>选择查询考试：</h2>
        <a-select
             placeholder="请选择考试"
-            style="width: auto"
+            style="width: auto;min-width: 100px"
             @change="handleChange"
             v-model:value="currentExamId"
         >
@@ -42,6 +42,7 @@ import { ref, onMounted, onUnmounted, onBeforeMount } from 'vue';
 import examAnalysis from './components/ExamAnalysis.vue'
 import { useUserStore } from '@/store/modules/user';
 import router from '@/router';
+import { message } from 'ant-design-vue';
 // 计算距离高考的天数
 const calculateDaysUntilExam = () => {
     const today = new Date();
@@ -143,6 +144,9 @@ onBeforeMount(() => {
             const gradeData = res.data[0];
             handleGradeDetail(gradeData)
         })
+        }else{
+            message.error('似乎还没有参加一场考试？')
+            return
         }
         
         // 获取考试成绩

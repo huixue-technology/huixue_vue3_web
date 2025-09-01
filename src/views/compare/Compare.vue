@@ -21,6 +21,7 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import VChart from 'vue-echarts'
 import { getPassLine, getUpDownDetailAnalysis } from '@/servers/api/analysis'
+import { message } from 'ant-design-vue'
 
 // 1. 班级、学期、学生列表
 const studentList = ref<any[]>([])
@@ -150,6 +151,10 @@ const generateTable = async (examData : any[], types: Object)=>{
   }
 
   for(let item of examData) {
+    if(item.exam === undefined) {
+      message.error('似乎还没有参加一场考试');
+      return
+    }
     const examName = item.exam[0].name;
     console.log(item)
     // 获取该考试的一本线分数
