@@ -222,7 +222,9 @@ const formattedMainScores = computed(() => {
   classAnalysisData.value.main_score_section.forEach((subjectObj: any) => {
     Object.entries(subjectObj).forEach(([enSubject, sections]: [string, any[]]) => {
       const cnSubject = subjectMap[enSubject] || enSubject;
-      result[cnSubject] = sections.map((section: any) => {
+      // 对分数段进行倒序处理
+      const reversedSections = [...sections].reverse();
+      result[cnSubject] = reversedSections.map((section: any) => {
         const range = Object.keys(section)[0];
         return {
           range,
@@ -240,7 +242,9 @@ const formattedSelectScores = computed(() => {
   classAnalysisData.value.select_score_section.forEach((subjectObj: any) => {
     Object.entries(subjectObj).forEach(([enSubject, sections]: [string, any[]]) => {
       const cnSubject = subjectMap[enSubject] || enSubject;
-      result[cnSubject] = sections.map((section: any) => {
+      // 对分数段进行倒序处理
+      const reversedSections = [...sections].reverse();
+      result[cnSubject] = reversedSections.map((section: any) => {
         const range = Object.keys(section)[0];
         return {
           range,
@@ -254,7 +258,9 @@ const formattedSelectScores = computed(() => {
 
 // 格式化分数段数据
 const formattedScoreSections = computed(() => {
-  return classAnalysisData.value.sum_score_section.map((record: any, index: number) => {
+  // 对总分分数段进行倒序处理
+  const reversedSections = [...classAnalysisData.value.sum_score_section].reverse();
+  return reversedSections.map((record: any, index: number) => {
     const key = Object.keys(record)[0] || '';
     const value = Object.values(record)[0] ?? 0;
     return { key: index, range: key, count: value };

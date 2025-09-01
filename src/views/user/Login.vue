@@ -82,6 +82,7 @@ const onFinish = (values: any) => {
      const user = userStore.getUserInfo()
      console.log(user)
      if(user['teacher'] !== null) {
+		 console.log(user['teacher'])
        router.push('/teacher_info')
      }else{
        router.push('/grade');
