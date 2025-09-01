@@ -81,8 +81,8 @@ const onFinish = (values: any) => {
     localStorage.setItem('token', res.data.token);
      const user = userStore.getUserInfo()
      console.log(user)
-     if(user['teacher'] !== null) {
-		 console.log(user['teacher'])
+     if(user['teacher'] !== undefined) {
+      console.log(user['teacher'])
        router.push('/teacher_info')
      }else{
        router.push('/grade');
