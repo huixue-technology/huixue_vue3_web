@@ -17,13 +17,21 @@ import { useUserStore } from '@/store';
 const current = ref<string[]>(['grade']);
 const userStore = useUserStore();
 const { logout } = useLogout();
+onMounted(()=>{
 
+})
 const items =  computed<MenuProps['items']>(()=>{
   const user = userStore.getUserInfo();
   const menuItems: MenuProps['items'] = [];
 
   if (!user) return menuItems;
-
+    // 获取用户信息
+  const u = userStore.getUserInfo();
+  console.log(u)
+  if(u.role === null) {
+    router.push('/user/login')
+    return
+  }
   if (user.role.length !== 10) {
     menuItems.push(
         {

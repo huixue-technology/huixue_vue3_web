@@ -59,6 +59,63 @@
          </a-input>
       </a-form-item>
 
+      <!-- 角色绑定选择器 -->
+      <a-form-item
+         label="所在学校"
+         name="schoolName"
+         :rules="[{ required: true, message: '请选择学校!' }]"
+      >
+         <a-select
+           v-model:value="formparams.schoolName"
+           @change="onSchoolChange"
+           style="width: 100%"
+           placeholder="请选择学校"
+           :loading="schoolList.length === 0"
+         >
+           <a-select-option v-for="school in schoolList" :key="school.id" :value="school.name">
+             {{ school.name }}
+           </a-select-option>
+         </a-select>
+      </a-form-item>
+       
+      <a-form-item
+         label="所在班级"
+         name="classId"
+         :rules="[{ required: true, message: '请选择班级!' }]"
+      >
+         <a-select
+           v-model:value="formparams.classId"
+           @change="onClassChange"
+           style="width: 100%"
+           placeholder="请选择班级"
+           :loading="classList.length === 0 && formparams.schoolName"
+           :disabled="!formparams.schoolName"
+         >
+           <a-select-option v-for="cls in classList" :key="cls.id" :value="cls.id">
+             {{ cls.name }}
+           </a-select-option>
+         </a-select>
+      </a-form-item>
+       
+      <a-form-item
+         label="学生姓名"
+         name="stuName"
+         :rules="[{ required: true, message: '请选择学生!' }]"
+      >
+         <a-select
+           v-model:value="formparams.stuName"
+           style="width: 100%"
+           @change="onStudentChange"
+           placeholder="请选择学生"
+           :loading="studentList.length === 0 && formparams.classId"
+           :disabled="!formparams.classId"
+         >
+           <a-select-option v-for="student in studentList" :key="student.id" :value="student.name">
+             {{ student.name }}
+           </a-select-option>
+         </a-select>
+      </a-form-item>
+
 
       <a-form-item>
          <a-button :disabled="disabled" type="primary" html-type="submit" class="login-form-button">
@@ -72,9 +129,12 @@
 
 </template>
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
+import { reactive, computed, ref, onMounted } from 'vue'
 import { UserOutlined, LockOutlined,SafetyOutlined,KeyOutlined,MobileOutlined } from '@ant-design/icons-vue';
 import { postUserApi, postUserLogin } from '@/servers/api/user';
+import { getSchoolApi } from '@/servers/api/school';
+import { getClassesApi } from '@/servers/api/classes';
+import { getStudentApi } from '@/servers/api/student';
 import router from '@/router';
 import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
@@ -84,33 +144,239 @@ interface FormParams {
   password: string
   name: string
   phone: string
+  schoolName: string
+  classId: number
+  stuName: string
+  role: string
 }
 
+// 扩展的绑定状态类型，包含uid
+interface ExtendedBindStatus {
+  id: string
+  school: string
+  class_id: string
+  stuName: string
+  uid: string
+}
+
+// 学校、班级、学生选择相关状态
+const schoolList = ref<any[]>([]) // 学校列表
+const classList = ref<any[]>([]) // 班级列表  
+const studentList = ref<any[]>([]) // 学生列表
+const schoolId = ref() // 当前选中学校ID
+const schoolName = ref('') // 当前选中学校名称
+const classId = ref(0) // 当前选中班级ID
+const stuName = ref('') // 当前选中学生姓名
+
 const disabled = computed(() => {
-  return !(formparams.email && formparams.password && formparams.name && formparams.phone);
+  return !(formparams.email && formparams.password && formparams.name && formparams.phone && formparams.schoolName && formparams.classId && formparams.stuName);
 });
 
 const formparams = reactive<FormParams>({
   email: '',
   password: '',
   name:'',
-  phone:''
+  phone:'',
+  schoolName: '',
+  classId: 0,
+  stuName: '',
+  role:''
 })
 
 const userStore = useUserStore();
 
-const onFinish = (values: any) => {
-   postUserApi(formparams).then((res) => { 
-      console.log(res)
-      message.success('注册成功！');
+const onFinish = async (values: any) => {
+  try {
+    // 先注册用户
+    const status_id = await getStudentApi({class_id: formparams.classId, school: formparams.schoolName,name: formparams.stuName})
+    formparams.role = status_id.data[0].uid;
+    console.log('status_id:', status_id)
+    const registerRes = await postUserApi(formparams);
+    if (registerRes.code !== 200) {
+      message.error('注册失败！');
+      return;
+    }
+    
+    console.log('注册成功:', registerRes);
+    message.success('注册成功！');
+    
+    // 注册成功后自动登录
+    const loginRes = await postUserLogin({
+      email: formparams.email,
+      password: formparams.password
+    });
+    
+    if (loginRes.code !== 200) {
+      message.error('自动登录失败，请手动登录');
       router.push('/user/login');
-  })
+      return;
+    }
+    
+    // 存储用户信息和token
+    localStorage.setItem('user', JSON.stringify(loginRes.data));
+    localStorage.setItem('token', loginRes.data.token);
+    userStore.setUserInfo({
+      ...loginRes.data,
+      token: loginRes.data.token
+    });
+    
+    // 进行角色绑定
+    // 首先获取选中学生的完整信息，特别是uid
+    const selectedStudent = studentList.value.find(student => student.name === formparams.stuName);
+    if (!selectedStudent) {
+      message.error('未找到选中的学生信息');
+      router.push('/grade');
+      return;
+    }
+    
+    console.log('选中的学生信息:', selectedStudent);
+    
+    const bindData: ExtendedBindStatus = {
+      id: loginRes.data.id,
+      school: formparams.schoolName,
+      class_id: String(formparams.classId),
+      stuName: formparams.stuName,
+      uid: selectedStudent.uid // 添加学生的uid
+    };
+    
+    // 调用角色绑定接口
+    const { putUserBindStatus } = await import('@/servers/api/user');
+    
+    // 首先尝试使用原有的绑定接口（不包含uid）
+    const basicBindData = {
+      id: loginRes.data.id,
+      school: formparams.schoolName,
+      class_id: String(formparams.classId),
+      stuName: formparams.stuName
+    };
+    
+    const bindRes = await putUserBindStatus(basicBindData);
+    console.log('绑定结果:', bindRes);
+    console.log('学生UID:', selectedStudent.uid);
+    
+    // TODO: 如果需要单独保存uid，可以在这里添加额外的API调用
+    
+    if (bindRes.success || bindRes.code === 200) {
+      message.success('注册并绑定成功！');
+      
+      // 根据用户类型跳转
+      const user = userStore.getUserInfo();
+      if (user['teacher'] !== undefined) {
+        router.push('/teacher_info');
+      } else {
+        router.push('/grade');
+      }
+    } else {
+      message.error('角色绑定失败，请在个人中心重新绑定');
+      router.push('/grade');
+    }
+  } catch (error) {
+    console.error('注册或绑定过程出错:', error);
+    message.error('注册失败，请重试');
+  }
 }
 
 const onFinishFailed = (errorInfo: any) => {
   console.log('Failed:', errorInfo)
   message.error('注册失败！');
 }
+
+// 学校选择事件处理
+const onSchoolChange = async (value: string) => {
+  formparams.schoolName = value;
+  schoolName.value = value;
+  // 根据学校名称查找学校ID
+  const selectedSchool = schoolList.value.find((item: any) => item.name === value);
+  schoolId.value = selectedSchool ? selectedSchool.id : null;
+  
+  // 重置班级和学生选择
+  classList.value = [];
+  studentList.value = [];
+  formparams.classId = 0;
+  classId.value = 0;
+  formparams.stuName = '';
+  stuName.value = '';
+  
+  if (!formparams.schoolName) {
+    return; // 静默返回，不显示错误信息
+  }
+  
+  try {
+    // 使用学校名称作为school_id参数
+    const res = await getClassesApi({ school_id: formparams.schoolName });
+    if (res.code === 200) {
+      classList.value = res.data;
+      formparams.classId = classList.value.length > 0 ? classList.value[0].id : 0;
+      classId.value = formparams.classId;
+      
+      // 如果有班级，自动加载第一个班级的学生
+      if (formparams.classId > 0) {
+        await onClassChange(formparams.classId);
+      }
+    } else {
+      message.error(res.message || '获取班级列表失败');
+    }
+  } catch (error) {
+    console.error('获取班级列表错误:', error);
+    message.error('获取班级列表失败');
+  }
+};
+
+// 班级选择事件处理
+const onClassChange = async (value: number) => {
+  formparams.classId = value;
+  classId.value = value;
+  
+  // 重置学生选择
+  studentList.value = [];
+  formparams.stuName = '';
+  stuName.value = '';
+  
+  if (!value || !formparams.schoolName) {
+    return; // 静默返回，不显示错误信息
+  }
+  
+  try {
+    const res = await getStudentApi({ class_id: value, school: formparams.schoolName, size: 100 });
+    if (res.code === 200) {
+      studentList.value = res.data;
+      formparams.stuName = studentList.value.length > 0 ? studentList.value[0].name : '';
+      stuName.value = formparams.stuName;
+    } else {
+      message.error(res.message || '获取学生列表失败');
+    }
+  } catch (error) {
+    console.error('获取学生列表错误:', error);
+    message.error('获取学生列表失败');
+  }
+};
+
+// 学生选择事件处理
+const onStudentChange = (value: string) => {
+  formparams.stuName = value;
+  stuName.value = value;
+};
+
+// 加载初始数据
+const loadInitialData = async () => {
+  try {
+    const res = await getSchoolApi({});
+    if (res.code === 200) {
+      schoolList.value = res.data;
+      console.log('学校列表加载成功:', schoolList.value.length, '个学校');
+    } else {
+      message.error('获取学校列表失败');
+    }
+  } catch (error) {
+    console.error('加载初始数据错误:', error);
+    message.error('加载数据失败');
+  }
+};
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadInitialData();
+});
 
 </script>
 
