@@ -23,6 +23,7 @@ const {logout} = useLogout();
 
 onMounted(async () => {
   const teacher_info = user.getUserInfo();
+  console.log(teacher_info['teacher'])
   if (teacher_info.bind_state) {
     show.value = {
       bindState: teacher_info.bind_state,
