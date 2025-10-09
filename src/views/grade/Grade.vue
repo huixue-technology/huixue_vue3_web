@@ -158,14 +158,14 @@ const handleGradeDetail = (gradeData:API.Grade) => {
     tableData.value = []
     currentExamData.value = gradeData
     tableData.value = [
-    // {
-    //     name: '总分',
-    //     sum_: gradeData.sum_ || 0,
-    //     sumB: gradeData.sumB || 0,
-    //     sumD: gradeData.sumD || 0,
-    //     maxB: gradeData.sum_ || 0, // Assuming maxB is total score for now
-    //     passLine: 0,
-    // },
+    {
+        name: '总分',
+        sum_: gradeData.sum_ || 0,
+        sumB: gradeData.sumB || 0,
+        sumD: gradeData.sumD || 0,
+        maxB: gradeData.sum_ || 0, // Assuming maxB is total score for now
+        passLine: 0,
+    },
     {
         name: '语文',
         sum_: gradeData.Yuwen || 0,
@@ -191,7 +191,7 @@ const handleGradeDetail = (gradeData:API.Grade) => {
         passLine: 0,
     }
 ];
-if (gradeData.Wuli != null) {
+if (gradeData.Wuli != null &&  gradeData.Dili!=0) {
     tableData.value.push({
         name: '物理',
         sum_: gradeData.Wuli || 0,
@@ -201,7 +201,7 @@ if (gradeData.Wuli != null) {
         passLine: 0,
     });
 }
-if (gradeData.Huaxue != null) {
+if (gradeData.Huaxue != null &&  gradeData.Huaxue!=0) {
     tableData.value.push({
         name: '化学',
         sum_: gradeData.Huaxue || 0,
@@ -211,7 +211,7 @@ if (gradeData.Huaxue != null) {
         passLine: 0,
     })
 }
-if (gradeData.Shengwu!= null) {
+if (gradeData.Shengwu!= null &&  gradeData.Shengwu!=0) {
     tableData.value.push({
         name: '生物',
         sum_: gradeData.Shengwu || 0,
@@ -221,7 +221,7 @@ if (gradeData.Shengwu!= null) {
         passLine: 0,
     });
 }
-if (gradeData.Lishi != null) {
+if (gradeData.Lishi != null &&  gradeData.Lishi!=0) {
     tableData.value.push({
         name: '历史',
         sum_: gradeData.Lishi || 0,
@@ -231,7 +231,7 @@ if (gradeData.Lishi != null) {
         passLine: 0,
     });
 }
-if (gradeData.Dili!= null) {
+if (gradeData.Dili!= null &&  gradeData.Dili!=0) {
     tableData.value.push({
         name: '地理',
         sum_: gradeData.Dili || 0,
@@ -241,7 +241,7 @@ if (gradeData.Dili!= null) {
         passLine: 0,
     });
 }
-if (gradeData.Zhengzhi != null) {
+if (gradeData.Zhengzhi != null && gradeData.Zhengzhi!=0) {
         tableData.value.push({
         name: '政治',
         sum_: gradeData.Zhengzhi || 0,

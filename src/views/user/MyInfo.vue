@@ -54,7 +54,7 @@
   <div>
     <a-modal v-model:open="bindOpen" title="绑定学生信息" @ok="handleOk2" >
       <a-form >
-        <a-form-item label="姓名">
+        <a-form-item label="昵称">
           <a-input v-model:value="name" placeholder="" disabled />
         </a-form-item>
         <a-form-item  label="邮箱">
@@ -67,11 +67,24 @@
             style="width: 100%"
             placeholder="请选择学校"
           >
-            <a-select-option v-for="school in schoolList" :key="school.name" :value="school.id">
+            <a-select-option v-for="school in schoolList" :key="school.name" :value="school.school_id">
               {{ school.name }}
             </a-select-option>
           </a-select>
         </a-form-item>
+        <!-- 增加年级选项 -->
+        <a-form-item label="年级">
+          <a-select
+            v-model:value="gradeId"
+            @change="onGradeChange"
+            style="width: 100%"
+            placeholder="请选择年级"
+          >
+            <a-select-option v-for="grade in gradeList" :key="grade">
+              {{ grade }}
+            </a-select-option>
+          </a-select>
+         </a-form-item>
         <a-form-item label="所在班级">
           <a-select
             v-model:value="classId"
@@ -115,13 +128,16 @@ import { getSchoolApi } from '@/servers/api/school'; // 新增
 import { getClassesApi } from '@/servers/api/classes'; // 新增
 import { getStudentApi } from '@/servers/api/student'; // 新增
 import { useLogout } from '@/composables/useLogout';
+import grade from '@/router/modules/grade';
 const size = ref<DescriptionsProps['size']>('default');
 const schoolList = ref<any[]>([]); // 新增 学校列表
 const classList = ref<any[]>([]); // 新增 班级列表
+const gradeList = ref<any[]>([]); // 新增 年级列表
 const studentList = ref<any[]>([]); // 新增 学生列表
 const schoolId = ref(); // 新增 当前选中学校
 const schoolName = ref();
 const classId = ref(0); // 新增 当前选中班级
+const gradeId = ref('0');
 
 const onChange = (e: any) => {
   console.log('size checked', e.target.value);
@@ -191,36 +207,57 @@ const handleOk2 = () =>{
 
 onMounted(() => {
   getSchoolApi({}).then((res: any) => {
+
     schoolList.value = res.data;
     schoolId.value = schoolList.value[0].school_id;
     schoolName.value = schoolList.value[0].name;
+    console.log(schoolId.value);
     getClassesApi({ school_id: schoolId.value }).then((res: any) => {
-      classList.value = res.data;
-      classId.value = classList.value[0].id;
-      getStudentApi({ class_id: classId.value,school:schoolName.value,size:100 }).then((res: any) => {
-        studentList.value = res.data;
-        stuName.value = studentList.value[0].name;
-      });
+      console.log(res.data);
+      getGradeList(res.data)
     });
   });
 });
 
 
+// 获取某个年级的所有班级列表
+const getGradeList = async (data: any) => { 
+  // 获取所有班级一共有多少个年级，年级为班级id前两个字符
+  gradeList.value =Array.from(new Set(data.map((item: any) => String(item.id).substring(0, 2))));
+  gradeId.value = gradeList.value[0];
+  console.log(gradeList.value);
+  await getClassesApi({ name: gradeId.value }).then((res: any) => {
+    getClassList(res.data);
+  });
+};
+
+const getClassList = async (data: any) => { 
+  // 获取所有班级
+  classList.value = data;
+  classId.value = classList.value[0].id;
+  console.log(classList.value);
+  onClassChange(classId.value)
+};
 
 // 新增学校选择事件处理
 const onSchoolChange = async (value: number) => {
   schoolId.value = value;
-  schoolName.value = schoolList.value.find((item: any) => item.id === value).name;
-  const res = await getClassesApi({ school_id: value });
-  if (res.code === 200){
-    classList.value = res.data;
-    classId.value = classList.value ? classList.value[0].id : null;
-    if(!classId.value){
-      studentList.value = [];
-      stuName.value = '';
-    }
+  // schoolName.value = schoolList.value.find((item: any) => item.id === value).name;
+  const res = await getClassesApi(schoolId.value);
+  if (res.code === 200) { 
+    getGradeList(res.data)
   }else{
-    message.error(res.message);
+    message.error(res.message)
+  }
+};
+
+// 新增年级选择事件处理
+const onGradeChange = async (value: number) => { 
+  console.log(`selected ${value}`);
+  gradeId.value = String(value);
+  const res = await getClassesApi({ school_id: schoolId.value, name: String(value) });
+  if (res.code === 200) { 
+    classList.value = res.data;
   }
 };
 
