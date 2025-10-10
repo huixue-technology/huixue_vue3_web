@@ -1,7 +1,6 @@
 <template>
   <div class="mistakes-page">
     <div class="header">
-      <button class="back-button" @click="goBack">返回</button>
       <h2>错题合集</h2>
     </div>
 
@@ -69,9 +68,6 @@ const generate = () => {
   // Logic to generate content based on selections
 };
 
-const goBack = () => {
-  router.back();
-};
 </script>
 
 <style scoped>
@@ -80,11 +76,6 @@ const goBack = () => {
   background-color: #f5f5f5;
   height: 100vh;
   overflow-y: auto;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
 }
 
 .header {

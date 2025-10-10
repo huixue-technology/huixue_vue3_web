@@ -8,14 +8,6 @@ const router = createRouter({
     ...common,
     ...modules,
     {
-      path: '/gradeanalysis/mistakes',
-      name: 'Mistakes',
-      component: () => import('@/views/gradeanalysis/Mistakes.vue'),
-      meta: {
-        title: '错题合集',
-      },
-    },
-    {
       path: '/:catchAll(.*)',
       redirect: '/404'
     }

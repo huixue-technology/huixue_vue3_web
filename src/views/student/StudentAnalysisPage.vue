@@ -1,6 +1,5 @@
 <template>
   <div class="student-analysis-page">
-    <a-button class="back-button" @click="goBack">返回</a-button>
     <a-space class="selector">
       <div class="select-item">
         <span style="">学期选择：</span>
@@ -213,9 +212,6 @@ const bindStudentSubject = ()=> {
     delete subjects_map.value.Dili
   }
 }
-const goBack = () => {
-  router.push('/analysis');
-};
 onMounted(async() => {
   fetchStudentInfo();
   bindStudentSubject();

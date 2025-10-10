@@ -1,6 +1,5 @@
 <template>
   <div class="student-challenge-page">
-    <button class="back-button" @click="goBack">返回</button>
     <h2>学生挑战</h2>
 
     <!-- Filter/Input Area -->
@@ -191,10 +190,6 @@ const currentStudentData = ref<any>({});
 const compareStudentData = ref<any>({});
 const resultData = ref<any>({});
 
-const goBack = () => {
-  router.push('/analysis');
-};
-
 // 获取考试列表
 // 获取考试列表
 const fetchExamList = async () => {
@@ -203,7 +198,7 @@ const fetchExamList = async () => {
       message.warning('请先完善学生信息');
       return;
     }
-    
+    // @ts-ignore
     const response = await getExamApi({ class_id: userInfo.student.class_id });
     if (response.code === 200) {
       examList.value = response.data || [];

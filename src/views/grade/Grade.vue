@@ -1,48 +1,74 @@
 <template>
  <div class="container">
-    <a-row>
-         <a-col :span="12" :offset="6">
-            <span style="font-size: 25px;">
-                ⏳距离高考还有<span style="font-size: 40px;font-weight: 800;">{{ daysUntilExam }}</span>天
-            </span>
+    <a-row class="countdown-section">
+         <a-col :span="24" class="countdown-content">
+            <div class="countdown-box">
+                <span class="countdown-label">⏳距离高考还有</span>
+                <span class="countdown-days">{{ daysUntilExam }}</span>
+                <span class="countdown-unit">天</span>
+            </div>
          </a-col>
     </a-row>
-    <div class="select">
+    <div class="select-section">
         <h2>选择查询考试：</h2>
        <a-select
             placeholder="请选择考试"
-            style="width: auto;min-width: 100px"
+            style="width: auto;min-width: 200px"
             @change="handleChange"
             v-model:value="currentExamId"
+            class="exam-select"
         >
             <a-select-option v-for="item in examList" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
         </a-select> 
     </div>
-    <a-table
-        size="large"
-        :columns="tableColumns"
-        :data-source="tableData"
-        :pagination="false"
-        style="font-size: larger;"
-    >
-    </a-table>
-    <exam-analysis 
-    :exam-list="examList.slice(1)" 
-    :student_id="parseInt(studentId)" 
-    :selected_id="parseInt(currentExamId)" 
-    :current-exam="currentExamData"
-    style="padding: 0;margin: 0;" />
+    
+    <!-- 左侧表格区域 -->
+    <div class="left-column">
+        <div class="table-section">
+            <a-table
+                size="large"
+                :columns="tableColumns"
+                :data-source="tableData"
+                :pagination="false"
+                class="grade-table"
+            >
+            </a-table>
+        </div>
+        
+        <!-- 对比表格组件 -->
+        <div class="compare-table-section" v-if="examList.length > 1">
+            <compare-table 
+                :student_id="parseInt(studentId)"
+                :selected_id="parseInt(currentExamId)"
+                :exam-list="examList.slice(1)"
+                :student-info="studentInfo"
+                @update:compareScoreData="updateCompareScoreData"
+            />
+        </div>
+    </div>
+    
+    <!-- 右侧雷达图区域 -->
+    <div class="right-column">
+        <radar-chart 
+            :student-info="studentInfo"
+            :compare-score-data="compareScoreData"
+            :current-exam-data="currentExamDataArray"
+        />
+    </div>
  </div>
 </template>
 
 <script setup lang="ts">
 import { getGradeApi } from '@/servers/api/grade';
 import { getStudentExamApi } from '@/servers/api/student';
-import { ref, onMounted, onUnmounted, onBeforeMount } from 'vue';
-import examAnalysis from './components/ExamAnalysis.vue'
+import { ref, onMounted, onUnmounted, onBeforeMount, computed } from 'vue';
 import { useUserStore } from '@/store/modules/user';
 import router from '@/router';
 import { message } from 'ant-design-vue';
+import CompareTable from './components/ExamAnalysis.vue';
+import RadarChart from './components/Radar.vue';
+import subjects_inflection from '@/utils/inflection';
+
 // 计算距离高考的天数
 const calculateDaysUntilExam = () => {
     const today = new Date();
@@ -62,10 +88,48 @@ const calculateDaysUntilExam = () => {
     
     return diffDays;
 };
+
 const currentExamData = ref<API.Grade>();
 const studentId = ref('');
+const studentInfo = ref<any>(null);
 const daysUntilExam = ref(calculateDaysUntilExam());
 const userStore = useUserStore();
+
+// 比较考试数据
+const compareScoreData = ref<number[]>([]);
+const updateCompareScoreData = (data: number[]) => {
+    compareScoreData.value = data;
+};
+
+// 当前考试数据数组
+const currentExamDataArray = computed(() => {
+    let tmp = []
+    if(currentExamData.value) {
+        for(let i of dynamicSubjectNames.value){
+            // @ts-ignore
+            tmp.push(currentExamData.value[subjects_inflection[i.name]])
+        }
+    }
+    return tmp
+});
+
+// 根据选科动态确定科目名称
+const dynamicSubjectNames = computed(() => {
+    let subjects = [
+        {name: '语文', max: 150},
+        {name: '英语', max: 150},
+        {name: '数学', max: 150}
+    ]
+    if (studentInfo.value) {
+        for (let i  of [{name:'物',value:'物理'},{name:'化',value:'化学'}, {name:'生',value:'生物'},{name:'史',value:'历史'},{name:'地',value:'地理'},{name:'政',value:'政治'}]) {
+            if(studentInfo.value.subject_selection && studentInfo.value.subject_selection.includes(i.name)) {
+                subjects.push({name: i.value, max: 100})
+            }
+        }
+    }
+    return subjects
+});
+
 // 每天更新倒计时
 let timer: number;
 onMounted(() => {
@@ -99,10 +163,12 @@ onUnmounted(() => {
         clearTimeout(timer);
     }
 });
+
 interface Exam {
     id:string,
     name:string
 }
+
 type TableData = {
     name: string;
     sum_: number;
@@ -111,11 +177,11 @@ type TableData = {
     maxB: number;
     passLine: number;
 }; 
+
 const examList = ref<Exam[]>([])
 const currentExamId = ref<string>('')
+
 onBeforeMount(() => {
-
-
     if (!userStore.isLogin) {
         router.push('/user/login');
         return
@@ -123,9 +189,9 @@ onBeforeMount(() => {
 
     const userInfo = userStore.getUserInfo();
     studentId.value = userInfo.role
+    studentInfo.value = userInfo.student
     getStudentExamApi({student_uid:userInfo.role},[]).then(res => {
-        console.log(res.data);
-        if (res.data) {
+        if (res.code === 200 ) {
             res.data.map((item:Exam[]) => {
                 if (Array.isArray(item) && item[0] && item[0].id && item[0].name) {
                     examList.value.push({
@@ -136,21 +202,17 @@ onBeforeMount(() => {
             })
         }
         
-        // 倒叙排列examList
         // 默认选择第一个考试
         if(examList.value.length > 0){
             currentExamId.value = examList.value[0].id;
             getGradeApi({student_id:userInfo.role,exam_id:parseInt(currentExamId.value)}).then(res => {
-            const gradeData = res.data[0];
-            handleGradeDetail(gradeData)
-        })
+                const gradeData = res.data[0];
+                handleGradeDetail(gradeData)
+            })
         }else{
             message.error('似乎还没有参加一场考试？')
             return
         }
-        
-        // 获取考试成绩
-        
     })
 })
 
@@ -191,7 +253,7 @@ const handleGradeDetail = (gradeData:API.Grade) => {
         passLine: 0,
     }
 ];
-if (gradeData.Wuli != null &&  gradeData.Dili!=0) {
+if (gradeData.Wuli != null &&  gradeData.Wuli!=0) {
     tableData.value.push({
         name: '物理',
         sum_: gradeData.Wuli || 0,
@@ -253,9 +315,6 @@ if (gradeData.Zhengzhi != null && gradeData.Zhengzhi!=0) {
 }
 }
 
-
-
-
 const  tableColumns = [{
         title:'科目',
         dataIndex:'name',
@@ -273,56 +332,160 @@ const  tableColumns = [{
         dataIndex: 'sumD',
         align: 'center',
     }
-    // ,{
-    //     title : '班级最高分',
-    //     dataIndex: 'maxB',
-    // },
-    // {
-    //     title: '一本线',
-    //     dataIndex: 'passLine',
-    // }
 ]
 
-
 const tableData = ref<TableData[]>([])
+
 const handleChange = (value:string) => {
-    console.log(`selected ${value}`);
-    // 获取当前用户信息
-    const userInfo = JSON.parse(localStorage.getItem('user') as string);
+    currentExamId.value = value;
     // 获取考试成绩
-    getGradeApi({student_id:userInfo.role,exam_id:parseInt(currentExamId.value || '0')}).then(res => {
+    getGradeApi({student_id:parseInt(studentId.value),exam_id:parseInt(currentExamId.value)}).then(res => {
         const gradeData = res.data[0];
         handleGradeDetail(gradeData)
     })
 }
-
 </script>
 
 <style scoped lang="less">
-
 .container{
     position:relative;
     height: 100vh;
-    overflow:scroll;
+    overflow-y: auto;
     padding: 20px;
-    padding-bottom: 0px;
-    .calendar {
-        padding: 10px;
-        width: 400px;
-        border-radius: 20px;
-        background-color: #e6e0e0;
-   
+    background-color: #f5f5f5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    
+    .countdown-section {
+        width: 100%;
+        margin-bottom: 30px;
+        text-align: center;
+        
+        .countdown-content {
+            .countdown-box {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 15px;
+                padding: 20px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                
+                .countdown-label {
+                    font-size: 20px;
+                    color: white;
+                    margin-right: 10px;
+                }
+                
+                .countdown-days {
+                    font-size: 40px;
+                    font-weight: 800;
+                    color: white;
+                }
+                
+                .countdown-unit {
+                    font-size: 20px;
+                    color: white;
+                    margin-left: 5px;
+                }
+            }
+        }
     }
-    .select {
+    
+    .select-section {
+        width: 100%;
         display: flex;
         flex-direction: row;
-        line-height: 30px;
-        white-space: space-between;
-   
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        
+        h2 {
+            margin: 0;
+            margin-right: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .exam-select {
+            min-width: 200px;
+        }
+    }
+    
+    .left-column {
+        flex: 1;
+        min-width: 300px;
+        
+        .table-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            padding: 20px;
+            margin-bottom: 20px;
+            
+            .grade-table {
+                :deep(.ant-table-thead > tr > th) {
+                    background-color: #fafafa;
+                    font-weight: bold;
+                    text-align: center;
+                }
+                
+                :deep(.ant-table-tbody > tr > td) {
+                    text-align: center;
+                }
+            }
+        }
+        
+        .compare-table-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            padding: 20px;
+        }
+    }
+    
+    .right-column {
+        flex: 1;
+        min-width: 300px;
     }
 }
-.rank_chart_bar {
-    text-align: left;
-}
 
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+        flex-direction: column;
+        
+        .countdown-section {
+            .countdown-content {
+                .countdown-box {
+                    padding: 15px;
+                    
+                    .countdown-label {
+                        font-size: 16px;
+                    }
+                    
+                    .countdown-days {
+                        font-size: 30px;
+                    }
+                    
+                    .countdown-unit {
+                        font-size: 16px;
+                    }
+                }
+            }
+        }
+        
+        .select-section {
+            flex-direction: column;
+            align-items: flex-start;
+            
+            h2 {
+                margin-bottom: 10px;
+            }
+        }
+    }
+}
 </style>

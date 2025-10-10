@@ -7,5 +7,5 @@ import teacher from "@/router/modules/teacher";
 export default [
     ...user,
     ...grade,
-    ...teacher
+    ...teacher,
 ]

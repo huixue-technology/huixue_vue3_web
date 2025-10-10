@@ -1,6 +1,5 @@
 <template>
   <div class="rank-details-page">
-    <button class="back-button" @click="goBack">返回</button>
     <h2 class="page-title">名次详情</h2>
 
     <!-- Filter/Info Area -->
@@ -104,10 +103,6 @@ import { useRouter } from 'vue-router';
 import { ref, computed } from 'vue';
 
 const router = useRouter();
-
-const goBack = () => {
-  router.push('/analysis');
-};
 
 const showRankDetailsTable = ref(false);
 

@@ -15,9 +15,9 @@ export default [
         component: () => import('@/views/gradeanalysis/AnalysisPage.vue')
     },
     {
-        path: '/analysis/student',
-        name: 'studentAnalysis',
-        component: () => import('@/views/gradeanalysis/StudentAnalysisPage.vue')
+        path: '/student',
+        name: 'student',
+        component: () => import('@/views/student/StudentAnalysisPage.vue')
     },
     {
         path: '/elevate-analytics',
@@ -25,14 +25,19 @@ export default [
         component: () => import('@/views/gradeanalysis/ElevateAnalyticsPage.vue')
     },
     {
-        path: '/student-challenge',
+        path: '/challenge',
         name: 'studentChallenge',
-        component: () => import('@/views/gradeanalysis/StudentChallengePage.vue')
+        component: () => import('@/views/challenge/StudentChallengePage.vue')
     },
     {
-        path: '/rank-details',
+      path: '/mistakes',
+      name: 'Mistakes',
+      component: () => import('@/views/mistake/Mistakes.vue'),
+    },
+    {
+        path: '/detail',
         name: 'rankDetails',
-        component: () => import('@/views/gradeanalysis/RankDetailsPage.vue')
+        component: () => import('@/views/detail/RankDetailsPage.vue')
     },
     {
         path: '/grade-simulation',

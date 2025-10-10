@@ -8,7 +8,7 @@
 
 <script setup lang="ts">
 import {h, ref, onMounted, computed} from 'vue'
-import { MailOutlined, AppstoreOutlined, SettingOutlined, UserOutlined, LogoutOutlined,UsergroupAddOutlined } from '@ant-design/icons-vue';
+import { MailOutlined, AppstoreOutlined, SettingOutlined,ThunderboltOutlined, UserOutlined, LogoutOutlined,UsergroupAddOutlined, ToolOutlined, SolutionOutlined, FrownOutlined } from '@ant-design/icons-vue';
 import { MenuProps } from 'ant-design-vue';
 import router from '@/router';
 import { useLogout } from '@/composables/useLogout';
@@ -80,10 +80,28 @@ const items =  computed<MenuProps['items']>(()=>{
           title: '历次排名',
         },
         {
-          key: 'analysis',
-          icon: () => h(SettingOutlined),
-          label: '成绩分析',
-          title: '成绩分析',
+          key: 'student',
+          icon: () => h(ThunderboltOutlined),
+          label: '学生分析',
+          title: '学生分析',
+        },
+        {
+          key: 'challenge',
+          icon: () => h(ToolOutlined),
+          label: '学生挑战',
+          title: '学生挑战',
+        },
+        {
+          key: 'detail',
+          icon: () => h(SolutionOutlined),
+          label: '名次详情',
+          title: '名次详情',
+        },
+        {
+          key: 'mistakes',
+          icon: () => h(FrownOutlined),
+          label: '错题合集',
+          title: '错题合集',
         }
     );
   }
