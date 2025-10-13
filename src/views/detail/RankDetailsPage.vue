@@ -263,9 +263,9 @@ const fetchClassDetails = async (classId: string) => {
   }
 };
 
-// 查询名次详情 
+// 修改查询名次详情方法
 const queryRankDetails = async () => {
-  // 基础校验
+  // 基础校验保持不变
   if (!selectedClassId.value) {
     errorMessage.value = '请选择班级';
     return;
@@ -284,6 +284,7 @@ const queryRankDetails = async () => {
     errorMessage.value = '';
     showRankDetailsTable.value = false;
 
+    // 1. 获取目标学生成绩
     const targetRes = await api.grade.getGradeApi({
       student_id: Number(currentStudentId.value),
       exam_id: Number(selectedExamId.value),
@@ -294,25 +295,34 @@ const queryRankDetails = async () => {
       return;
     }
     const targetStudentData = transformGradeToStudent(targetRes.data[0]);
-    const fullClassRes = await api.grade.getGradeApi({
-      class_id: Number(selectedClassId.value),
-      exam_id: Number(selectedExamId.value),
-      sort: 'sumB,asc'
-    });
+
+    // 2. 获取前三名学生
     const top3Res = await api.grade.getGradeApi({
       class_id: Number(selectedClassId.value),
       exam_id: Number(selectedExamId.value),
       size: 3,
       sort: 'sumB,asc'
     });
-    fullClassStudents.value = (fullClassRes.data || []).map(transformGradeToStudent);
     top3Students.value = (top3Res.data || []).map(transformGradeToStudent);
-    const isTargetInFullList = fullClassStudents.value.some(
+
+    // 3. 使用新接口获取前后10名学生
+    const rankRes = await api.grade.getStudentGradeRank({
+      student_id: Number(currentStudentId.value),
+      selected_exam_id: Number(selectedExamId.value),
+    });
+
+    // 4. 处理接口返回的前后10名数据
+    const aroundStudents = (rankRes.data?.around || []).map(transformGradeToStudent);
+    
+    // 5. 合并数据并去重
+    fullClassStudents.value = aroundStudents;
+    
+    // 确保目标学生在列表中
+    const isTargetInList = aroundStudents.some(
       s => s.studentId === currentStudentId.value
     );
-    if (!isTargetInFullList) {
+    if (!isTargetInList) {
       fullClassStudents.value.push(targetStudentData);
-      fullClassStudents.value.sort((a, b) => a.classRank - b.classRank);
     }
 
     showRankDetailsTable.value = true;
@@ -364,34 +374,28 @@ const transformGradeToStudent = (grade: any) => {
   return baseData;
 };
 
+// 修改displayedStudents计算属性（简化版本）
 const displayedStudents = computed(() => {
   const finalList: any[] = [];
   const addedStudentIds = new Set<string>();
-  const targetStudentId = currentStudentId.value;
+
+  // 添加前三名
   top3Students.value.forEach(student => {
     if (student.studentId && !addedStudentIds.has(student.studentId)) {
       finalList.push(student);
       addedStudentIds.add(student.studentId);
     }
   });
-  const targetIndex = fullClassStudents.value.findIndex(
-    student => student.studentId === targetStudentId
-  );
-  if (targetIndex === -1) {
-    return finalList;
-  }
-  const startIndex = Math.max(0, targetIndex - 10); // 向前取10名，最小到0
-  const endIndex = Math.min(
-    fullClassStudents.value.length - 1, 
-    targetIndex + 10 // 向后取10名，最大到列表最后一位
-  );
-  for (let i = startIndex; i <= endIndex; i++) {
-    const currentStudent = fullClassStudents.value[i];
-    if (currentStudent.studentId && !addedStudentIds.has(currentStudent.studentId)) {
-      finalList.push(currentStudent);
-      addedStudentIds.add(currentStudent.studentId);
+
+  // 添加前后10名学生
+  fullClassStudents.value.forEach(student => {
+    if (student.studentId && !addedStudentIds.has(student.studentId)) {
+      finalList.push(student);
+      addedStudentIds.add(student.studentId);
     }
-  }
+  });
+
+  // 按班级排名排序
   return finalList.sort((a, b) => a.classRank - b.classRank);
 });
 </script>

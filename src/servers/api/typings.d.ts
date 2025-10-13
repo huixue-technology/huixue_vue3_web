@@ -35,9 +35,11 @@ declare namespace API {
     /** 班级名称 */
     name: string;
     /** 班主任ID */
-    header: number;
+    header: string;
     /** 学校ID */
-    school_id: number;
+    school_id: string;
+    /** 选科 */
+    subject_selection: string;
   };
 
   type deleteClassesDetailApiParams = {
