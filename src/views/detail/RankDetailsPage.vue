@@ -6,29 +6,30 @@
     <div class="info-display-container">
       <div class="display-item">
         <span class="label">班级</span>
-        <select v-model="selectedClass" class="value-select">
-          <option v-for="cls in classes" :key="cls" :value="cls">{{ cls }}</option>
-        </select>
-      </div>
-      <div class="display-item">
-        <span class="label">学期</span>
-        <select v-model="selectedSemester" class="value-select">
-          <option v-for="semester in semesters" :key="semester" :value="semester">{{ semester }}</option>
+        <select v-model="selectedClassId" class="value-select" disabled>
+          <option v-for="cls in classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
         </select>
       </div>
       <div class="display-item">
         <span class="label">考试</span>
-        <select v-model="selectedExam" class="value-select">
-          <option v-for="exam in exams" :key="exam" :value="exam">{{ exam }}</option>
+        <select v-model="selectedExamId" class="value-select">
+          <option value="">请选择考试</option>
+          <option v-for="exam in exams" :key="exam.id" :value="exam.id">{{ exam.name }}</option>
         </select>
       </div>
       <div class="display-item">
         <span class="label">姓名</span>
-        <input type="text" v-model="studentName" class="value-input" placeholder="请输入姓名" />
+        <input 
+          type="text" 
+          v-model="studentName" 
+          class="value-input" 
+          placeholder="请输入姓名" 
+          readonly
+        />
       </div>
 
       <p class="description red-text">
-        说明：成绩展示为班级前三名和以本学生为基准前后各10位同学的成绩。
+        说明：成绩展示为班级前三名和以本学生为基准前后各10位同学的成绩（含本人）。
       </p>
 
       <button class="query-button" @click="queryRankDetails">查询</button>
@@ -38,8 +39,17 @@
       </p>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="isLoading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>加载中...</p>
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+
     <!-- Rank Details Table -->
-    <div class="table-container" v-if="showRankDetailsTable">
+    <div class="table-container" v-if="showRankDetailsTable && !isLoading && !errorMessage">
       <table class="rank-details-table">
         <thead>
           <tr>
@@ -56,19 +66,22 @@
             <th>外语</th>
             <th>外语班次</th>
             <th>外语段次</th>
-            <th>历史</th>
-            <th>历史班次</th>
-            <th>历史段次</th>
-            <th>政治</th>
-            <th>政治班次</th>
-            <th>政治段次</th>
-            <th>地理</th>
-            <th>地理班次</th>
-            <th>地理段次</th>
+            <template v-for="subject in dynamicSubjects" :key="subject.name">
+              <th>{{ subject.name }}</th>
+              <th>{{ subject.name }}班次</th>
+              <th>{{ subject.name }}段次</th>
+            </template>
           </tr>
         </thead>
         <tbody>
-          <tr :class="{ 'highlight-row': student.name === '刘艺飞', 'third-place-divider': index === 2 }" v-for="(student, index) in displayedStudents" :key="student.name">
+          <tr 
+            :class="{ 
+              'highlight-row': student.studentId === currentStudentId, 
+              'third-place-divider': index === 2 
+            }" 
+            v-for="(student, index) in displayedStudents" 
+            :key="student.studentId"
+          >
             <td>{{ student.name }}</td>
             <td>{{ student.totalScore }}</td>
             <td>{{ student.classRank }}</td>
@@ -82,15 +95,11 @@
             <td>{{ student.englishScore }}</td>
             <td>{{ student.englishClassRank }}</td>
             <td>{{ student.englishOverallRank }}</td>
-            <td>{{ student.historyScore }}</td>
-            <td>{{ student.historyClassRank }}</td>
-            <td>{{ student.historyOverallRank }}</td>
-            <td>{{ student.politicsScore }}</td>
-            <td>{{ student.politicsClassRank }}</td>
-            <td>{{ student.politicsOverallRank }}</td>
-            <td>{{ student.geographyScore }}</td>
-            <td>{{ student.geographyClassRank }}</td>
-            <td>{{ student.geographyOverallRank }}</td>
+            <template v-for="subject in dynamicSubjects" :key="subject.name">
+              <td>{{ student[`${subject.key}Score`] }}</td>
+              <td>{{ student[`${subject.key}ClassRank`] }}</td>
+              <td>{{ student[`${subject.key}OverallRank`] }}</td>
+            </template>
           </tr>
         </tbody>
       </table>
@@ -100,119 +109,332 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import api from '@/servers/api';
+import { useUserStore } from '@/store';
+import { message } from 'ant-design-vue';
+import { getStudentExamApi } from '@/servers/api/student';
 
 const router = useRouter();
+const userStore = useUserStore();
 
+// State
 const showRankDetailsTable = ref(false);
+const isLoading = ref(false);
+const errorMessage = ref('');
 
 // Form data
-const selectedClass = ref('高三 2238');
-const classes = ref(['高三 2238', '高三 2239', '高三 2240']);
+const selectedClassId = ref('');
+const classes = ref<API.Classes[]>([]);
 
-const selectedSemester = ref('本学期');
-const semesters = ref(['本学期', '上学期', '下学期']);
+const selectedExamId = ref('');
+const exams = ref<{id: string; name: string}[]>([]);
 
-const selectedExam = ref('5.22周考');
-const exams = ref(['5.22周考', '期中考试', '期末考试']);
+const studentName = ref('');
+const currentStudentId = ref('');
+const studentInfo = ref<any>(null);
 
-const studentName = ref('刘艺飞');
+// Data storage - 存储完整班级数据（用于精准定位目标学生）
+const fullClassStudents = ref<any[]>([]);
+const top3Students = ref<any[]>([]);
 
-// Sample data for top 3 students (replace with actual data)
-const topStudents = ref([
-  { name: '**飞', totalScore: 454, classRank: 68, overallRank: 392, chineseScore: 100, chineseClassRank: 10, chineseOverallRank: 200, mathScore: 100, mathClassRank: 10, mathOverallRank: 200, englishScore: 100, englishClassRank: 10, englishOverallRank: 200, historyScore: 100, historyClassRank: 10, historyOverallRank: 200, politicsScore: 100, politicsClassRank: 10, politicsOverallRank: 200, geographyScore: 100, geographyClassRank: 10, geographyOverallRank: 200 },
-  { name: '**秀', totalScore: 450, classRank: 69, overallRank: 399, chineseScore: 100, chineseClassRank: 10, chineseOverallRank: 200, mathScore: 100, mathClassRank: 10, mathOverallRank: 200, englishScore: 100, englishClassRank: 10, englishOverallRank: 200, historyScore: 100, historyClassRank: 10, historyOverallRank: 200, politicsScore: 100, politicsClassRank: 10, politicsOverallRank: 200, geographyScore: 100, geographyClassRank: 10, geographyOverallRank: 200 },
-  { name: '*睿', totalScore: 447, classRank: 70, overallRank: 405, chineseScore: 100, chineseClassRank: 10, chineseOverallRank: 200, mathScore: 100, mathClassRank: 10, mathOverallRank: 200, englishScore: 100, englishClassRank: 10, englishOverallRank: 200, historyScore: 100, historyClassRank: 10, historyOverallRank: 200, politicsScore: 100, politicsClassRank: 10, politicsOverallRank: 200, geographyScore: 100, geographyClassRank: 10, geographyOverallRank: 200 },
-]);
+// 动态科目列表（基于学生选科）
+const dynamicSubjects = computed(() => {
+  const subjects: { name: string; key: string }[] = [];
+  
+  if (!studentInfo.value?.subject_selection) return subjects;
+  
+  const subjectMap = {
+    '物': { name: '物理', key: 'physics' },
+    '化': { name: '化学', key: 'chemistry' },
+    '生': { name: '生物', key: 'biology' },
+    '史': { name: '历史', key: 'history' },
+    '地': { name: '地理', key: 'geography' },
+    '政': { name: '政治', key: 'politics' }
+  };
+  
+  for (const key in subjectMap) {
+    if (studentInfo.value.subject_selection.includes(key)) {
+      subjects.push(subjectMap[key as keyof typeof subjectMap]);
+    }
+  }
+  
+  return subjects;
+});
 
-// Sample data for surrounding students (replace with actual data)
-const surroundingStudents = ref([
-  { name: '**前10', totalScore: 435, classRank: 62, overallRank: 380, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**前9', totalScore: 433, classRank: 63, overallRank: 385, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**前8', totalScore: 431, classRank: 64, overallRank: 390, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**前7', totalScore: 429, classRank: 65, overallRank: 395, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**前6', totalScore: 427, classRank: 66, overallRank: 400, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**前5', totalScore: 425, classRank: 67, overallRank: 405, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**前4', totalScore: 423, classRank: 68, overallRank: 410, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**前3', totalScore: 421, classRank: 69, overallRank: 415, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**前2', totalScore: 419, classRank: 70, overallRank: 420, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**前1', totalScore: 417, classRank: 71, overallRank: 425, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '刘艺飞', totalScore: 429, classRank: 72, overallRank: 428, chineseScore: 111, chineseClassRank: 11, chineseOverallRank: 111, mathScore: 45, mathClassRank: 4, mathOverallRank: 45, englishScore: 98, englishClassRank: 9, englishOverallRank: 98, historyScore: 65, historyClassRank: 6, historyOverallRank: 65, politicsScore: 57, politicsClassRank: 5, politicsOverallRank: 57, geographyScore: 53, geographyClassRank: 5, geographyOverallRank: 53 },
-  { name: '**后1', totalScore: 408, classRank: 73, overallRank: 430, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**后2', totalScore: 406, classRank: 74, overallRank: 435, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**后3', totalScore: 404, classRank: 75, overallRank: 440, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**后4', totalScore: 402, classRank: 76, overallRank: 445, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**后5', totalScore: 400, classRank: 77, overallRank: 450, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**后6', totalScore: 398, classRank: 78, overallRank: 455, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**后7', totalScore: 396, classRank: 79, overallRank: 460, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**后8', totalScore: 394, classRank: 80, overallRank: 465, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**后9', totalScore: 392, classRank: 81, overallRank: 470, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-  { name: '**后10', totalScore: 390, classRank: 82, overallRank: 475, chineseScore: 90, chineseClassRank: 9, chineseOverallRank: 190, mathScore: 90, mathClassRank: 9, mathOverallRank: 190, englishScore: 90, englishClassRank: 9, englishOverallRank: 190, historyScore: 90, historyClassRank: 9, historyOverallRank: 190, politicsScore: 90, politicsClassRank: 9, politicsOverallRank: 190, geographyScore: 90, geographyClassRank: 9, geographyOverallRank: 190 },
-]);
+// 初始化数据
+onMounted(async () => {
+  const userInfo = userStore.userInfo;
+  
+  if (!userInfo) {
+    errorMessage.value = '用户信息获取失败，请重新登录';
+    return;
+  }
 
-const queryRankDetails = () => {
-  // In a real application, you would fetch data based on selected filters here
-  // For now, just show the table
-  showRankDetailsTable.value = true;
+  if (userInfo.student) {
+    await initStudentInfo(userInfo);
+  } else {
+    errorMessage.value = '请以学生身份登录查看';
+  }
+});
 
-  // In a real application, you'd filter/fetch topStudents and surroundingStudents
-  // based on selectedClass, selectedSemester, selectedExam, and studentName.
-  // For this example, we'll just demonstrate the `displayedStudents` logic.
+// 初始化学生信息
+const initStudentInfo = async (userInfo: any) => {
+  try {
+    isLoading.value = true;
+    const studentInfoData = userInfo.student;
+    
+    if (!studentInfoData) {
+      message.warning('请先完善学生信息');
+      return;
+    }
+
+    studentName.value = studentInfoData.name || '';
+    currentStudentId.value = studentInfoData.uid || '';
+    studentInfo.value = studentInfoData;
+    
+    const studentClassId = studentInfoData.class_id;
+    if (studentClassId) {
+      await fetchClassDetails(studentClassId);
+      await fetchExamsByStudent(userInfo.role);
+    } else {
+      message.warning('未找到学生所在班级信息');
+    }
+    
+    // 默认选中最新考试
+    if (exams.value.length > 0) {
+      const sortedExams = [...exams.value].sort((a, b) => Number(b.id) - Number(a.id));
+      selectedExamId.value = sortedExams[0].id;
+    }
+  } catch (err) {
+    message.error('获取当前学生信息失败，请重试');
+  } finally {
+    isLoading.value = false;
+  }
 };
 
-const displayedStudents = computed(() => {
-  const finalOrderedList = [];
-  const addedStudents = new Set(); // To keep track of added student names for deduplication
+// 获取学生考试列表
+const fetchExamsByStudent = async (studentUid: string) => {
+  try {
+    isLoading.value = true;
+    const response = await getStudentExamApi({ student_uid: studentUid });
+    
+    if (response.code === 200) {
+      exams.value = response.data.map((item: any[]) => {
+        if (Array.isArray(item) && item[0] && item[0].id && item[0].name) {
+          return {
+            id: item[0].id.toString(),
+            name: item[0].name
+          };
+        }
+        return null;
+      }).filter(Boolean);
+    } else {
+      message.error(response.msg || '获取考试列表失败');
+      exams.value = [];
+    }
+  } catch (err) {
+    message.error('获取考试列表失败，请刷新页面重试');
+  } finally {
+    isLoading.value = false;
+  }
+};
 
-  // 1. Add top 3 students (班次第1-3名)
-  topStudents.value.forEach(student => {
-    if (!addedStudents.has(student.name)) {
-      finalOrderedList.push(student);
-      addedStudents.add(student.name);
+// 获取班级详情
+const fetchClassDetails = async (classId: string) => {
+  try {
+    const response = await api.classes.getClassesApi({ id: classId });
+    if (response.data && response.data.length > 0) {
+      classes.value = response.data;
+      selectedClassId.value = classId;
+    } else {
+      classes.value = [{
+        id: classId,
+        name: `班级 ${classId}`
+      }];
+      selectedClassId.value = classId;
+    }
+  } catch (err) {
+    classes.value = [{
+      id: classId,
+      name: `班级 ${classId}`
+    }];
+    selectedClassId.value = classId;
+  }
+};
+
+// 查询名次详情 
+const queryRankDetails = async () => {
+  // 基础校验
+  if (!selectedClassId.value) {
+    errorMessage.value = '请选择班级';
+    return;
+  }
+  if (!selectedExamId.value) {
+    errorMessage.value = '请选择考试';
+    return;
+  }
+  if (!studentName.value.trim()) {
+    errorMessage.value = '请输入姓名';
+    return;
+  }
+
+  try {
+    isLoading.value = true;
+    errorMessage.value = '';
+    showRankDetailsTable.value = false;
+
+    const targetRes = await api.grade.getGradeApi({
+      student_id: Number(currentStudentId.value),
+      exam_id: Number(selectedExamId.value),
+    });
+
+    if (!targetRes.data || targetRes.data.length === 0) {
+      errorMessage.value = '未找到该学生的成绩信息';
+      return;
+    }
+    const targetStudentData = transformGradeToStudent(targetRes.data[0]);
+    const fullClassRes = await api.grade.getGradeApi({
+      class_id: Number(selectedClassId.value),
+      exam_id: Number(selectedExamId.value),
+      sort: 'sumB,asc'
+    });
+    const top3Res = await api.grade.getGradeApi({
+      class_id: Number(selectedClassId.value),
+      exam_id: Number(selectedExamId.value),
+      size: 3,
+      sort: 'sumB,asc'
+    });
+    fullClassStudents.value = (fullClassRes.data || []).map(transformGradeToStudent);
+    top3Students.value = (top3Res.data || []).map(transformGradeToStudent);
+    const isTargetInFullList = fullClassStudents.value.some(
+      s => s.studentId === currentStudentId.value
+    );
+    if (!isTargetInFullList) {
+      fullClassStudents.value.push(targetStudentData);
+      fullClassStudents.value.sort((a, b) => a.classRank - b.classRank);
+    }
+
+    showRankDetailsTable.value = true;
+  } catch (err) {
+    message.error('查询失败，请稍后重试');
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// 转换成绩数据为学生格式
+const transformGradeToStudent = (grade: any) => {
+  const baseData = {
+    studentId: grade.student_id,
+    name: grade.student_name || '',
+    totalScore: grade.sum_,
+    classRank: grade.sumB,
+    overallRank: grade.sumD,
+    chineseScore: grade.Yuwen,
+    chineseClassRank: grade.YuwenB,
+    chineseOverallRank: grade.YuwenD,
+    mathScore: grade.Shuxue,
+    mathClassRank: grade.ShuxueB,
+    mathOverallRank: grade.ShuxueD,
+    englishScore: grade.Yingyu,
+    englishClassRank: grade.YingyuB,
+    englishOverallRank: grade.YingyuD
+  };
+
+  // 动态添加选考科目数据
+  dynamicSubjects.value.forEach(subject => {
+    const subjectKeyMap: Record<string, string> = {
+      'physics': 'Wuli',
+      'chemistry': 'Huaxue',
+      'biology': 'Shengwu',
+      'history': 'Lishi',
+      'geography': 'Dili',
+      'politics': 'Zhengzhi'
+    };
+    
+    const apiKey = subjectKeyMap[subject.key];
+    if (apiKey) {
+      baseData[`${subject.key}Score`] = grade[apiKey];
+      baseData[`${subject.key}ClassRank`] = grade[`${apiKey}B`];
+      baseData[`${subject.key}OverallRank`] = grade[`${apiKey}D`];
     }
   });
 
-  let liuYiFeiIndex = -1;
-  // Find the index of the student with the current 'studentName' from the input
-  for (let i = 0; i < surroundingStudents.value.length; i++) {
-    if (surroundingStudents.value[i].name === studentName.value) {
-      liuYiFeiIndex = i;
-      break;
+  return baseData;
+};
+
+const displayedStudents = computed(() => {
+  const finalList: any[] = [];
+  const addedStudentIds = new Set<string>();
+  const targetStudentId = currentStudentId.value;
+  top3Students.value.forEach(student => {
+    if (student.studentId && !addedStudentIds.has(student.studentId)) {
+      finalList.push(student);
+      addedStudentIds.add(student.studentId);
+    }
+  });
+  const targetIndex = fullClassStudents.value.findIndex(
+    student => student.studentId === targetStudentId
+  );
+  if (targetIndex === -1) {
+    return finalList;
+  }
+  const startIndex = Math.max(0, targetIndex - 10); // 向前取10名，最小到0
+  const endIndex = Math.min(
+    fullClassStudents.value.length - 1, 
+    targetIndex + 10 // 向后取10名，最大到列表最后一位
+  );
+  for (let i = startIndex; i <= endIndex; i++) {
+    const currentStudent = fullClassStudents.value[i];
+    if (currentStudent.studentId && !addedStudentIds.has(currentStudent.studentId)) {
+      finalList.push(currentStudent);
+      addedStudentIds.add(currentStudent.studentId);
     }
   }
-
-  // 2. Add students before '刘艺飞' (前10-1名)
-  if (liuYiFeiIndex !== -1) {
-    for (let i = Math.max(0, liuYiFeiIndex - 10); i < liuYiFeiIndex; i++) {
-      const student = surroundingStudents.value[i];
-      if (!addedStudents.has(student.name)) {
-        finalOrderedList.push(student);
-        addedStudents.add(student.name);
-      }
-    }
-
-    // 3. Add '刘艺飞' (该学生)
-    const liuYiFeiStudent = surroundingStudents.value[liuYiFeiIndex];
-    if (!addedStudents.has(liuYiFeiStudent.name)) {
-      finalOrderedList.push(liuYiFeiStudent);
-      addedStudents.add(liuYiFeiStudent.name);
-    }
-
-    // 4. Add students after '刘艺飞' (后1-10名)
-    for (let i = liuYiFeiIndex + 1; i < Math.min(surroundingStudents.value.length, liuYiFeiIndex + 11); i++) {
-      const student = surroundingStudents.value[i];
-      if (!addedStudents.has(student.name)) {
-        finalOrderedList.push(student);
-        addedStudents.add(student.name);
-      }
-    }
-  }
-
-  return finalOrderedList;
+  return finalList.sort((a, b) => a.classRank - b.classRank);
 });
 </script>
 
 <style scoped>
+.loading-container {
+  text-align: center;
+  padding: 50px 0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+  text-align: center;
+}
+
+.highlight-row {
+  background-color: #fff3cd; /* 高亮本人行 */
+}
+
+.third-place-divider {
+  border-bottom: 2px solid #333; /* 前三名下方分隔线 */
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .rank-details-page {
   padding: 20px;
   position: relative;
@@ -284,6 +506,11 @@ const displayedStudents = computed(() => {
   margin-left: 0;
 }
 
+.value-input:read-only {
+  background-color: #f9f9f9;
+  cursor: not-allowed;
+}
+
 .description {
   margin-bottom: 10px;
   font-size: 0.9em;
@@ -331,7 +558,7 @@ const displayedStudents = computed(() => {
 
 .table-container {
   width: 100%;
-  overflow-x: auto; /* Enable horizontal scrolling for the table */
+  overflow-x: auto;
   margin-top: 20px;
 }
 
@@ -344,8 +571,8 @@ const displayedStudents = computed(() => {
 .rank-details-table td {
   border: 1px solid #ccc;
   padding: 8px;
-  text-align: center; /* Center text in table cells */
-  white-space: nowrap; /* Prevent text wrapping in table cells */
+  text-align: center;
+  white-space: nowrap;
 }
 
 .rank-details-table th {
@@ -353,10 +580,10 @@ const displayedStudents = computed(() => {
 }
 
 .highlight-row {
-  background-color: #e0f7fa; /* Light blue highlight for the current student */
+  background-color: #e0f7fa;
 }
 
 .third-place-divider {
-  border-bottom: 2px solid red; /* Red underline for the third place */
+  border-bottom: 2px solid red;
 }
-</style> 
+</style>

@@ -1,67 +1,66 @@
 <template>
   <div class="student-challenge-page">
-    <h2>学生挑战</h2>
+    <div class="page-header">
+      <h2>学生挑战</h2>
+    </div>
 
-    <!-- Filter/Input Area -->
-    <div class="filter-input-container">
+    <!-- 筛选和输入区域 -->
+    <div class="filter-input-card">
       <div class="input-row">
-        <span class="label">班级</span>
-        <select class="input-select" v-model="selectedClass">
+        <label class="form-label">班级</label>
+        <select class="form-select" v-model="selectedClass">
           <option :value="userInfo?.student?.class_id" selected>
             {{ userInfo?.student?.class_id }}
           </option>
         </select>
-        <span class="arrow">></span>
       </div>
       <div class="input-row">
-        <span class="label">考试</span>
-        <select class="input-select" v-model="selectedExam">
+        <label class="form-label">考试</label>
+        <select class="form-select" v-model="selectedExam">
           <option value="">请选择考试</option>
           <option v-for="exam in examList" :key="exam.id" :value="exam.id">
             {{ exam.name }}
           </option>
         </select>
-        <span class="arrow">></span>
       </div>
       <div class="input-row">
-        <span class="label">维度</span>
-        <select class="input-select" v-model="selectedDimension">
+        <label class="form-label">维度</label>
+        <select class="form-select" v-model="selectedDimension">
           <option value="">请选择维度</option>
           <option value="score">分数</option>
           <option value="rank">段次</option>
         </select>
-        <span class="arrow">></span>
       </div>
       <div class="input-row">
-        <span class="label">姓名</span>
-        <select class="input-select" v-model="selectedName">
+        <label class="form-label">姓名</label>
+        <select class="form-select" v-model="selectedName">
           <option :value="userInfo?.student?.name" selected>
             {{ userInfo?.student?.name }}
           </option>
         </select>
-        <span class="arrow">></span>
       </div>
       <div class="input-row">
-        <span class="label">对手</span>
-        <div class="opponent-inputs">
-          <select 
-            class="input-select opponent-class-select" 
-            v-model="opponentClass" 
-            @change="handleOpponentClassChange"
-          >
-            <option value="">请选择班级</option>
-            <option v-for="cls in opponentClassList" :key="cls.id" :value="cls.id">
-              {{ cls.id }}
-            </option>
-          </select>
-          <input
-            type="text"
-            class="input-text opponent-name-text"
-            v-model="opponentName"
-            placeholder="请输入对手姓名"
-          />
-        </div>
-        <span class="arrow">></span>
+        <label class="form-label">对手班级</label>
+        <select 
+          class="form-select opponent-class-select" 
+          v-model="opponentClass" 
+          @change="handleOpponentClassChange"
+        >
+          <option value="">请选择班级</option>
+          <option v-for="cls in opponentClassList" :key="cls.id" :value="cls.id">
+            {{ cls.id }}
+          </option>
+        </select>
+      </div>
+      <!-- 对手姓名单独一行 -->
+      <div class="input-row">
+        <label class="form-label">对手姓名</label>
+        <input
+          type="text"
+          class="form-input opponent-name-input"
+          v-model="opponentName"
+          placeholder="请输入对手姓名"
+        />
       </div>
     </div>
 
@@ -71,8 +70,8 @@
 
     <button class="compare-button" @click="runComparison">对比</button>
 
-    <!-- Comparison Results Table -->
-    <div class="comparison-table-container" v-if="showComparisonTable">
+    <!-- 对比结果表格 -->
+    <div class="comparison-table-section" v-if="showComparisonTable">
       <table class="results-table">
         <thead>
           <tr>
@@ -422,25 +421,16 @@ onMounted(() => {
   font-family: sans-serif;
 }
 
-.back-button {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 5px 10px;
-  background-color: #ccc;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  z-index: 10;
-}
-
-h2 {
+.page-header h2 {
   text-align: center;
   margin-top: 10px;
   margin-bottom: 20px;
+  font-size: 24px;
+  color: #333;
+  font-weight: 600;
 }
 
-.filter-input-container {
+.filter-input-card {
   margin-bottom: 20px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -458,38 +448,37 @@ h2 {
   border-bottom: none;
 }
 
-.label {
+.form-label {
   width: 80px;
   flex-shrink: 0;
   color: #555;
+  text-align: right;
+  margin-right: 10px;
+  font-size: 1rem;
 }
 
-.opponent-inputs {
-  display: flex;
-  gap: 20px;
+.form-select,
+.form-input {
   flex-grow: 1;
-  align-items: center;
-}
-
-.input-select,
-.input-text {
-  padding: 5px 10px;
-  border: none;
+  padding: 8px 10px;
   font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-left: 0;
   outline: none;
-  text-align: center;
+  transition: border-color 0.3s;
 }
 
-.arrow {
-  margin-left: 10px;
-  color: #999;
-  flex-shrink: 0;
+.form-select:focus,
+.form-input:focus {
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
 }
 
 .description {
   margin-bottom: 10px;
   font-size: 0.9em;
-  color: #555;
+  color: red;
 }
 
 .compare-button {
@@ -505,8 +494,10 @@ h2 {
   font-size: 1.1em;
 }
 
-.comparison-table-container {
-  margin-top: 30px;
+.comparison-table-section {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 20px;
 }
 
 .results-table {
@@ -532,9 +523,5 @@ h2 {
 
 .results-table .green {
   color: green;
-}
-
-:deep(.arrow) {
-  display: none;
 }
 </style>
