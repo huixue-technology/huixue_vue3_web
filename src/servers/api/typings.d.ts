@@ -35,9 +35,11 @@ declare namespace API {
     /** 班级名称 */
     name: string;
     /** 班主任ID */
-    header: number;
+    header: string;
     /** 学校ID */
-    school_id: number;
+    school_id: string;
+    /** 选科 */
+    subject_selection: string;
   };
 
   type deleteClassesDetailApiParams = {
@@ -254,8 +256,6 @@ declare namespace API {
   };
 
   type getStudentGradeRankParams = {
-    /** 班级id */
-    class_id: string;
     /** 选中考试id */
     selected_exam_id: string;
     /** 学生id */
