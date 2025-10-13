@@ -256,8 +256,6 @@ declare namespace API {
   };
 
   type getStudentGradeRankParams = {
-    /** 班级id */
-    class_id: string;
     /** 选中考试id */
     selected_exam_id: string;
     /** 学生id */

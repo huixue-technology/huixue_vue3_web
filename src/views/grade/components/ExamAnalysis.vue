@@ -34,6 +34,7 @@ import type { CompareScore } from '@/utils/types'
 import subjects_inflection from '@/utils/inflection'
 import { message } from 'ant-design-vue';
 
+
 interface Exam {id:string,name:string}
 
 const props = defineProps<{
@@ -127,6 +128,17 @@ const handleUpandDown = (res:any) => {
     addSubjectData('历史', res.data[0].compareB.LishiB, res.data[0].compareD.LishiD);
     addSubjectData('地理', res.data[0].compareB.DiliB, res.data[0].compareD.DiliD);
 }
+const debounce = (func: Function, wait: number) => {
+  let timeout: number | null = null;
+  return function (...args: any[]) {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    timeout = window.setTimeout(() => {
+      func.apply(null, args);
+    }, wait);
+  };
+};
 
 const loadTableAndRadar = (value:string) => {
   postCompareRankMultiExam({
@@ -154,10 +166,13 @@ const loadTableAndRadar = (value:string) => {
     });
 }
 
+const debouncedLoadTableAndRadar = debounce(loadTableAndRadar, 300);
+
 const handleChange = (value:string) => {
     compareExamId.value = value;
-    loadTableAndRadar(value)
+    debouncedLoadTableAndRadar(value)
 }
+
 
 // 根据选科动态确定科目名称
 const dynamicSubjectNames = computed(() => {
@@ -179,9 +194,9 @@ const dynamicSubjectNames = computed(() => {
 watch(
   () => props.examList,
   (newExamList) => {
-    if (newExamList && newExamList.length > 0) {
+    if (newExamList && newExamList.length > 0 && compareExamId.value !== newExamList[0].id) {
       compareExamId.value = newExamList[0].id;
-      loadTableAndRadar(newExamList[0].id);
+      debouncedLoadTableAndRadar(newExamList[0].id);
     }
   },
   { immediate: true }
