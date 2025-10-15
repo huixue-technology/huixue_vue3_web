@@ -8,7 +8,7 @@
 
 <script setup lang="ts">
 import {h, ref, onMounted, computed} from 'vue'
-import { MailOutlined, AppstoreOutlined, SettingOutlined,ThunderboltOutlined, UserOutlined, LogoutOutlined,UsergroupAddOutlined, ToolOutlined, SolutionOutlined, FrownOutlined } from '@ant-design/icons-vue';
+import { MailOutlined, AppstoreOutlined, SettingOutlined,ThunderboltOutlined, UserOutlined, LogoutOutlined,UsergroupAddOutlined, ToolOutlined, SolutionOutlined, FrownOutlined, ForkOutlined, SecurityScanOutlined, MergeCellsOutlined } from '@ant-design/icons-vue';
 import { MenuProps } from 'ant-design-vue';
 import router from '@/router';
 import { useLogout } from '@/composables/useLogout';
@@ -54,9 +54,24 @@ const items =  computed<MenuProps['items']>(()=>{
         },
         {
           key: 'class_compare',
-          icon: () => h(AppstoreOutlined),
+          icon: () => h(MergeCellsOutlined),
           label: '班级对比',
           title: '班级对比',
+        },
+        {
+          key: 'student_analysis',
+          icon: () => h(SecurityScanOutlined),
+          label: '学生分析',
+        },
+        {
+          key: 'student_compare',
+          icon: () => h(ThunderboltOutlined),
+          label: '学生对比',
+        },
+        {
+          key: 'ai_assistant',
+          icon: () => h(ToolOutlined),
+          label: 'AI小助手'
         }
     );
   } else {

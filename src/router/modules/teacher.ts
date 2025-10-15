@@ -18,5 +18,10 @@ export default [
         name:'/class_analysis',
         path: '/class_analysis',
         component: () => import('@/views/teacher/ClassAnalysis.vue'),
-    }
+    },
+    {
+        name: '/student_analysis',
+        path: '/student_analysis',
+        component: () => import('@/views/teacher/StudentAnalysis.vue'),
+    },
 ]
