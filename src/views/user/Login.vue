@@ -51,6 +51,7 @@ import { UserOutlined, LockOutlined } from '@ant-design/icons-vue';
 import { postUserLogin } from '@/servers/api/user';
 import router from '@/router';
 import { useUserStore } from '@/store';
+import { getClassesDetailApi } from '@/servers/api/classes';
 // 表单参数
 interface FormParams {
   email: string
@@ -68,25 +69,35 @@ const formparams = reactive<FormParams>({
 
 const userStore = useUserStore();
 
-const onFinish = (values: any) => {
-   postUserLogin(values).then((res) => {
-    console.log(res);
-    localStorage.setItem('user', JSON.stringify(res.data));
-    // 使用Pinia存储用户信息
-    userStore.setUserInfo({
+const onFinish = async (values: any) => {
+   const res = await postUserLogin(values);
+   console.log(res);
+   localStorage.setItem('user', JSON.stringify(res.data));
+   if(! res.data.teacher) {
+      // 从res.data中获取对应的班级，然后根据班级获取对应的选科
+      const classId = res.data.student.class_id;
+      
+      const r = await  getClassesDetailApi({ class_id: classId });
+      // 在res.data中添加subject_selection字段
+      console.log(r.data);
+      res.data.student.subject_selection = r.data[0].subject_selection;
+      console.log(res.data)
+   }
+   
+   // 使用Pinia存储用户信息
+   userStore.setUserInfo({
       ...res.data,
       token: res.data.token
-    });
-    // 仍然保留token在localStorage中，方便API请求使用
-    localStorage.setItem('token', res.data.token);
-     const user = userStore.getUserInfo()
-     if(user['teacher'] !== undefined) {
-      console.log(user['teacher'])
-       router.push('/teacher_info')
-     }else{
-       router.push('/grade');
-     }
-  })
+   });
+   // 仍然保留token在localStorage中，方便API请求使用
+   localStorage.setItem('token', res.data.token);
+   const user = userStore.getUserInfo()
+   if(user['teacher'] !== undefined) {
+   console.log(user['teacher'])
+      router.push('/teacher_info')
+   }else{
+      router.push('/grade');
+   }
 }
 
 const onFinishFailed = (errorInfo: any) => {

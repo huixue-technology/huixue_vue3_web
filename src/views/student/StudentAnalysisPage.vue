@@ -34,6 +34,7 @@ import type { ColumnType } from 'ant-design-vue/es/table';
 import { useUserStore } from '@/store';
 import { getStudentExamApi } from '@/servers/api/student';
 import { postPassLineAnalysis} from '@/servers/api/analysis';
+import { getClassesDetailApi } from '@/servers/api/classes';
 
 type ExamAnalysis = {
   key: string;
@@ -103,6 +104,7 @@ const termSelected = ref(default_term[0].label)
 const fetchStudentInfo = async () => {
   try {
     userInfo.value = userStore.userInfo;
+    
     let studentId = userInfo.value.role;
 
     if (!studentId) {
@@ -172,19 +174,48 @@ const submit = () => {
 
   termSelected.value === 'all' ? examListSelected.value = examList.value.map(item => item.value):examListSelected.value = examList.value.filter(item => item.year === termSelected.value).map(item => item.value)
   
-  postPassLineAnalysis({ student_id: userInfo.value.role, exam_ids: examListSelected.value}).then((res)=>{
-    examAnalysisList.value = []
-    for(let item in res.data) {
-      if(item in subjects_map.value) {
-        examAnalysisList.value.push({
-          key: item,
-          subject: subjects_map.value[item],
-          passCount: res.data[item].pass_count,
-          passRate: res.data[item].pass_rate,
-        })
+  postPassLineAnalysis({ student_id: userInfo.value.role, exam_ids: examListSelected.value})
+    .then((res)=>{
+      examAnalysisList.value = []
+      console.log(res.data)
+      for(let item in res.data) {
+        if(item in subjects_map.value) {
+          examAnalysisList.value.push({
+            key: item,
+            subject: subjects_map.value[item],
+            passCount: res.data[item].pass_count,
+            passRate: res.data[item].pass_rate,
+          })
+        }
       }
-    }
-  })
+    })
+    .catch(async (error) => {
+      // 处理 HTTP 500 错误并尝试从错误中获取响应数据
+      if (error.response) {
+        try {
+          // 从 Response 对象中获取实际的响应数据
+          const errorData = await error.response.clone().json();
+          console.log('Error data:', errorData);
+          
+          // 检查是否包含业务错误信息
+          if (errorData && typeof errorData === 'object' && errorData.data) {
+            // 显示具体的业务错误消息
+            message.warning(errorData.data);
+          } else {
+            // 显示通用错误消息
+            message.error(`请求失败: ${error.response.statusText || 'Internal Server Error'}`);
+          }
+        } catch (parseError) {
+          // 如果解析 JSON 失败，可能是其他格式的响应
+          console.error('Failed to parse error response:', parseError);
+          message.error('请求失败，无法解析服务器响应');
+        }
+      } else {
+        // 网络错误或其他问题
+        console.error('Network error or other issue:', error);
+        message.error('网络错误或未知问题');
+      }
+    });
 }
 
 const bindStudentSubject = ()=> {
@@ -297,5 +328,4 @@ onMounted(async() => {
 .exam-list-group {
   width: 80%;
 }
-
-</style> 
+</style>

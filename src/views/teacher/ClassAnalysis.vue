@@ -1,130 +1,3 @@
-<template>
-  <div class="class-analysis-container">
-    <div class="header">
-      <h2>班级分析</h2>
-    </div>
-
-    <!-- 考试选择下拉框 -->
-    <div class="filter-section">
-      <a-select
-        v-model:value="selectedExamId"
-        placeholder="选择考试"
-        style="width: 200px"
-        @change="handleExamChange"
-        :disabled="loading"
-      >
-        <a-select-option
-          v-for="exam in examList"
-          :key="exam"
-          :value="exam"
-        >
-          考试{{ exam }}
-        </a-select-option>
-      </a-select>
-    </div>
-
-    <!-- 分析数据展示 -->
-    <div v-if="!loading" class="analysis-content">
-      <div class="analysis-card full-width">
-        <h3>优秀学生及成绩详情</h3>
-        <a-table
-          :data-source="formattedExcellentStudents"
-          bordered
-          :columns="excellentStudentColumns"
-          pagination="false"
-          :expandable="{
-            expandedRowKeys: excellentExpandedRowKeys.value,
-            onExpand: (expanded, record) => handleExcellentExpand(expanded, record)
-          }"
-        >
-          <!-- 优秀学生展开行内容：科目详情 -->
-          <template #expandedRowRender="{ record }">
-            <div class="expanded-detail">
-              <a-table
-                :data-source="getSubjectDetails(record)"
-                bordered
-                :columns="subjectDetailColumns"
-                pagination="false"
-                :show-header="true"
-              />
-            </div>
-          </template>
-        </a-table>
-      </div>
-
-      <!-- 待关注学生 -->
-      <div class="analysis-card full-width">
-        <h3>待关注学生及成绩详情</h3>
-        <a-table
-          :data-source="formattedDangerStudents"
-          bordered
-          :columns="dangerStudentColumns"
-          pagination="false"
-          :expandable="{
-            expandedRowKeys: dangerExpandedRowKeys.value,
-            onExpand: (expanded, record) => handleDangerExpand(expanded, record)
-          }"
-        >
-          <!-- 待关注学生展开行内容：科目详情 -->
-          <template #expandedRowRender="{ record }">
-            <div class="expanded-detail">
-              <a-table
-                :data-source="getSubjectDetails(record)"
-                bordered
-                :columns="subjectDetailColumns"
-                pagination="false"
-                :show-header="true"
-              />
-            </div>
-          </template>
-        </a-table>
-      </div>
-
-      <!-- 主科成绩分析（分数段分布） -->
-      <div class="analysis-card full-width">
-        <h3>主科成绩分数段分布</h3>
-        <div v-for="(subjectData, subject) in formattedMainScores" :key="subject" class="subject-section">
-          <h4>{{ subject }}</h4>
-          <a-table
-            :data-source="subjectData"
-            bordered
-            :columns="sectionColumns"
-            pagination="false"
-          />
-        </div>
-      </div>
-
-      <!-- 选考科目分析（分数段分布） -->
-      <div class="analysis-card full-width">
-        <h3>选考科目成绩分数段分布</h3>
-        <div v-for="(subjectData, subject) in formattedSelectScores" :key="subject" class="subject-section">
-          <h4>{{ subject }}</h4>
-          <a-table
-            :data-source="subjectData"
-            bordered
-            :columns="sectionColumns"
-            pagination="false"
-          />
-        </div>
-      </div>
-
-      <!-- 总分分段统计 -->
-      <div class="analysis-card full-width">
-        <h3>总分分段统计</h3>
-        <a-table
-          :data-source="formattedScoreSections"
-          bordered
-          :columns="sectionColumns"
-          pagination="false"
-        />
-      </div>
-    </div>
-
-    <!-- 加载状态 -->
-    <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { getClassExam } from '@/servers/api/grade';
@@ -216,44 +89,144 @@ const getSubjectDetails = (student: any) => {
   return details;
 };
 
-// 格式化主科成绩数据（分数段分布）
-const formattedMainScores = computed(() => {
-  const result: Record<string, {range: string; count: number}[]> = {};
+// 主科分数段数据处理
+const mainScoreSectionsData = computed(() => {
+  const result: any[] = [];
+  
+  // 获取所有分数段范围（去重并排序）
+  const allRanges = new Set<string>();
+  
+  // 收集主科数据
   classAnalysisData.value.main_score_section.forEach((subjectObj: any) => {
-    Object.entries(subjectObj).forEach(([enSubject, sections]: [string, any[]]) => {
-      const cnSubject = subjectMap[enSubject] || enSubject;
-      // 对分数段进行倒序处理
-      const reversedSections = [...sections].reverse();
-      result[cnSubject] = reversedSections.map((section: any) => {
+    Object.entries(subjectObj).forEach(([enSubject, sections]) => {
+      (sections as any[]).forEach((section: any) => {
         const range = Object.keys(section)[0];
-        return {
-          range,
-          count: section[range] ?? 0
-        };
+        allRanges.add(range);
       });
     });
   });
+  
+  // 将分数段按从高到低排序
+  const sortedRanges = Array.from(allRanges).sort((a, b) => {
+    const aMin = parseInt(a.split('-')[0]);
+    const bMin = parseInt(b.split('-')[0]);
+    return bMin - aMin;
+  });
+  
+  // 为每个分数段创建一行数据
+  sortedRanges.forEach(range => {
+    const row: any = { range };
+    
+    // 添加主科数据
+    classAnalysisData.value.main_score_section.forEach((subjectObj: any) => {
+      Object.entries(subjectObj).forEach(([enSubject, sections]) => {
+        const cnSubject = subjectMap[enSubject as keyof typeof subjectMap] || enSubject;
+        const section = (sections as any[]).find((s: any) => Object.keys(s)[0] === range);
+        row[enSubject] = section ? section[range] : 0;
+      });
+    });
+    
+    result.push(row);
+  });
+  
   return result;
 });
 
-// 格式化选考科目数据（分数段分布）
-const formattedSelectScores = computed(() => {
-  const result: Record<string, {range: string; count: number}[]> = {};
+// 副科分数段数据处理
+const selectScoreSectionsData = computed(() => {
+  const result: any[] = [];
+  
+  // 获取所有分数段范围（去重并排序）
+  const allRanges = new Set<string>();
+  
+  // 收集选考科目数据
   classAnalysisData.value.select_score_section.forEach((subjectObj: any) => {
-    Object.entries(subjectObj).forEach(([enSubject, sections]: [string, any[]]) => {
-      const cnSubject = subjectMap[enSubject] || enSubject;
-      // 对分数段进行倒序处理
-      const reversedSections = [...sections].reverse();
-      result[cnSubject] = reversedSections.map((section: any) => {
+    Object.entries(subjectObj).forEach(([enSubject, sections]) => {
+      (sections as any[]).forEach((section: any) => {
         const range = Object.keys(section)[0];
-        return {
-          range,
-          count: section[range] ?? 0
-        };
+        allRanges.add(range);
       });
     });
   });
+  
+  // 将分数段按从高到低排序
+  const sortedRanges = Array.from(allRanges).sort((a, b) => {
+    const aMin = parseInt(a.split('-')[0]);
+    const bMin = parseInt(b.split('-')[0]);
+    return bMin - aMin;
+  });
+  
+  // 为每个分数段创建一行数据
+  sortedRanges.forEach(range => {
+    const row: any = { range };
+    
+    // 添加选考科目数据
+    classAnalysisData.value.select_score_section.forEach((subjectObj: any) => {
+      Object.entries(subjectObj).forEach(([enSubject, sections]) => {
+        const cnSubject = subjectMap[enSubject as keyof typeof subjectMap] || enSubject;
+        const section = (sections as any[]).find((s: any) => Object.keys(s)[0] === range);
+        row[enSubject] = section ? section[range] : 0;
+      });
+    });
+    
+    result.push(row);
+  });
+  
   return result;
+});
+
+// 主科表格列定义
+const mainScoreSectionsColumns = computed(() => {
+  const columns: any[] = [
+    { 
+      title: '分数段', 
+      dataIndex: 'range', 
+      fixed: 'left',
+      width: 120
+    }
+  ];
+  
+  // 添加主科列
+  classAnalysisData.value.main_score_section.forEach((subjectObj: any) => {
+    Object.keys(subjectObj).forEach(enSubject => {
+      const cnSubject = subjectMap[enSubject as keyof typeof subjectMap] || enSubject;
+      columns.push({
+        title: cnSubject,
+        dataIndex: enSubject,
+        align: 'center',
+        width: 100
+      });
+    });
+  });
+  
+  return columns;
+});
+
+// 副科表格列定义
+const selectScoreSectionsColumns = computed(() => {
+  const columns: any[] = [
+    { 
+      title: '分数段', 
+      dataIndex: 'range', 
+      fixed: 'left',
+      width: 120
+    }
+  ];
+  
+  // 添加选考科目列
+  classAnalysisData.value.select_score_section.forEach((subjectObj: any) => {
+    Object.keys(subjectObj).forEach(enSubject => {
+      const cnSubject = subjectMap[enSubject as keyof typeof subjectMap] || enSubject;
+      columns.push({
+        title: cnSubject,
+        dataIndex: enSubject,
+        align: 'center',
+        width: 100
+      });
+    });
+  });
+  
+  return columns;
 });
 
 // 格式化分数段数据
@@ -398,16 +371,158 @@ const handleExamChange = async (examId: number) => {
 };
 </script>
 
+<template>
+  <div class="class-analysis-container">
+    <div class="header">
+      <h2>班级分析</h2>
+    </div>
+
+    <!-- 考试选择下拉框 -->
+    <div class="filter-section">
+      <a-select
+        v-model:value="selectedExamId"
+        placeholder="选择考试"
+        style="width: 200px"
+        @change="handleExamChange"
+        :disabled="loading"
+      >
+        <a-select-option
+          v-for="exam in examList"
+          :key="exam"
+          :value="exam"
+        >
+          考试{{ exam }}
+        </a-select-option>
+      </a-select>
+    </div>
+
+    <!-- 分析数据展示 -->
+    <div v-if="!loading" class="analysis-content">
+      <div class="analysis-card full-width">
+        <h3>优秀学生及成绩详情</h3>
+        <a-table
+          :data-source="formattedExcellentStudents"
+          bordered
+          :columns="excellentStudentColumns"
+          pagination="false"
+          :expandable="{
+            expandedRowKeys: excellentExpandedRowKeys,
+            onExpand: (expanded: boolean, record: any) => handleExcellentExpand(expanded, record)
+          }"
+        >
+          <!-- 优秀学生展开行内容：科目详情 -->
+          <template #expandedRowRender="{ record }">
+            <div class="expanded-detail">
+              <a-table
+                :data-source="getSubjectDetails(record)"
+                bordered
+                :columns="subjectDetailColumns"
+                pagination="false"
+                :show-header="true"
+              />
+            </div>
+          </template>
+        </a-table>
+      </div>
+
+      <!-- 待关注学生 -->
+      <div class="analysis-card full-width">
+        <h3>待关注学生及成绩详情</h3>
+        <a-table
+          :data-source="formattedDangerStudents"
+          bordered
+          :columns="dangerStudentColumns"
+          pagination="false"
+          :expandable="{
+            expandedRowKeys: dangerExpandedRowKeys,
+            onExpand: (expanded: boolean, record: any) => handleDangerExpand(expanded, record)
+          }"
+        >
+          <!-- 待关注学生展开行内容：科目详情 -->
+          <template #expandedRowRender="{ record }">
+            <div class="expanded-detail">
+              <a-table
+                :data-source="getSubjectDetails(record)"
+                bordered
+                :columns="subjectDetailColumns"
+                pagination="false"
+                :show-header="true"
+              />
+            </div>
+          </template>
+        </a-table>
+      </div>
+
+      <!-- 分段统计卡片容器 -->
+      <div class="segment-analysis-container">
+        <!-- 主科分段统计 -->
+        <div class="analysis-card segment-card">
+          <h3>主科成绩分段统计（满分150分）</h3>
+          <div class="table-container">
+            <a-table
+              :data-source="mainScoreSectionsData"
+              :columns="mainScoreSectionsColumns"
+              bordered
+              pagination="false"
+              :scroll="{ x: 'max-content' }"
+            />
+          </div>
+        </div>
+
+        <!-- 副科分段统计 -->
+        <div class="analysis-card segment-card">
+          <h3>副科成绩分段统计（满分100分）</h3>
+          <div class="table-container">
+            <a-table
+              :data-source="selectScoreSectionsData"
+              :columns="selectScoreSectionsColumns"
+              bordered
+              pagination="false"
+              :scroll="{ x: 'max-content' }"
+            />
+          </div>
+        </div>
+
+        <!-- 总分分段统计 -->
+        <div class="analysis-card segment-card">
+          <h3>总分分段统计（满分750分）</h3>
+          <div class="table-container">
+            <a-table
+              :data-source="formattedScoreSections"
+              bordered
+              :columns="sectionColumns"
+              pagination="false"
+              :scroll="{ x: 'max-content' }"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 加载状态 -->
+    <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
+  </div>
+</template>
+
 <style scoped>
 .class-analysis-container {
   padding: 20px;
   height: 100vh;
   box-sizing: border-box;
   overflow-y: auto;
+  background-color: #f5f7fa;
+  font-size: 16px; /* 设置基础字体大小 */
 }
 
 .header {
   margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
 }
 
 .filter-section {
@@ -415,39 +530,45 @@ const handleExamChange = async (examId: number) => {
 }
 
 .analysis-content {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 20px;
-  margin-top: 20px;
 }
 
 .analysis-card {
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
 }
 
-.subject-section {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.subject-section:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.subject-section h4 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  color: #1890ff;
+.analysis-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
 .full-width {
-  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.segment-analysis-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.segment-card {
+  flex: 1;
+  min-width: 300px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fc 100%);
+}
+
+.segment-card h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 20px; /* 增大标题字体 */
+  font-weight: 600;
+  color: #2c3e50;
 }
 
 .loading-spin {
@@ -458,5 +579,96 @@ const handleExamChange = async (examId: number) => {
 
 .expanded-detail {
   margin: 16px 0 0 48px;
+}
+
+/* 表格容器样式，确保可以横向滚动 */
+.table-container {
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* 表格样式优化 */
+:deep(.ant-table-thead > tr > th) {
+  background: linear-gradient(180deg, #f0f5ff 0%, #e6f0ff 100%);
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #d6e4ff;
+  text-align: center;
+  font-size: 16px; /* 设置表头字体大小 */
+}
+
+:deep(.ant-table-tbody > tr > td) {
+  text-align: center;
+  font-size: 16px; /* 设置表格内容字体大小 */
+  padding: 12px 8px; /* 增加单元格内边距 */
+}
+
+:deep(.ant-table-tbody > tr:hover) {
+  background-color: #f0f8ff;
+}
+
+:deep(.ant-table) {
+  min-width: 100%;
+}
+
+:deep(.ant-table-bordered .ant-table-thead > tr > th) {
+  border-right: 1px solid #d6e4ff;
+}
+
+:deep(.ant-table-bordered .ant-table-tbody > tr > td) {
+  border-right: 1px solid #f0f0f0;
+}
+
+/* 优秀学生和待关注学生标题颜色 */
+.analysis-card:first-child h3 {
+  color: #1890ff; /* 优秀学生标题颜色 */
+}
+
+.analysis-card:nth-child(2) h3 {
+  color: #fa8c16; /* 待关注学生标题颜色 */
+}
+
+/* 分段统计卡片标题颜色 */
+.segment-card:nth-child(1) h3 {
+  color: #1890ff; /* 主科标题颜色 */
+}
+
+.segment-card:nth-child(2) h3 {
+  color: #52c41a; /* 副科标题颜色 */
+}
+
+.segment-card:nth-child(3) h3 {
+  color: #722ed1; /* 总分标题颜色 */
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .segment-analysis-container {
+    flex-direction: column;
+  }
+  
+  .segment-card {
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .class-analysis-container {
+    padding: 12px;
+    font-size: 14px; /* 小屏幕下适当减小字体 */
+  }
+  
+  .analysis-card {
+    padding: 16px;
+  }
+  
+  .segment-card h3 {
+    font-size: 18px; /* 小屏幕下调整标题字体 */
+  }
+  
+  :deep(.ant-table-thead > tr > th),
+  :deep(.ant-table-tbody > tr > td) {
+    font-size: 14px; /* 小屏幕下调整表格字体 */
+  }
 }
 </style>

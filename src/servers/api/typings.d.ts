@@ -9,8 +9,10 @@ declare namespace API {
   };
 
   type BatchDeleteStudent = {
-    /** 要删除的学生ID列表 */
-    student_ids: number[];
+    /** 要删除的学生ID列表(与grade二选一) */
+    student_ids?: number[];
+    /** 学生年级(与student_ids二选一) */
+    grade?: string;
   };
 
   type BatchDeleteTeacher = {

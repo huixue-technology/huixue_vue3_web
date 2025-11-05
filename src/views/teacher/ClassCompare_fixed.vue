@@ -7,7 +7,8 @@
 
     <!-- 筛选区域 -->
     <div class="filter-section">
-      <a-row :gutter="[16, 16]" justify="center">
+      <a-row :gutter="[16, 16]" align="middle">
+        <!-- 考试选择 -->
         <a-col :span="24" :md="8">
           <div class="filter-item">
             <span class="label">考试：</span>
@@ -28,11 +29,9 @@
             </a-select>
           </div>
         </a-col>
-      </a-row>
-      
-      <a-row :gutter="[16, 16]" justify="center" align="middle" style="margin-top: 20px;">
+
         <!-- 班级选择区域 -->
-        <a-col :span="24" :md="18">
+        <a-col :span="24" :md="16">
           <div class="class-selector-container">
             <!-- 我的班级 -->
             <div class="class-selector-item">
@@ -40,7 +39,7 @@
               <a-select
                 v-model:value="selectedClass1"
                 placeholder="我的班级"
-                style="flex: 1;"
+                style="width: 100%"
                 disabled  
               >
                 <a-select-option
@@ -61,7 +60,7 @@
               <a-select
                 v-model:value="selectedClass2"
                 placeholder="选择班级"
-                style="flex: 1;"
+                style="width: 100%"
                 :disabled="loading"
               >
                 <a-select-option
@@ -73,24 +72,20 @@
                 </a-select-option>
               </a-select>
             </div>
+
+            <!-- 开始对比按钮 -->
+            <a-button 
+              type="primary" 
+              @click="fetchComparisonData"
+              :disabled="isCompareBtnDisabled" 
+              class="compare-button"
+            >
+              开始对比
+            </a-button>
           </div>
         </a-col>
       </a-row>
-      
-      <a-row justify="center" style="margin-top: 20px;">
-        <!-- 开始对比按钮 -->
-        <a-col>
-          <a-button 
-            type="primary" 
-            @click="fetchComparisonData"
-            :disabled="isCompareBtnDisabled" 
-            class="compare-button"
-          >
-            开始对比
-          </a-button>
-        </a-col>
-      </a-row>
-      
+
       <!-- 显示方式选择 -->
       <div class="display-option">
         <span class="label">显示方式：</span>
@@ -642,66 +637,53 @@ onMounted(init);
     border-radius: 8px;
     margin-bottom: 24px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
-    text-align: center;
     
     .filter-item {
       display: flex;
-      flex-direction: row;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
       
       .label {
         font-weight: 500;
         color: #535353;
-        width: 60px;
         margin-bottom: 8px;
         font-size: 14px;
-        margin-right: 12px;
-        text-align: right;
       }
     }
 
     .class-selector-container {
       display: flex;
-      flex-wrap: nowrap;
-      align-items: center;
+      flex-wrap: wrap;
+      align-items: end;
       gap: 16px;
-      justify-content: center;
       
       .class-selector-item {
         flex: 1;
+        min-width: 180px;
         display: flex;
-        flex-direction: row;
-        align-items: center;
-        min-width: 200px;
+        flex-direction: column;
         
         .label {
           font-weight: 500;
           color: #535353;
-          margin-right: 8px;
+          margin-bottom: 8px;
           font-size: 14px;
-          white-space: nowrap;
-        }
-        
-        :deep(.ant-select) {
-          flex: 1;
         }
       }
       
       .versus {
         display: flex;
-        align-items: center;
+        align-items: end;
         justify-content: center;
         font-weight: 700;
         font-size: 20px;
         color: #1890ff;
         min-width: 40px;
-        padding: 0 10px;
+        padding-bottom: 4px;
       }
       
       .compare-button {
         height: 38px;
-        margin-top: 24px;
+        align-self: end;
       }
     }
 
@@ -709,9 +691,6 @@ onMounted(init);
       margin-top: 20px;
       padding-top: 16px;
       border-top: 1px solid #f0f0f0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       
       .label {
         font-weight: 500;

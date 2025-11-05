@@ -7,7 +7,6 @@
             style="min-width: 150px; margin-left: 15px;"
             @change="handleChange"
             v-model:value="compareExamId"
-            :value="examList.filter(i=> i.id === compareExamId)[0]?.name"
         >
             <a-select-option v-for="item in examList" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
         </a-select> 
@@ -25,8 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
-import { Table as ATable } from 'ant-design-vue';
+import { ref, computed } from 'vue';
 import type { ColumnType } from 'ant-design-vue/es/table';
 import { postCompareRankMultiExam } from '@/servers/api/analysis';
 import { getGradeApi } from '@/servers/api/grade';
@@ -119,7 +117,7 @@ const handleUpandDown = (res:any) => {
 
     // 添加各学科数据
     addSubjectData('总分',res.data[0].compareB.sumB, res.data[0].compareD.sumD)
-    addSubjectData('语文', res.data[0].compareB.YuwenB, res.data[0].compareD.YuwenD);
+    addSubjectData('语文', res.data[0].compareB.YuwenB, res.data[0].compareD.YingyuD);
     addSubjectData('英语', res.data[0].compareB.YingyuB, res.data[0].compareD.YingyuD);
     addSubjectData('物理', res.data[0].compareB.WuliB, res.data[0].compareD.WuliD);
     addSubjectData('化学', res.data[0].compareB.HuaxueB, res.data[0].compareD.HuaxueD);
@@ -173,7 +171,6 @@ const handleChange = (value:string) => {
     debouncedLoadTableAndRadar(value)
 }
 
-
 // 根据选科动态确定科目名称
 const dynamicSubjectNames = computed(() => {
   let subjects = [
@@ -190,17 +187,6 @@ const dynamicSubjectNames = computed(() => {
   }
   return subjects
 });
-
-watch(
-  () => props.examList,
-  (newExamList) => {
-    if (newExamList && newExamList.length > 0 && compareExamId.value !== newExamList[0].id) {
-      compareExamId.value = newExamList[0].id;
-      debouncedLoadTableAndRadar(newExamList[0].id);
-    }
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped>
