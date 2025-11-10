@@ -1,8 +1,8 @@
 <template>
   <div class="student-analysis-container">
     <div class="header">
-      <h2>学生成绩查看</h2>
-      <p>查看本班所有学生的考试成绩</p>
+      <h2>学生成绩分析</h2>
+      <p>选择学生和考试查看详细成绩分析</p>
     </div>
 
     <!-- 筛选区域 -->
@@ -48,136 +48,143 @@
       </a-row>
     </div>
 
-    <!-- 学生列表卡片 -->
-    <div class="students-section" v-if="!selectedStudentId && filteredStudentList.length > 0">
-      <h3>班级学生列表</h3>
-      <a-row :gutter="16">
-        <a-col 
-          v-for="student in filteredStudentList" 
-          :key="student.student_id" 
-          :span="24"
-          :md="12"
-          :lg="8"
-          :xl="6"
-        >
-          <div class="student-card" @click="selectStudent(student.student_id)">
-            <div class="student-info">
-              <div class="student-avatar">
-                <UserOutlined />
-              </div>
-              <div class="student-details">
-                <h4>{{ student.student_name }}</h4>
-                <p>学号: {{ student.student_id }}</p>
-              </div>
+    <!-- 成绩详情区域 -->
+    <div class="analysis-content" v-if="selectedStudentId && selectedExamId">
+      <!-- 学生基本信息和总览 -->
+      <a-row :gutter="16" class="overview-section">
+        <a-col :span="24" :md="8">
+          <div class="student-info-card">
+            <div class="student-avatar">
+              <UserOutlined />
+            </div>
+            <div class="student-details">
+              <h3>{{ currentStudentInfo.student_name }}</h3>
+              <p>学号: {{ currentStudentInfo.student_id }}</p>
+              <p>考试: {{ examMap[selectedExamId] || currentExamInfo.name }}</p>
             </div>
           </div>
         </a-col>
+        <a-col :span="24" :md="16">
+          <div class="summary-cards">
+            <a-row :gutter="16">
+              <a-col :span="12" :lg="6">
+                <div class="summary-card total-score-card">
+                  <div class="card-title">总分</div>
+                  <div class="card-value">{{ totalScore }}</div>
+                  <div class="card-footer">
+                    <span>班级排名: {{ totalClassRank }}</span>
+                    <span>年级排名: {{ totalGradeRank }}</span>
+                  </div>
+                </div>
+              </a-col>
+              <a-col :span="12" :lg="6">
+                <div class="summary-card average-score-card">
+                  <div class="card-title">平均分</div>
+                  <div class="card-value">{{ averageScore }}</div>
+                  <div class="card-footer">
+                    <span>最高分: {{ maxScore }}</span>
+                  </div>
+                </div>
+              </a-col>
+              <a-col :span="12" :lg="6">
+                <div class="summary-card rank-card">
+                  <div class="card-title">班级排名</div>
+                  <div class="card-value" :class="getRankClass(totalClassRank)">
+                    {{ totalClassRank }}
+                  </div>
+                  <div class="card-footer">
+                    <span>年级排名: {{ totalGradeRank }}</span>
+                  </div>
+                </div>
+              </a-col>
+              <a-col :span="12" :lg="6">
+                <div class="summary-card pass-rate-card">
+                  <div class="card-title">及格率</div>
+                  <div class="card-value">{{ passRate }}%</div>
+                  <div class="card-footer">
+                    <span>及格科目: {{ passSubjectCount }}/{{ subjectCount }}</span>
+                  </div>
+                </div>
+              </a-col>
+            </a-row>
+          </div>
+        </a-col>
       </a-row>
-    </div>
 
-    <!-- 搜索结果为空提示 -->
-    <div class="empty-section" v-if="!selectedStudentId && filteredStudentList.length === 0 && searchKeyword">
-      <a-empty description="未找到匹配的学生" />
-    </div>
-
-    <!-- 成绩详情区域 -->
-    <div class="analysis-content" v-if="selectedStudentId">
-      <!-- 学生基本信息 -->
-      <div class="student-basic-info">
-        <a-card title="学生信息" size="small">
-          <div class="info-row">
-            <span class="info-label">姓名：</span>
-            <span class="info-value">{{ currentStudentInfo.student_name }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">学号：</span>
-            <span class="info-value">{{ currentStudentInfo.student_id }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">考试：</span>
-            <span class="info-value">{{ examMap[selectedExamId] || currentExamInfo.name }}</span>
-          </div>
-        </a-card>
-      </div>
-
-      <!-- 成绩详情 -->
-      <div class="score-details" v-if="selectedExamId">
-        <a-row :gutter="16">
-          <a-col :span="24">
-            <a-card title="成绩详情" size="small">
-              <a-table
-                :columns="scoreColumns"
-                :data-source="scoreData"
-                :pagination="false"
-                bordered
-                size="middle"
-              >
-                <template #bodyCell="{ column, record }">
-                  <template v-if="column.dataIndex === 'score'">
-                    <span :class="getScoreClass(record.score, record.subject)">
-                      {{ record.score }}
-                    </span>
-                  </template>
-                  <template v-if="column.dataIndex === 'classRank'">
-                    <span :class="getRankClass(record.classRank)">
-                      {{ record.classRank }}
-                    </span>
-                  </template>
-                  <template v-if="column.dataIndex === 'gradeRank'">
-                    <span :class="getRankClass(record.gradeRank)">
-                      {{ record.gradeRank }}
-                    </span>
-                  </template>
+      <!-- 成绩详情和分数线对比 -->
+      <a-row :gutter="16" style="margin-top: 20px;">
+        <a-col :span="24" :md="12">
+          <a-card title="成绩详情" class="score-card">
+            <a-table
+              :columns="scoreColumns"
+              :data-source="scoreData"
+              :pagination="false"
+              bordered
+              size="middle"
+              :scroll="{ y: 300 }"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.dataIndex === 'score'">
+                  <span :class="getScoreClass(record.score, record.subject)">
+                    {{ record.score }}
+                  </span>
                 </template>
-              </a-table>
-            </a-card>
-          </a-col>
-        </a-row>
-
-        <!-- 分数线对比 -->
-        <a-row :gutter="16" style="margin-top: 20px;">
-          <a-col :span="24">
-            <a-card title="分数线对比" size="small">
-              <a-table
-                :columns="passLineColumns"
-                :data-source="passLineData"
-                :pagination="false"
-                bordered
-                size="middle"
-              >
-                <template #bodyCell="{ column, record }">
-                  <template v-if="column.dataIndex === 'studentScore'">
-                    <span :class="getScoreClass(record.studentScore, record.subject)">
-                      {{ record.studentScore }}
-                    </span>
-                  </template>
-                  <template v-if="column.dataIndex === 'passLine'">
-                    <span class="pass-line">{{ record.passLine }}</span>
-                  </template>
-                  <template v-if="column.dataIndex === 'difference'">
-                    <span :class="getDifferenceClass(record.difference)">
-                      {{ record.difference > 0 ? '+' : '' }}{{ record.difference }}
-                    </span>
-                  </template>
+                <template v-if="column.dataIndex === 'classRank'">
+                  <span :class="getRankClass(record.classRank)">
+                    {{ record.classRank }}
+                  </span>
                 </template>
-              </a-table>
-            </a-card>
-          </a-col>
-        </a-row>
-      </div>
+                <template v-if="column.dataIndex === 'gradeRank'">
+                  <span :class="getRankClass(record.gradeRank)">
+                    {{ record.gradeRank }}
+                  </span>
+                </template>
+              </template>
+            </a-table>
+          </a-card>
+        </a-col>
+        <a-col :span="24" :md="12">
+          <a-card title="分数线对比" class="passline-card">
+            <a-table
+              :columns="passLineColumns"
+              :data-source="passLineData"
+              :pagination="false"
+              bordered
+              size="middle"
+              :scroll="{ y: 300 }"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.dataIndex === 'studentScore'">
+                  <span :class="getScoreClass(record.studentScore, record.subject)">
+                    {{ record.studentScore }}
+                  </span>
+                </template>
+                <template v-if="column.dataIndex === 'passLine'">
+                  <span class="pass-line">{{ record.passLine }}</span>
+                </template>
+                <template v-if="column.dataIndex === 'difference'">
+                  <span :class="getDifferenceClass(record.difference)">
+                    {{ record.difference > 0 ? '+' : '' }}{{ record.difference }}
+                  </span>
+                </template>
+              </template>
+            </a-table>
+          </a-card>
+        </a-col>
+      </a-row>
 
       <!-- 图表展示 -->
-      <div class="charts-section" v-if="selectedExamId">
+      <div class="charts-section">
         <a-row :gutter="16" style="margin-top: 20px;">
           <a-col :span="24" :md="12">
-            <a-card title="成绩分布图" size="small">
+            <a-card title="成绩分布图" class="chart-card">
               <div class="chart-container">
                 <e-charts :option="scoreChartOption" style="height: 300px" />
               </div>
             </a-card>
           </a-col>
           <a-col :span="24" :md="12">
-            <a-card title="排名趋势图" size="small">
+            <a-card title="排名趋势图" class="chart-card">
               <div class="chart-container">
                 <e-charts :option="rankChartOption" style="height: 300px" />
               </div>
@@ -185,6 +192,11 @@
           </a-col>
         </a-row>
       </div>
+    </div>
+
+    <!-- 选择提示 -->
+    <div class="select-prompt" v-else>
+      <a-empty description="请选择学生和考试查看成绩分析" />
     </div>
 
     <!-- 加载状态 -->
@@ -204,6 +216,7 @@ import { getGradeApi } from '@/servers/api/grade';
 import { getPassLine } from '@/servers/api/analysis';
 import { getExamDetailApi } from '@/servers/api/exam';
 import type { ColumnType } from 'ant-design-vue/es/table';
+import * as echarts from 'echarts';
 
 // 类型定义
 interface Student {
@@ -291,6 +304,50 @@ const currentStudentInfo = computed(() => {
 const currentExamInfo = computed(() => {
   const exam = examList.value.find(e => e.id === selectedExamId.value);
   return exam || { id: 0, name: '' };
+});
+
+// 总分相关计算
+const totalScore = computed(() => {
+  const detail = scoreDetails.value[selectedExamId.value];
+  return detail ? detail.sum_ || 0 : 0;
+});
+
+const totalClassRank = computed(() => {
+  const detail = scoreDetails.value[selectedExamId.value];
+  return detail ? detail.sumB || 0 : 0;
+});
+
+const totalGradeRank = computed(() => {
+  const detail = scoreDetails.value[selectedExamId.value];
+  return detail ? detail.sumD || 0 : 0;
+});
+
+// 平均分相关计算
+const averageScore = computed(() => {
+  const data = scoreData.value.filter(item => item.subject !== 'sum_');
+  if (data.length === 0) return 0;
+  const sum = data.reduce((acc, item) => acc + item.score, 0);
+  return (sum / data.length).toFixed(1);
+});
+
+const maxScore = computed(() => {
+  const data = scoreData.value.filter(item => item.subject !== 'sum_');
+  if (data.length === 0) return 0;
+  return Math.max(...data.map(item => item.score));
+});
+
+// 及格率相关计算
+const passSubjectCount = computed(() => {
+  return scoreData.value.filter(item => item.subject !== 'sum_' && item.score >= 60).length;
+});
+
+const subjectCount = computed(() => {
+  return scoreData.value.filter(item => item.subject !== 'sum_').length;
+});
+
+const passRate = computed(() => {
+  if (subjectCount.value === 0) return 0;
+  return ((passSubjectCount.value / subjectCount.value) * 100).toFixed(0);
 });
 
 // 成绩表格列
@@ -435,8 +492,8 @@ const passLineData = computed<PassLineDetail[]>(() => {
 
 // 成绩图表选项
 const scoreChartOption = computed(() => {
-  const subjects = scoreData.value.map(item => item.subjectName);
-  const scores = scoreData.value.map(item => item.score);
+  const subjects = scoreData.value.filter(item => item.subject !== 'sum_').map(item => item.subjectName);
+  const scores = scoreData.value.filter(item => item.subject !== 'sum_').map(item => item.score);
   
   return {
     tooltip: {
@@ -450,13 +507,18 @@ const scoreChartOption = computed(() => {
       data: subjects
     },
     yAxis: {
-      type: 'value'
+      type: 'value',
+      name: '分数'
     },
     series: [{
       type: 'bar',
       data: scores,
       itemStyle: {
-        color: '#5470C6'
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#83bff6' },
+          { offset: 0.5, color: '#188df0' },
+          { offset: 1, color: '#1890ff' }
+        ])
       },
       label: {
         show: true,
@@ -469,9 +531,9 @@ const scoreChartOption = computed(() => {
 
 // 排名图表选项
 const rankChartOption = computed(() => {
-  const subjects = scoreData.value.map(item => item.subjectName);
-  const classRanks = scoreData.value.map(item => item.classRank);
-  const gradeRanks = scoreData.value.map(item => item.gradeRank);
+  const subjects = scoreData.value.filter(item => item.subject !== 'sum_').map(item => item.subjectName);
+  const classRanks = scoreData.value.filter(item => item.subject !== 'sum_').map(item => item.classRank);
+  const gradeRanks = scoreData.value.filter(item => item.subject !== 'sum_').map(item => item.gradeRank);
   
   return {
     tooltip: {
@@ -486,6 +548,7 @@ const rankChartOption = computed(() => {
     },
     yAxis: {
       type: 'value',
+      name: '排名',
       inverse: true
     },
     series: [
@@ -500,7 +563,8 @@ const rankChartOption = computed(() => {
           show: true,
           position: 'top',
           formatter: '{c}'
-        }
+        },
+        smooth: true
       },
       {
         name: '年级排名',
@@ -513,7 +577,8 @@ const rankChartOption = computed(() => {
           show: true,
           position: 'top',
           formatter: '{c}'
-        }
+        },
+        smooth: true
       }
     ]
   };
@@ -552,6 +617,12 @@ const getRankClass = (rank: number) => {
 // 获取差值类名
 const getDifferenceClass = (difference: number) => {
   return difference >= 0 ? 'positive-difference' : 'negative-difference';
+};
+
+// 显示所有学生
+const showAllStudents = () => {
+  searchKeyword.value = '';
+  filteredStudentList.value = [...studentList.value];
 };
 
 // 初始化
@@ -599,6 +670,15 @@ const fetchStudentList = async () => {
       
       // 初始化过滤后的学生列表为所有学生
       filteredStudentList.value = [...studentList.value];
+      
+      // 默认选择第一个学生
+      if (studentList.value.length > 0 && !selectedStudentId.value) {
+        selectedStudentId.value = studentList.value[0].student_id;
+        // 获取第一个学生的考试成绩
+        if (selectedExamId.value) {
+          await fetchStudentGrades(selectedStudentId.value, selectedExamId.value);
+        }
+      }
     } else {
       message.error('获取学生列表失败');
     }
@@ -647,7 +727,15 @@ const fetchExamList = async () => {
       );
       
       examList.value = examDetails;
-      selectedExamId.value = examDetails[0].id;
+      if (examDetails.length > 0) {
+        selectedExamId.value = examDetails[0].id;
+        
+        // 如果已经有选中的学生，获取该学生的考试成绩
+        if (selectedStudentId.value) {
+          await fetchStudentGrades(selectedStudentId.value, selectedExamId.value);
+          await fetchPassLine(selectedExamId.value);
+        }
+      }
     } else {
       message.error('获取考试列表失败');
     }
@@ -705,13 +793,9 @@ const handleStudentChange = async (studentId: string) => {
   passLineDetails.value = {};
  
   // 获取该学生的考试成绩
-  const res = fetchStudentGrades(studentId, selectedExamId.value);
-};
-
-// 选择学生卡片
-const selectStudent = (studentId: string) => {
-  selectedStudentId.value = studentId;
-  handleStudentChange(studentId);
+  if (selectedExamId.value) {
+    await fetchStudentGrades(studentId, selectedExamId.value);
+  }
 };
 
 // 处理考试选择
@@ -719,15 +803,18 @@ const handleExamChange = async (examId: number) => {
   selectedExamId.value = examId;
   
   // 获取成绩详情和分数线
-  await Promise.all([
-    fetchStudentGrades(selectedStudentId.value, examId),
-    fetchPassLine(examId)
-  ]);
+  if (selectedStudentId.value) {
+    await Promise.all([
+      fetchStudentGrades(selectedStudentId.value, examId),
+      fetchPassLine(examId)
+    ]);
+  }
 };
 
 // 重置筛选
 const resetFilters = () => {
   selectedStudentId.value = '';
+  selectedExamId.value = examList.value.length > 0 ? examList.value[0].id : 0;
   scoreDetails.value = {};
   passLineDetails.value = {};
   searchKeyword.value = '';
@@ -742,31 +829,34 @@ const resetFilters = () => {
   height: 100vh;
   box-sizing: border-box;
   overflow-y: auto;
-  background-color: #f5f5f5;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
   
   .header {
-    background: white;
+    background: linear-gradient(120deg, #4b6cb7, #1890ff);
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
+    color: white;
     
     h2 {
       margin: 0 0 10px 0;
-      color: #333;
+      font-size: 24px;
+      font-weight: 600;
     }
     
     p {
       margin: 0;
-      color: #666;
+      font-size: 16px;
+      opacity: 0.9;
     }
   }
   
   .filter-section {
     background: white;
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     margin-bottom: 20px;
     
     .filter-item {
@@ -775,7 +865,8 @@ const resetFilters = () => {
       
       .filter-label {
         width: 80px;
-        font-weight: bold;
+        font-weight: 600;
+        color: #333;
       }
     }
     
@@ -787,109 +878,156 @@ const resetFilters = () => {
     }
   }
   
-  .students-section {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  .overview-section {
     margin-bottom: 20px;
     
-    h3 {
-      margin-top: 0;
-      color: #333;
-    }
-    
-    .student-card {
-      background: #fff;
-      border: 1px solid #e8e8e8;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 16px;
-      cursor: pointer;
-      transition: all 0.3s;
+    .student-info-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      display: flex;
+      align-items: center;
+      height: 100%;
       
-      &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        transform: translateY(-2px);
-      }
-      
-      .student-info {
+      .student-avatar {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4b6cb7, #1890ff);
         display: flex;
         align-items: center;
-        margin-bottom: 12px;
+        justify-content: center;
+        color: white;
+        font-size: 30px;
+        margin-right: 20px;
+      }
+      
+      .student-details {
+        h3 {
+          margin: 0 0 8px 0;
+          font-size: 20px;
+          color: #333;
+        }
         
-        .student-avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          background: #1890ff;
+        p {
+          margin: 0 0 4px 0;
+          font-size: 14px;
+          color: #666;
+        }
+      }
+    }
+    
+    .summary-cards {
+      height: 100%;
+      
+      .summary-card {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s ease;
+        
+        &:hover {
+          transform: translateY(-5px);
+        }
+        
+        .card-title {
+          font-size: 14px;
+          color: #666;
+          margin-bottom: 8px;
+        }
+        
+        .card-value {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 8px;
+          flex: 1;
           display: flex;
           align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 20px;
-          margin-right: 12px;
         }
         
-        .student-details {
-          h4 {
-            margin: 0 0 4px 0;
-            font-size: 16px;
-            color: #333;
-          }
+        .card-footer {
+          font-size: 12px;
+          color: #999;
+          display: flex;
+          flex-direction: column;
           
-          p {
-            margin: 0;
-            font-size: 14px;
-            color: #666;
+          span {
+            margin-bottom: 2px;
+            
+            &:last-child {
+              margin-bottom: 0;
+            }
           }
         }
       }
       
-    }
-  }
-  
-  .empty-section {
-    background: white;
-    padding: 40px 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    text-align: center;
-  }
-  
-  .student-basic-info {
-    margin-bottom: 20px;
-    
-    :deep(.ant-card) {
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    
-    .info-row {
-      display: flex;
-      margin-bottom: 8px;
-      
-      .info-label {
-        font-weight: bold;
-        width: 60px;
+      .total-score-card {
+        border-top: 4px solid #1890ff;
+        
+        .card-value {
+          color: #1890ff;
+        }
       }
       
-      .info-value {
-        flex: 1;
+      .average-score-card {
+        border-top: 4px solid #52c41a;
+        
+        .card-value {
+          color: #52c41a;
+        }
+      }
+      
+      .rank-card {
+        border-top: 4px solid #fa8c16;
+        
+        .card-value {
+          color: #fa8c16;
+        }
+      }
+      
+      .pass-rate-card {
+        border-top: 4px solid #722ed1;
+        
+        .card-value {
+          color: #722ed1;
+        }
       }
     }
   }
   
-  .score-details, .charts-section {
-    :deep(.ant-card) {
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  .score-card, .passline-card, .chart-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    
+    :deep(.ant-card-head) {
+      background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
+      border-bottom: 1px solid #e8e8e8;
+      padding: 0 16px;
+      
+      .ant-card-head-title {
+        font-weight: 600;
+        color: #333;
+      }
     }
   }
   
   .chart-container {
     padding: 10px 0;
+  }
+  
+  .select-prompt {
+    background: white;
+    border-radius: 12px;
+    padding: 60px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    text-align: center;
+    margin-bottom: 20px;
   }
   
   .loading-spin {
@@ -905,6 +1043,7 @@ const resetFilters = () => {
   
   .good-score {
     color: #1890ff;
+    font-weight: 600;
   }
   
   .normal-score {
@@ -918,6 +1057,7 @@ const resetFilters = () => {
   
   .good-rank {
     color: #fa8c16;
+    font-weight: 600;
   }
   
   .normal-rank {
@@ -931,10 +1071,12 @@ const resetFilters = () => {
   
   .positive-difference {
     color: #52c41a;
+    font-weight: 600;
   }
   
   .negative-difference {
     color: #f5222d;
+    font-weight: 600;
   }
 }
 
@@ -952,39 +1094,37 @@ const resetFilters = () => {
       }
     }
     
-    .students-section {
-      .student-card {
-        padding: 12px;
+    .overview-section {
+      .student-info-card {
+        padding: 15px;
         
-        .student-info {
-          .student-avatar {
-            width: 40px;
-            height: 40px;
-            font-size: 16px;
-            margin-right: 10px;
-          }
-          
-          .student-details {
-            h4 {
-              font-size: 14px;
-            }
-            
-            p {
-              font-size: 12px;
-            }
-          }
+        .student-avatar {
+          width: 50px;
+          height: 50px;
+          font-size: 20px;
+          margin-right: 15px;
         }
         
-        .student-stats {
-          .stat-item {
-            .stat-label {
-              font-size: 10px;
-            }
-            
-            .stat-value {
-              font-size: 14px;
-            }
+        .student-details {
+          h3 {
+            font-size: 18px;
           }
+        }
+      }
+      
+      .summary-card {
+        padding: 12px;
+        
+        .card-title {
+          font-size: 12px;
+        }
+        
+        .card-value {
+          font-size: 20px;
+        }
+        
+        .card-footer {
+          font-size: 10px;
         }
       }
     }

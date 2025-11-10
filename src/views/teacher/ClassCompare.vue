@@ -3,14 +3,15 @@
     <!-- 头部区域 -->
     <div class="header">
       <h2>班级对比</h2>
+      <p>选择考试和班级进行对比分析</p>
     </div>
 
     <!-- 筛选区域 -->
     <div class="filter-section">
-      <a-row :gutter="[16, 16]" justify="center">
+      <a-row :gutter="[16, 16]">
         <a-col :span="24" :md="8">
           <div class="filter-item">
-            <span class="label">考试：</span>
+            <span class="filter-label">考试：</span>
             <a-select
               v-model:value="selectedExamId"
               placeholder="选择考试"
@@ -28,11 +29,16 @@
             </a-select>
           </div>
         </a-col>
+        <a-col :span="24" :md="16">
+          <div class="filter-actions">
+            <a-button type="primary" @click="resetFilters">重置筛选</a-button>
+          </div>
+        </a-col>
       </a-row>
       
-      <a-row :gutter="[16, 16]" justify="center" align="middle" style="margin-top: 20px;">
+      <a-row :gutter="[16, 16]" style="margin-top: 20px;">
         <!-- 班级选择区域 -->
-        <a-col :span="24" :md="18">
+        <a-col :span="24">
           <div class="class-selector-container">
             <!-- 我的班级 -->
             <div class="class-selector-item">
@@ -73,21 +79,19 @@
                 </a-select-option>
               </a-select>
             </div>
+            
+            <!-- 开始对比按钮 -->
+            <div class="compare-button-container">
+              <a-button 
+                type="primary" 
+                @click="fetchComparisonData"
+                :disabled="isCompareBtnDisabled" 
+                class="compare-button"
+              >
+                开始对比
+              </a-button>
+            </div>
           </div>
-        </a-col>
-      </a-row>
-      
-      <a-row justify="center" style="margin-top: 20px;">
-        <!-- 开始对比按钮 -->
-        <a-col>
-          <a-button 
-            type="primary" 
-            @click="fetchComparisonData"
-            :disabled="isCompareBtnDisabled" 
-            class="compare-button"
-          >
-            开始对比
-          </a-button>
         </a-col>
       </a-row>
       
@@ -108,121 +112,136 @@
     <div v-if="!loading && comparisonData" class="comparison-results">
       <!-- 总体情况卡片 -->
       <div class="summary-cards">
-        <div class="summary-card">
-          <h3>总分平均分</h3>
-          <div class="summary-item">
-            <span class="class-name">{{ getClassName(selectedClass1) }}</span>
-            <span class="score">{{ formatScore(comparisonData.subject_average_score.current.sum_) }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="class-name">{{ getClassName(selectedClass2) }}</span>
-            <span class="score">{{ formatScore(comparisonData.subject_average_score.compare.sum_) }}</span>
-          </div>
-          <div class="difference" :class="getDifferenceClass(totalScoreDiff)">
-            差值: {{ formatScore(totalScoreDiff) }}
-          </div>
-        </div>
-
-        <div class="summary-card">
-          <h3>一本线通过率</h3>
-          <div class="summary-item">
-            <span class="class-name">{{ getClassName(selectedClass1) }}</span>
-            <span class="rate">{{ formatRate(comparisonData.pass_rate.current) }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="class-name">{{ getClassName(selectedClass2) }}</span>
-            <span class="rate">{{ formatRate(comparisonData.pass_rate.compare) }}</span>
-          </div>
-          <div class="difference" :class="getDifferenceClass(passRateDiff)">
-            差值: {{ formatRateDiff(passRateDiff) }}
-          </div>
-        </div>
-
-        <div class="summary-card">
-          <h3>一本线通过人数</h3>
-          <div class="summary-item">
-            <span class="class-name">{{ getClassName(selectedClass1) }}</span>
-            <span class="count">{{ comparisonData.pass_count.current }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="class-name">{{ getClassName(selectedClass2) }}</span>
-            <span class="count">{{ comparisonData.pass_count.compare }}</span>
-          </div>
-          <div class="difference" :class="getDifferenceClass(passCountDiff)">
-            差值: {{ passCountDiff }}
-          </div>
-        </div>
+        <a-row :gutter="16">
+          <a-col :span="24" :md="8">
+            <div class="summary-card total-score-card">
+              <h3>总分平均分</h3>
+              <div class="summary-item">
+                <span class="class-name">{{ getClassName(selectedClass1) }}</span>
+                <span class="score">{{ formatScore(comparisonData.subject_average_score.current.sum_) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="class-name">{{ getClassName(selectedClass2) }}</span>
+                <span class="score">{{ formatScore(comparisonData.subject_average_score.compare.sum_) }}</span>
+              </div>
+              <div class="difference" :class="getDifferenceClass(totalScoreDiff)">
+                差值: {{ formatScore(totalScoreDiff) }}
+              </div>
+            </div>
+          </a-col>
+          <a-col :span="24" :md="8">
+            <div class="summary-card pass-rate-card">
+              <h3>一本线通过率</h3>
+              <div class="summary-item">
+                <span class="class-name">{{ getClassName(selectedClass1) }}</span>
+                <span class="rate">{{ formatRate(comparisonData.pass_rate.current) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="class-name">{{ getClassName(selectedClass2) }}</span>
+                <span class="rate">{{ formatRate(comparisonData.pass_rate.compare) }}</span>
+              </div>
+              <div class="difference" :class="getDifferenceClass(passRateDiff)">
+                差值: {{ formatRateDiff(passRateDiff) }}
+              </div>
+            </div>
+          </a-col>
+          <a-col :span="24" :md="8">
+            <div class="summary-card pass-count-card">
+              <h3>一本线通过人数</h3>
+              <div class="summary-item">
+                <span class="class-name">{{ getClassName(selectedClass1) }}</span>
+                <span class="count">{{ comparisonData.pass_count.current }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="class-name">{{ getClassName(selectedClass2) }}</span>
+                <span class="count">{{ comparisonData.pass_count.compare }}</span>
+              </div>
+              <div class="difference" :class="getDifferenceClass(passCountDiff)">
+                差值: {{ passCountDiff }}
+              </div>
+            </div>
+          </a-col>
+        </a-row>
       </div>
 
       <!-- 科目平均分对比 -->
       <div class="analysis-card">
-        <h3>科目平均分对比</h3>
-        <div v-if="displayMode === 'table'" class="table-container">
-          <a-table
-            :data-source="subjectAverageData"
-            bordered
-            :columns="subjectColumns"
-            :pagination="false"
-          >
-            <template #bodyCell="{ column, record }">
-              <template v-if="column.dataIndex === 'diff'">
-                <span :class="getDifferenceClass(record.diff)">{{ formatScore(record.diff) }}</span>
+        <a-card title="科目平均分对比" class="chart-card">
+          <div v-if="displayMode === 'table'" class="table-container">
+            <a-table
+              :data-source="subjectAverageData"
+              bordered
+              :columns="subjectColumns"
+              :pagination="false"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.dataIndex === 'diff'">
+                  <span :class="getDifferenceClass(record.diff)">{{ formatScore(record.diff) }}</span>
+                </template>
               </template>
-            </template>
-          </a-table>
-        </div>
+            </a-table>
+          </div>
 
-        <div v-if="displayMode === 'chart'" class="chart-container">
-          <v-chart :option="subjectChartOption" autoresize style="height: 400px" />
-        </div>
+          <div v-if="displayMode === 'chart'" class="chart-container">
+            <v-chart :option="subjectChartOption" autoresize style="height: 400px" />
+          </div>
+        </a-card>
       </div>
 
       <!-- 科目最高分对比 -->
       <div class="analysis-card">
-        <h3>科目最高分对比</h3>
-        <div v-if="displayMode === 'table'" class="table-container">
-          <a-table
-            :data-source="subjectTopData"
-            bordered
-            :columns="subjectTopColumns"
-            :pagination="false"
-          />
-        </div>
+        <a-card title="科目最高分对比" class="chart-card">
+          <div v-if="displayMode === 'table'" class="table-container">
+            <a-table
+              :data-source="subjectTopData"
+              bordered
+              :columns="subjectTopColumns"
+              :pagination="false"
+            />
+          </div>
 
-        <div v-if="displayMode === 'chart'" class="chart-container">
-          <v-chart :option="subjectTopChartOption" autoresize style="height: 400px" />
-        </div>
+          <div v-if="displayMode === 'chart'" class="chart-container">
+            <v-chart :option="subjectTopChartOption" autoresize style="height: 400px" />
+          </div>
+        </a-card>
       </div>
 
       <!-- 前三名学生对比 -->
       <div class="analysis-card">
-        <h3>班级前三名学生对比</h3>
-        <div class="top-students-container">
-          <div class="class-top-students">
-            <h4>{{ getClassName(selectedClass1) }} 前三名</h4>
-            <a-table
-              :data-source="comparisonData.top_3.current"
-              bordered
-              :columns="topStudentColumns"
-              :pagination="false"
-            />
+        <a-card title="班级前三名学生对比" class="student-card">
+          <div class="top-students-container">
+            <a-row :gutter="16">
+              <a-col :span="24" :md="12">
+                <div class="class-top-students">
+                  <h4>{{ getClassName(selectedClass1) }} 前三名</h4>
+                  <a-table
+                    :data-source="comparisonData.top_3.current"
+                    bordered
+                    :columns="topStudentColumns"
+                    :pagination="false"
+                  />
+                </div>
+              </a-col>
+              <a-col :span="24" :md="12">
+                <div class="class-top-students">
+                  <h4>{{ getClassName(selectedClass2) }} 前三名</h4>
+                  <a-table
+                    :data-source="comparisonData.top_3.compare"
+                    bordered
+                    :columns="topStudentColumns"
+                    :pagination="false"
+                  />
+                </div>
+              </a-col>
+            </a-row>
           </div>
-          <div class="class-top-students">
-            <h4>{{ getClassName(selectedClass2) }} 前三名</h4>
-            <a-table
-              :data-source="comparisonData.top_3.compare"
-              bordered
-              :columns="topStudentColumns"
-              :pagination="false"
-            />
-          </div>
-        </div>
+        </a-card>
       </div>
     </div>
 
     <!-- 无数据状态 -->
     <div v-if="!loading && !comparisonData && hasSearched" class="no-data">
-      <p>未找到对比数据，请选择其他班级或考试</p>
+      <a-empty description="未找到对比数据，请选择其他班级或考试" />
     </div>
   </div>
 </template>
@@ -235,6 +254,7 @@ import { getClassesApi } from '@/servers/api/classes';
 import { getClassExam } from '@/servers/api/grade';
 import { getClassCompare } from '@/servers/api/grade';
 import { useUserStore } from '@/store';
+import { Row, Col, Card, Button, Empty } from "ant-design-vue";
 
 // 类型定义 
 interface ClassInfo {
@@ -379,6 +399,7 @@ const subjectColumns = computed(() => [
   },
   { title: '差值(班1-班2)', dataIndex: 'diff', key: 'diff' }
 ]);
+
 const subjectTopColumns = computed(() => [
   { title: '科目', dataIndex: 'subject', key: 'subject' },
   { title: `${getClassName(selectedClass1.value)}最高分`, dataIndex: 'class1Top', key: 'class1Top', render: (val: number) => formatScore(val) },
@@ -472,15 +493,15 @@ const getClassName = (classId: number | undefined) => {
   const cls = allClassList.value.find(c => c.id === classId);
   return cls ? cls.name : '未知班级';
 };
+
 const getDifferenceClass = (diff: number) => {
-  if (diff > 0) return 'negative';
-  if (diff < 0) return 'positive';
+  if (diff > 0) return 'positive';
+  if (diff < 0) return 'negative';
   return 'zero';
 };
 
 // 格式化分数（保留2位小数）
 const formatScore = (score: number) => {
-	console.log(score)
   return score.toFixed(2);
 };
 
@@ -493,7 +514,6 @@ const formatRate = (rate: number) => {
 const formatRateDiff = (diff: number) => {
   return diff.toFixed(2) + '%';
 };
-
 
 const handleExamChange = (examId: number) => {
   selectedExamId.value = examId;
@@ -536,6 +556,19 @@ const fetchComparisonData = async () => {
     loading.value = false;
   }
 };
+
+// 重置筛选
+const resetFilters = () => {
+  if (examList.value.length > 0) {
+    selectedExamId.value = examList.value[0].id;
+  }
+  if (classList.value.length > 0) {
+    selectedClass2.value = classList.value[0].id;
+  }
+  comparisonData.value = null;
+  hasSearched.value = false;
+};
+
 // 计算"开始对比"按钮的禁用状态
 const isCompareBtnDisabled = computed(() => {
   return (
@@ -546,6 +579,7 @@ const isCompareBtnDisabled = computed(() => {
     selectedClass1.value === selectedClass2.value // 选择了相同班级（双重保险）
   );
 });
+
 // 初始化数据 - 核心筛选逻辑修改
 const init = async () => {
   try {
@@ -602,6 +636,7 @@ const init = async () => {
         message.warning(examRes.msg || '获取考试列表失败');
       }
     }
+    fetchComparisonData();
   } catch (err) {
     message.error('初始化失败');
     console.error(err);
@@ -621,44 +656,52 @@ onMounted(init);
   overflow-y: auto;
   box-sizing: border-box;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  background-color: #f0f2f5;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
 
   .header {
-    text-align: center;
-    margin-bottom: 30px;
-    padding-top: 10px;
+    background: linear-gradient(120deg, #4b6cb7, #1890ff);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    color: white;
     
     h2 {
-      color: #1f1f1f;
-      font-size: 28px;
+      margin: 0 0 10px 0;
+      font-size: 24px;
       font-weight: 600;
+    }
+    
+    p {
       margin: 0;
+      font-size: 16px;
+      opacity: 0.9;
     }
   }
 
   .filter-section {
     background: #ffffff;
     padding: 20px;
-    border-radius: 8px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
-    text-align: center;
     
     .filter-item {
       display: flex;
-      flex-direction: row;
-      justify-content: center;
       align-items: center;
       
-      .label {
-        font-weight: 500;
-        color: #535353;
-        width: 60px;
-        margin-bottom: 8px;
-        font-size: 14px;
-        margin-right: 12px;
-        text-align: right;
+      .filter-label {
+        width: 80px;
+        font-weight: 600;
+        color: #333;
       }
+    }
+    
+    .filter-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      height: 100%;
     }
 
     .class-selector-container {
@@ -699,9 +742,10 @@ onMounted(init);
         padding: 0 10px;
       }
       
-      .compare-button {
-        height: 38px;
-        margin-top: 24px;
+      .compare-button-container {
+        .compare-button {
+          height: 38px;
+        }
       }
     }
 
@@ -732,20 +776,18 @@ onMounted(init);
   }
 
   .summary-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
     margin-bottom: 24px;
 
     .summary-card {
       background: #ffffff;
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
       transition: all 0.3s ease;
+      height: 100%;
 
       &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
         transform: translateY(-2px);
       }
 
@@ -757,6 +799,7 @@ onMounted(init);
         font-weight: 600;
         border-bottom: 1px solid #f0f0f0;
         padding-bottom: 12px;
+        text-align: center;
       }
 
       .summary-item {
@@ -785,61 +828,70 @@ onMounted(init);
         font-size: 16px;
       }
     }
+    
+    .total-score-card {
+      border-top: 4px solid #1890ff;
+    }
+    
+    .pass-rate-card {
+      border-top: 4px solid #52c41a;
+    }
+    
+    .pass-count-card {
+      border-top: 4px solid #fa8c16;
+    }
   }
 
   .analysis-card {
-    background: #ffffff;
-    border-radius: 8px;
-    padding: 20px;
     margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
-    transition: all 0.3s ease;
-
-    &:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      transform: translateY(-2px);
-    }
-
-    h3 {
-      margin-top: 0;
-      margin-bottom: 20px;
-      color: #1f1f1f;
-      font-size: 20px;
-      font-weight: 600;
-      border-bottom: 1px solid #f0f0f0;
-      padding-bottom: 12px;
-    }
-
-    .table-container {
-      overflow-x: auto;
-    }
-
-    .chart-container {
-      width: 100%;
-      height: 400px;
+    
+    .chart-card, .student-card {
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      
+      :deep(.ant-card-head) {
+        background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
+        border-bottom: 1px solid #e8e8e8;
+        padding: 0 16px;
+        
+        .ant-card-head-title {
+          font-weight: 600;
+          color: #333;
+        }
+      }
     }
   }
 
-  .top-students-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 24px;
+  .table-container {
+    overflow-x: auto;
+    padding: 10px 0;
+  }
 
+  .chart-container {
+    width: 100%;
+    height: 400px;
+  }
+
+  .top-students-container {
     .class-top-students {
       h4 {
         margin-bottom: 16px;
         color: #1f1f1f;
         font-size: 18px;
         font-weight: 500;
+        text-align: center;
       }
     }
   }
 
   .no-data {
+    background: white;
+    border-radius: 12px;
+    padding: 60px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     text-align: center;
-    padding: 80px 0;
-    color: #8c8c8c;
-    font-size: 16px;
+    margin-bottom: 20px;
   }
 
   .positive {
@@ -871,18 +923,42 @@ onMounted(init);
         padding: 12px 0;
       }
       
-      .compare-button {
+      .compare-button-container {
         align-self: stretch;
         margin-top: 12px;
+        
+        .compare-button {
+          width: 100%;
+        }
       }
     }
     
     .summary-cards {
-      grid-template-columns: 1fr;
+      .summary-card {
+        padding: 16px;
+        
+        h3 {
+          font-size: 16px;
+        }
+        
+        .summary-item {
+          .score, .rate, .count {
+            font-size: 14px;
+          }
+        }
+        
+        .difference {
+          font-size: 14px;
+        }
+      }
     }
     
     .top-students-container {
-      grid-template-columns: 1fr;
+      .class-top-students {
+        h4 {
+          font-size: 16px;
+        }
+      }
     }
   }
 }

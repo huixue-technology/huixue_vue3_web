@@ -2,74 +2,111 @@
   <div class="class-grade-container">
     <div class="header">
       <h2>{{classInfo?.name}}班级成绩分析</h2>
+      <p>选择考试查看班级成绩详情</p>
     </div>
 
+    <!-- 筛选区域 -->
     <div class="filter-section">
-      <a-select 
-        v-model:value="selectedExamId" 
-        placeholder="选择考试" 
-        style="width: 200px"
-        @change="handleExamChange"
-      >
-        <a-select-option 
-          v-for="examId in classExamList" 
-          :key="examId" 
-          :value="examId"
-        >
-          考试 {{ examId }}
-        </a-select-option>
-      </a-select>
+      <a-row :gutter="16">
+        <a-col :span="24" :md="8">
+          <div class="filter-item">
+            <span class="filter-label">选择考试：</span>
+            <a-select 
+              v-model:value="selectedExamId" 
+              placeholder="选择考试" 
+              style="width: 100%"
+              @change="handleExamChange"
+            >
+              <a-select-option 
+                v-for="examId in classExamList" 
+                :key="examId" 
+                :value="examId"
+              >
+                考试 {{ examId }}
+              </a-select-option>
+            </a-select>
+          </div>
+        </a-col>
+        <a-col :span="24" :md="16">
+          <div class="filter-actions">
+            <a-button type="primary" @click="resetFilters">重置筛选</a-button>
+          </div>
+        </a-col>
+      </a-row>
     </div>
 
-    <div class="stats-card">
-      <div class="stat-item">
-        <p>班级平均分</p>
-        <p class="stat-value">{{ classAvg.totalScore.toFixed(1) }}</p>
-      </div>
-      <div class="stat-item">
-        <p>最高分</p>
-        <p class="stat-value">{{ classMax.totalScore }}</p>
-      </div>
-      <div class="stat-item">
-        <p>最低分</p>
-        <p class="stat-value">{{ classMin.totalScore }}</p>
-      </div>
-      <div class="stat-item">
-        <p>一本线</p>
-        <p class="stat-value">{{ passLine }}</p>
-      </div>
-      <div class="stat-item">
-        <p>一本率</p>
-        <p class="stat-value">{{ passRate }}%</p>
-      </div>
+    <!-- 统计卡片区域 -->
+    <div class="stats-section">
+      <a-row :gutter="16">
+        <a-col :span="12" :lg="4">
+          <div class="summary-card avg-score-card">
+            <div class="card-title">班级平均分</div>
+            <div class="card-value">{{ classAvg.totalScore.toFixed(1) }}</div>
+          </div>
+        </a-col>
+        <a-col :span="12" :lg="4">
+          <div class="summary-card max-score-card">
+            <div class="card-title">最高分</div>
+            <div class="card-value">{{ classMax.totalScore }}</div>
+          </div>
+        </a-col>
+        <a-col :span="12" :lg="4">
+          <div class="summary-card min-score-card">
+            <div class="card-title">最低分</div>
+            <div class="card-value">{{ classMin.totalScore }}</div>
+          </div>
+        </a-col>
+        <a-col :span="12" :lg="4">
+          <div class="summary-card pass-line-card">
+            <div class="card-title">一本线</div>
+            <div class="card-value">{{ passLine }}</div>
+          </div>
+        </a-col>
+        <a-col :span="12" :lg="4">
+          <div class="summary-card pass-rate-card">
+            <div class="card-title">一本率</div>
+            <div class="card-value">{{ passRate }}%</div>
+          </div>
+        </a-col>
+        <a-col :span="12" :lg="4">
+          <div class="summary-card student-count-card">
+            <div class="card-title">学生人数</div>
+            <div class="card-value">{{ scoreList.length }}</div>
+          </div>
+        </a-col>
+      </a-row>
     </div>
 
-    <div class="table-scroll-container">
-      <div class="table-container">
-        <a-table
-            :columns="columns"
-            :data-source="scoreList"
-            bordered
-            row-key="studentId"
-            :pagination="{ pageSize: 6 }"
-        >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.dataIndex === 'totalScore'">
-            <span :class="record.totalScore >= passLine ? 'pass' : 'fail'">
-              {{ record.totalScore }}
-            </span>
+    <!-- 成绩表格区域 -->
+    <div class="table-section">
+      <a-card title="班级成绩详情" class="score-card">
+        <div class="table-container">
+          <a-table
+              :columns="columns"
+              :data-source="scoreList"
+              bordered
+              row-key="studentId"
+              :pagination="{ pageSize: 10 }"
+              :scroll="{ x: true }"
+          >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.dataIndex === 'totalScore'">
+              <span :class="getScoreClass(record.totalScore)">
+                {{ record.totalScore }}
+              </span>
+            </template>
+            <template v-if="column.dataIndex === 'classRank'">
+              <span :class="getRankClass(record.classRank)">
+                {{ record.classRank }}
+              </span>
+            </template>
           </template>
-          <template v-if="column.dataIndex === 'classRank'">
-            <span :class="getRankClass(record.classRank)">
-              {{ record.classRank }}
-            </span>
-          </template>
-        </template>
-      </a-table>
-	  </div>
+        </a-table>
+      </div>
+      </a-card>
     </div>
 
-    <a-spin v-if="loading" class="loading" size="large" />
+    <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
   </div>
 </template>
 
@@ -82,6 +119,7 @@ import { message } from "ant-design-vue";
 import { getClassExam, getClassScore } from "@/servers/api/grade";
 import { useRouter } from "vue-router";
 import { getPassLine } from "@/servers/api/analysis";
+import { Row, Col, Card, Button } from "ant-design-vue";
 
 interface ScoreItem {
   studentId: string;
@@ -197,11 +235,17 @@ const columns = computed(() => {
   return [...baseColumns, ...subjectColumns, ...endColumns];
 });
 
+// 获取成绩等级类名
+const getScoreClass = (score: number) => {
+  return score >= 90 ? 'excellent-score' : score >= 80 ? 'good-score' : 'normal-score';
+};
+
 const getRankClass = (rank: number) => {
   if (rank <= 3) return 'top-rank';
   if (rank <= 10) return 'good-rank';
   return '';
 };
+
 const calculateStats = (scores: ScoreItem[]) => {
   if (!scores.length) return;
   const stats: Record<string, number[]> = {
@@ -333,6 +377,22 @@ const handleExamChange = async (examId: number) => {
   }
 };
 
+// 重置筛选
+const resetFilters = () => {
+  selectedExamId.value = classExamList.value.length > 0 ? classExamList.value[0] : 0;
+  scoreList.value = [];
+  subjects.value = [];
+  classAvg.value = { totalScore: 0 };
+  classMax.value = { totalScore: 0 };
+  classMin.value = { totalScore: 0 };
+  passRate.value = 0;
+  passLine.value = 0;
+  
+  if (selectedExamId.value) {
+    handleExamChange(selectedExamId.value);
+  }
+};
+
 onMounted(async () => {
   teacherId.value = user.getUserInfo().role;
   if (!teacherId.value) {
@@ -375,162 +435,231 @@ onMounted(async () => {
 
 <style scoped lang="less">
 .class-grade-container {
-  position:relative;
-  height: 100vh;
-  overflow:scroll;
   padding: 20px;
-  padding-bottom: 0px;
+  height: 100vh;
+  box-sizing: border-box;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
   
-  .table-scroll-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-bottom: 20px;
-    max-height: calc(100vh - 300px);
-    scrollbar-width: thin;
-    max-width: calc(100vw - 40px);
-  }
-
-  .table-container {
-    background: #fff;
-    border-radius: 8px;
-    padding: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    min-width: 768px;
-  }
-
   .header {
-    display: flex;
-    align-items: center;
+    background: linear-gradient(120deg, #4b6cb7, #1890ff);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
-
+    color: white;
+    
     h2 {
+      margin: 0 0 10px 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    p {
       margin: 0;
-      color: #333;
+      font-size: 16px;
+      opacity: 0.9;
     }
   }
-
+  
   .filter-section {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-  }
-
-  .stats-card {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    margin-bottom: 20px;
-
-    .stat-item {
-      flex: 1;
-      min-width: 120px;
-      background: #fff;
-      padding: 16px;
-      border-radius: 8px;
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-      p {
-        margin: 0 0 8px 0;
-        color: #666;
-        font-size: 14px;
+    
+    .filter-item {
+      display: flex;
+      align-items: center;
+      
+      .filter-label {
+        width: 80px;
+        font-weight: 600;
+        color: #333;
       }
-
-      .stat-value {
+    }
+    
+    .filter-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      height: 100%;
+    }
+  }
+  
+  .stats-section {
+    margin-bottom: 20px;
+    
+    .summary-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s ease;
+      
+      &:hover {
+        transform: translateY(-5px);
+      }
+      
+      .card-title {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 8px;
+      }
+      
+      .card-value {
         font-size: 24px;
-        font-weight: bold;
+        font-weight: 700;
+        margin-bottom: 8px;
+        flex: 1;
+        display: flex;
+        align-items: center;
+      }
+    }
+    
+    .avg-score-card {
+      border-top: 4px solid #1890ff;
+      
+      .card-value {
         color: #1890ff;
       }
     }
+    
+    .max-score-card {
+      border-top: 4px solid #52c41a;
+      
+      .card-value {
+        color: #52c41a;
+      }
+    }
+    
+    .min-score-card {
+      border-top: 4px solid #fa8c16;
+      
+      .card-value {
+        color: #fa8c16;
+      }
+    }
+    
+    .pass-line-card {
+      border-top: 4px solid #722ed1;
+      
+      .card-value {
+        color: #722ed1;
+      }
+    }
+    
+    .pass-rate-card {
+      border-top: 4px solid #eb2f96;
+      
+      .card-value {
+        color: #eb2f96;
+      }
+    }
+    
+    .student-count-card {
+      border-top: 4px solid #13c2c2;
+      
+      .card-value {
+        color: #13c2c2;
+      }
+    }
   }
-
-  .loading {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+  
+  .table-section {
+    .score-card {
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      
+      :deep(.ant-card-head) {
+        background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
+        border-bottom: 1px solid #e8e8e8;
+        padding: 0 16px;
+        
+        .ant-card-head-title {
+          font-weight: 600;
+          color: #333;
+        }
+      }
+    }
   }
-
-  .pass {
-    color: green;
+  
+  .table-container {
+    padding: 10px 0;
   }
-
-  .fail {
-    color: red;
+  
+  .loading-spin {
+    display: flex;
+    justify-content: center;
+    margin: 50px 0;
   }
-
-  .top-rank {
-    color: #f50;
+  
+  .excellent-score {
+    color: #52c41a;
     font-weight: bold;
   }
-
-  .good-rank {
+  
+  .good-score {
     color: #1890ff;
+    font-weight: 600;
+  }
+  
+  .normal-score {
+    color: #333;
+  }
+  
+  .top-rank {
+    color: #f5222d;
+    font-weight: bold;
+  }
+  
+  .good-rank {
+    color: #fa8c16;
+    font-weight: 600;
+  }
+  
+  .pass {
+    color: #52c41a;
+    font-weight: bold;
+  }
+  
+  .fail {
+    color: #f5222d;
+    font-weight: bold;
   }
 }
 
 @media (max-width: 768px) {
   .class-grade-container {
-      padding: 10px;
-      overflow-x: hidden;
-    }
-  
-    .table-scroll-container {
-      max-width: calc(100vw - 20px);
-    }
-
-  .filter-section {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-
-    a-select {
-      width: 100% !important;
-      margin-left: 0 !important;
-    }
-  }
-
-  .stats-card {
-    gap: 10px;
-
-    .stat-item {
-      flex: 1 0 calc(50% - 10px);
-      min-width: auto;
-      padding: 10px 5px;
-
-      p {
-        font-size: 12px;
-      }
-
-      .stat-value {
-        font-size: 18px;
+    padding: 10px;
+    
+    .filter-section {
+      .filter-item {
+        margin-bottom: 10px;
+        
+        .filter-label {
+          width: 60px;
+        }
       }
     }
-  }
-
-  .table-container {
-    min-width: 320px;
-    padding: 8px;
-  }
-
-  :deep(.ant-table th) {
-    padding: 8px 4px !important;
-    font-size: 12px !important;
-  }
-
-  :deep(.ant-table td) {
-    padding: 8px 4px !important;
-    font-size: 12px !important;
-  }
-
-  .columns {
-    &[data-index="studentId"],
-    &[data-index="studentName"] {
-      width: 80px !important;
-    }
-    &[data-index="totalScore"],
-    &[data-index="classRank"] {
-      width: 70px !important;
+    
+    .stats-section {
+      .summary-card {
+        padding: 12px;
+        
+        .card-title {
+          font-size: 12px;
+        }
+        
+        .card-value {
+          font-size: 20px;
+        }
+      }
     }
   }
 }

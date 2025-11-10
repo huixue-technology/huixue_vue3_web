@@ -79,8 +79,8 @@ const items =  computed<MenuProps['items']>(()=>{
         {
           key: 'user',
           icon: () => h(UserOutlined),
-          label: '学生信息',
-          title: '学生信息',
+          label: '我的信息',
+          title: '我的信息',
         },
         {
           key: 'grade',
