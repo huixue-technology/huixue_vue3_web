@@ -1,527 +1,818 @@
 <template>
   <div class="student-challenge-page">
-    <div class="page-header">
+    <!-- 头部区域 -->
+    <div class="header">
       <h2>学生挑战</h2>
+      <p>选择考试和对手，进行对比</p>
     </div>
 
-    <!-- 筛选和输入区域 -->
-    <div class="filter-input-card">
-      <div class="input-row">
-        <label class="form-label">班级</label>
-        <select class="form-select" v-model="selectedClass">
-          <option :value="userInfo?.student?.class_id" selected>
-            {{ userInfo?.student?.class_id }}
-          </option>
-        </select>
-      </div>
-      <div class="input-row">
-        <label class="form-label">考试</label>
-        <select class="form-select" v-model="selectedExam">
-          <option value="">请选择考试</option>
-          <option v-for="exam in examList" :key="exam.id" :value="exam.id">
-            {{ exam.name }}
-          </option>
-        </select>
-      </div>
-      <div class="input-row">
-        <label class="form-label">维度</label>
-        <select class="form-select" v-model="selectedDimension">
-          <option value="">请选择维度</option>
-          <option value="score">分数</option>
-          <option value="rank">段次</option>
-        </select>
-      </div>
-      <div class="input-row">
-        <label class="form-label">姓名</label>
-        <select class="form-select" v-model="selectedName">
-          <option :value="userInfo?.student?.name" selected>
-            {{ userInfo?.student?.name }}
-          </option>
-        </select>
-      </div>
-      <div class="input-row">
-        <label class="form-label">对手班级</label>
-        <select 
-          class="form-select opponent-class-select" 
-          v-model="opponentClass" 
-          @change="handleOpponentClassChange"
-        >
-          <option value="">请选择班级</option>
-          <option v-for="cls in opponentClassList" :key="cls.id" :value="cls.id">
-            {{ cls.id }}
-          </option>
-        </select>
-      </div>
-      <!-- 对手姓名单独一行 -->
-      <div class="input-row">
-        <label class="form-label">对手姓名</label>
-        <input
-          type="text"
-          class="form-input opponent-name-input"
-          v-model="opponentName"
-          placeholder="请输入对手姓名"
-        />
-      </div>
+    <!-- 筛选区域 -->
+    <div class="filter-section">
+      <a-row :gutter="[16, 16]">
+        <!-- 班级选择（不可改） -->
+        <a-col :span="24" :md="12">
+          <div class="filter-item">
+            <span class="label">所属班级：</span>
+            <a-select
+              v-model:value="selectedClassId"
+              placeholder="选择班级"
+              style="width: 100%"
+              disabled
+            >
+              <a-select-option
+                v-for="cls in classList"
+                :key="cls.id"
+                :value="cls.id"
+              >
+                {{ cls.name }}
+              </a-select-option>
+            </a-select>
+          </div>
+        </a-col>
+
+        <!-- 考试选择 -->
+        <a-col :span="24" :md="12">
+          <div class="filter-item">
+            <span class="label">选择考试：</span>
+            <a-select
+              v-model:value="selectedExamId"
+              placeholder="选择考试"
+              style="width: 100%"
+              :disabled="loading"
+            >
+              <a-select-option
+                v-for="exam in examList"
+                :key="exam.id"
+                :value="exam.id"
+              >
+                {{ exam.name }}
+              </a-select-option>
+            </a-select>
+          </div>
+        </a-col>
+      </a-row>
+
+      <!-- 对手 -->
+      <a-row :gutter="[16, 16]" style="margin-top: 20px;">
+        <!-- 对手班级 -->
+        <a-col :span="24" :md="12">
+          <div class="filter-item">
+            <span class="label">对手班级：</span>
+            <a-select
+              v-model:value="opponentClassId"
+              placeholder="选择对手班级"
+              style="width: 100%"
+              :disabled="loading"
+              @change="fetchOpponentStudents"
+            >
+              <a-select-option
+                v-for="cls in opponentClassList"
+                :key="cls.id"
+                :value="cls.id"
+              >
+                {{ cls.name }}
+              </a-select-option>
+            </a-select>
+          </div>
+        </a-col>
+
+        <!-- 对手姓名 -->
+        <a-col :span="24" :md="12">
+          <div class="filter-item">
+            <span class="label">对手姓名：</span>
+            <a-select
+              v-model:value="finalOpponentId"
+              placeholder="选择或输入学生姓名/学号"
+              style="width: 100%"
+              :disabled="loading || !opponentStudents.length"
+              show-search
+              :filter-option="false"
+              @search="handleOpponentSearch"
+              @input="handleManualInput"
+              @change="handleOpponentSelect"
+            >
+              <a-select-option
+                v-for="student in filteredOpponentStudents"
+                :key="student.id"
+                :value="student.id"
+              >
+                {{ student.name }} ({{ student.uid }})
+              </a-select-option>
+            </a-select>
+          </div>
+        </a-col>
+      </a-row>
+
+      <!-- 开始对比按钮 -->
+      <a-row justify="center" style="margin-top: 20px;">
+        <a-col>
+          <a-button 
+            type="primary" 
+            @click="runComparison"
+            :disabled="isCompareBtnDisabled" 
+            class="compare-button"
+          >
+            开始挑战
+          </a-button>
+        </a-col>
+      </a-row>
     </div>
 
+    <!-- 说明文本 -->
     <p class="description">
-      说明：默认考试选择最近一次考试，您也可以选择其他考试，与对手进行比较。
+      说明：默认考试选择最近一次考试，您也可以选择其他考试，与对手进行学科维度比较。手动输入对手姓名时，请确保姓名准确。
     </p>
 
-    <button class="compare-button" @click="runComparison">对比</button>
+    <!-- 加载状态 -->
+    <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
 
-    <!-- 对比结果表格 -->
-    <div class="comparison-table-section" v-if="showComparisonTable">
-      <table class="results-table">
-        <thead>
-          <tr>
-            <th>学科</th>
-            <th>{{ userInfo?.student?.name }}</th>
-            <th>{{ opponentName }}</th>
-            <th>{{ selectedDimension === 'score' ? '分差' : '段次差' }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- 总分/总段次行 -->
-          <tr>
-            <td>{{ selectedDimension === 'score' ? '总分' : '总段次' }}</td>
-            <td>{{ getCurrentValue('sum') }}</td>
-            <td>{{ getCompareValue('sum') }}</td>
-            <td :class="getDiffClass('sum')">
-              {{ getDiffValue('sum') }}
-            </td>
-          </tr>
+    <!-- 挑战结果提示 -->
+     <div class="analysis-card" style="margin-bottom: 24px;">
+      <a-card 
+        :title="showComparisonTables ? '挑战结果' : ''" 
+        class="chart-card"
+        :loading="loading"
+      >
+      <div v-if="!loading && showComparisonTables" class="challenge-result-card">
+        <div class="result-header" :class="totalScoreDiff >= 0 ? 'success' : 'error'" style="justify-content: center;">
+          <span class="result-icon" :class="totalScoreDiff >= 0 ? 'success-icon' : 'error-icon'">
+            {{ totalScoreDiff >= 0 ? '✔' : '✖' }}
+          </span>
+          <span class="result-text">{{ userInfo?.student?.name || '本人' }} 挑战{{ totalScoreDiff >= 0 ? '成功' : '失败' }}</span>
+        </div>
+        <div class="subject-analysis" style="text-align: center;">
+          <p>
+            <span class="advantage-label">优势科目：</span>
+            <span v-for="(sub, idx) in getAdvantageSubjects()" :key="idx" class="advantage-subject">{{ sub }}</span>
+          </p>
+          <p>
+            <span class="disadvantage-label">劣势科目：</span>
+            <span v-for="(sub, idx) in getDisadvantageSubjects()" :key="idx" class="disadvantage-subject">{{ sub }}</span>
+          </p>
+        </div>
+      </div>
+        </a-card>
+     </div>
 
-          <!-- 语文行 -->
-          <tr>
-            <td>语文</td>
-            <td>{{ getCurrentValue('Yuwen') }}</td>
-            <td>{{ getCompareValue('Yuwen') }}</td>
-            <td :class="getDiffClass('Yuwen')">
-              {{ getDiffValue('Yuwen') }}
-            </td>
-          </tr>
+    <!-- 对比结果区域（分数+段次双表格） -->
+    <div v-if="!loading && showComparisonTables" class="comparison-results">
+      <!-- 分数对比表格 -->
+      <div class="analysis-card" style="margin-bottom: 24px;">
+        <a-card :title="`分数对比结果`" class="chart-card">
+          <div class="table-container">
+            <a-table
+              :data-source="scoreComparisonData"
+              bordered
+              :columns="scoreColumns"
+              :pagination="false"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.dataIndex === 'diff'">
+                  <span :class="getScoreDiffClass(record.diff)">{{ record.diff }}</span>
+                </template>
+              </template>
+            </a-table>
+          </div>
+        </a-card>
+      </div>
 
-          <!-- 数学行 -->
-          <tr>
-            <td>数学</td>
-            <td>{{ getCurrentValue('Shuxue') }}</td>
-            <td>{{ getCompareValue('Shuxue') }}</td>
-            <td :class="getDiffClass('Shuxue')">
-              {{ getDiffValue('Shuxue') }}
-            </td>
-          </tr>
+      <!-- 段次对比表格 -->
+      <div class="analysis-card">
+        <a-card :title="`段次对比结果`" class="chart-card">
+          <div class="table-container">
+            <a-table
+              :data-source="rankComparisonData"
+              bordered
+              :columns="rankColumns"
+              :pagination="false"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.dataIndex === 'classDiff' || column.dataIndex === 'gradeDiff'">
+                  <span :class="getRankDiffClass(Number(record[column.dataIndex]))">
+                    {{ record[column.dataIndex] }}
+                  </span>
+                </template>
+              </template>
+            </a-table>
+          </div>
+        </a-card>
+      </div>
+    </div>
 
-          <!-- 外语行 -->
-          <tr>
-            <td>外语</td>
-            <td>{{ getCurrentValue('Yingyu') }}</td>
-            <td>{{ getCompareValue('Yingyu') }}</td>
-            <td :class="getDiffClass('Yingyu')">
-              {{ getDiffValue('Yingyu') }}
-            </td>
-          </tr>
-
-          <!-- 历史/物理行 -->
-          <tr>
-            <td>历史/物理</td>
-            <td>{{ getCurrentValue('Lishi,Wuli') }}</td>
-            <td>{{ getCompareValue('Lishi,Wuli') }}</td>
-            <td :class="getDiffClass('Lishi,Wuli')">
-              {{ getDiffValue('Lishi,Wuli') }}
-            </td>
-          </tr>
-
-          <!-- 政治/化学行 -->
-          <tr>
-            <td>政治/化学</td>
-            <td>{{ getCurrentValue('Zhengzhi,Huaxue') }}</td>
-            <td>{{ getCompareValue('Zhengzhi,Huaxue') }}</td>
-            <td :class="getDiffClass('Zhengzhi,Huaxue')">
-              {{ getDiffValue('Zhengzhi,Huaxue') }}
-            </td>
-          </tr>
-
-          <!-- 地理/生物行 -->
-          <tr>
-            <td>地理/生物</td>
-            <td>{{ getCurrentValue('Dili,Shengwu') }}</td>
-            <td>{{ getCompareValue('Dili,Shengwu') }}</td>
-            <td :class="getDiffClass('Dili,Shengwu')">
-              {{ getDiffValue('Dili,Shengwu') }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- 无数据状态 -->
+    <div v-if="!loading && !showComparisonTables && hasSearched" class="no-data">
+      <a-empty description="未找到对比数据，请检查选择条件或对手信息是否正确" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-import { ref, onMounted } from 'vue';
-import { useUserStore } from '@/store';
+import { ref, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
-import { getExamApi } from '@/servers/api/exam';
+import { useUserStore } from '@/store';
 import { getClassesApi } from '@/servers/api/classes';
+import { getClassExam } from '@/servers/api/grade';
 import { getStudentApi } from '@/servers/api/student';
+import { getCompareWithStudent } from '@/servers/api/analysis';
 
-const router = useRouter();
+// 状态管理
 const userStore = useUserStore();
 const userInfo = userStore.userInfo;
 
+// 核心状态
+const loading = ref(false);
+const showComparisonTables = ref(false);
+const hasSearched = ref(false); // 标记是否执行过对比
+
+// 班级相关（不可改）
+const classList = ref<any[]>([]);
+const selectedClassId = ref<number | undefined>(userInfo?.student?.class_id);
+
 // 考试相关
 const examList = ref<any[]>([]);
-const showComparisonTable = ref(false);
-const selectedClass = ref(userInfo?.student?.class_id || '');
-const selectedExam = ref('');
-const selectedDimension = ref(''); // 'score' 或 'rank'
-const selectedName = ref(userInfo?.student?.name || '');
+const selectedExamId = ref<number>(0);
 
 // 对手相关
 const opponentClassList = ref<any[]>([]);
-const opponentClass = ref('');
-const opponentName = ref('');
-const opponentStudents = ref<any[]>([]);
+const opponentClassId = ref<number | undefined>();
+const opponentStudents = ref<any[]>([]); // 对手班级学生列表
+const filteredOpponentStudents = ref<any[]>([]); // 搜索过滤后的学生列表
+const finalOpponentId = ref<string | undefined>(); // 最终使用的对手ID（选择/输入一体化）
+const finalOpponentName = ref<string>('未知对手'); // 最终显示的对手姓名
 
 // 对比数据
 const currentStudentData = ref<any>({});
 const compareStudentData = ref<any>({});
-const resultData = ref<any>({});
+const scoreComparisonData = ref<any[]>([]); // 分数对比数据
+const rankComparisonData = ref<any[]>([]); // 段次对比数据
 
-// 获取考试列表
-// 获取考试列表
-const fetchExamList = async () => {
+// 学科名称映射
+const subjectMap = {
+  'Yuwen': '语文',
+  'Shuxue': '数学',
+  'Yingyu': '英语',
+  'Wuli': '物理',
+  'Huaxue': '化学',
+  'Shengwu': '生物',
+  'Lishi': '历史',
+  'Zhengzhi': '政治',
+  'Dili': '地理',
+  'sum': '总分'
+};
+
+// 初始化：获取班级、考试列表
+const init = async () => {
   try {
-    if (!userInfo?.student?.class_id) {
-      message.warning('请先完善学生信息');
-      return;
-    }
-    // @ts-ignore
-    const response = await getExamApi({ class_id: userInfo.student.class_id });
-    if (response.code === 200) {
-      examList.value = response.data || [];
-      console.log('获取到考试列表:', examList.value);
-      
-      if (examList.value.length > 0) {
-        // 按考试id倒序排序，id大的视为最新考试
-        const sortedExams = [...examList.value].sort((a, b) => b.id - a.id); 
-        selectedExam.value = sortedExams[0].id;
-        console.log('默认选中最新考试:', sortedExams[0].name, '考试id:', sortedExams[0].id);
-      } else {
-        selectedExam.value = '';
-        message.warning('当前班级暂无考试数据');
+    loading.value = true;
+    // 1. 获取当前学生班级列表（默认选中当前班级，不可改）
+    const classRes = await getClassesApi({ header: userInfo?.teacher?.uid });
+    if (classRes.code === 200 && classRes.data.length > 0) {
+      classList.value = classRes.data;
+      // 若未自动选中，默认选第一个
+      if (!selectedClassId.value && classList.value.length > 0) {
+        selectedClassId.value = classList.value[0].id;
       }
-    } else {
-      console.error('获取考试列表失败:', response.msg);
     }
-  } catch (error) {
-    console.error('获取考试列表出错', error);
-  }
-};
 
-// 获取对手班级列表
-const fetchOpponentClasses = async () => {
-  try {
-    const response = await getClassesApi({ 
-      school_id: userInfo?.student?.school_id 
-    });
-    
-    if (response.code === 200) {
-      // 排除当前学生自己的班级
-      opponentClassList.value = response.data.filter(
-        (cls: any) => cls.id !== userInfo?.student?.class_id
+    // 2. 获取考试列表（默认选中最新考试）
+    const examRes = await getClassExam({ class_id: selectedClassId.value });
+    if (examRes.code === 200 && examRes.data.length > 0) {
+      examList.value = examRes.data.map((examId: number) => ({
+        id: examId,
+        name: `考试${examId}` // 或根据实际接口返回的名称赋值
+      }));
+      if (examList.value.length > 0) {
+        selectedExamId.value = examList.value[0].id;
+      }
+    }
+
+    // 3. 获取对手班级列表（排除当前班级）
+    const allClassesRes = await getClassesApi({ school_id: userInfo?.student?.school_id });
+    if (allClassesRes.code === 200) {
+      opponentClassList.value = allClassesRes.data.filter(
+        (cls: any) => cls.id !== selectedClassId.value
       );
-    } else {
     }
-  } catch (error) {
-    console.error('获取对手班级列表出错', error);
+  } catch (err) {
+    message.error('初始化数据失败');
+    console.error(err);
+  } finally {
+    loading.value = false;
   }
 };
 
-// 处理对手班级变化
-const handleOpponentClassChange = async (event: Event) => {
-  const classId = (event.target as HTMLSelectElement).value;
-  
-  if (!classId) {
+// 获取对手班级的学生列表
+const fetchOpponentStudents = async () => {
+  if (!opponentClassId.value) {
     opponentStudents.value = [];
-    opponentName.value = '';
+    filteredOpponentStudents.value = [];
+    finalOpponentName.value = '未知对手';
     return;
   }
-  
   try {
-    const classIdNumber = Number(classId);
-    if (isNaN(classIdNumber)) {
-      message.error('班级ID格式错误');
-      return;
-    }
-
-    const response = await getStudentApi({ 
-      class_id: classIdNumber,
-      school: userInfo?.student?.school,
-      size: 1000
-    });
-    
-    if (response.code === 200) {
-      opponentStudents.value = response.data;
+    loading.value = true;
+    const studentRes = await getStudentApi({ class_id: opponentClassId.value });
+    if (studentRes.code === 200 && studentRes.data) {
+      opponentStudents.value = studentRes.data.map((item: any) => ({
+        id: item.uid,
+        name: item.name,
+        uid: item.uid,
+        class_id: item.class_id
+      }));
+      filteredOpponentStudents.value = [...opponentStudents.value]; // 初始化过滤列表
     } else {
-      message.error(`获取学生列表失败：${response.msg || '未知错误'}`);
+      message.warning(studentRes.msg || '获取对手学生列表失败');
+      opponentStudents.value = [];
+      filteredOpponentStudents.value = [];
+      finalOpponentName.value = '未知对手';
     }
-  } catch (error) {
-    console.error('获取对手班级学生列表出错', error);
-    message.error('获取学生列表失败，请重试');
+  } catch (err) {
+    message.error('获取对手学生列表失败');
+    console.error(err);
+    finalOpponentName.value = '未知对手';
+  } finally {
+    loading.value = false;
   }
 };
 
-// 获取当前学生的维度值
-const getCurrentValue = (subject: string) => {
-  return getDimensionValue(currentStudentData.value, subject);
-};
-
-// 获取对手学生的维度值
-const getCompareValue = (subject: string) => {
-  return getDimensionValue(compareStudentData.value, subject);
-};
-
-// 获取组合学科中分数不为0的科目
-const getValidSubject = (data: any, subjects: string[]) => {
-  // 遍历组合学科，返回值不为0的科目
-  for (const sub of subjects) {
-    if (data[sub] !== undefined && data[sub] !== 0) {
-      return sub;
-    }
+// 对手姓名搜索过滤
+const handleOpponentSearch = (value: string) => {
+  if (!value) {
+    filteredOpponentStudents.value = [...opponentStudents.value];
+    return;
   }
-  return subjects[0];
+  const lowerValue = value.toLowerCase();
+  filteredOpponentStudents.value = opponentStudents.value.filter((student: any) => 
+    student.name.toLowerCase().includes(lowerValue) || 
+    student.uid.toLowerCase().includes(lowerValue)
+  );
 };
 
-// 根据维度和学科获取对应值
-const getDimensionValue = (data: any, subject: string) => {
-  if (subject.includes(',')) {
-    const subjects = subject.split(',');
-    const validSub = getValidSubject(data, subjects);
-    if (selectedDimension.value === 'score') { 
-      return data[validSub] || 0;
-    } else {
-      return data[`${validSub}D`] || 0;
+const handleOpponentSelect = (studentId: string | undefined) => {
+  if (studentId) {
+    const selectedStudent = opponentStudents.value.find((s: any) => s.id === studentId);
+    if (selectedStudent) {
+      finalOpponentId.value = studentId;
+      finalOpponentName.value = selectedStudent.name;
     }
-  }
-  if (selectedDimension.value === 'score') { 
-    return subject === 'sum' ? data.sum_ : data[subject] || 0;
   } else {
-    return subject === 'sum' ? data.sumD : data[`${subject}D`] || 0;
+    finalOpponentId.value = undefined;
+    finalOpponentName.value = '未知对手';
   }
 };
 
-// 计算差分值
-const getDiffValue = (subject: string) => {
-  if (selectedDimension.value === 'score') {
-    // 分数维度
-    if (subject.includes(',')) {
-      const subjects = subject.split(',');
-      // 组合学科
-      const validSub = getValidSubject(currentStudentData.value, subjects);
-      return resultData.value[validSub] || 0;
-    }
-    // 单学科
-    const resultKey = subject === 'sum' ? 'sum_' : subject;
-    return resultData.value[resultKey] || 0;
-  } else {
-    // 段次维度
-    const currentVal = getCurrentValue(subject);
-    const compareVal = getCompareValue(subject);
-    return currentVal - compareVal;
-  }
-};
-
-// 根据维度和差值判断样式
-const getDiffClass = (subject: string) => {
-  const diff = getDiffValue(subject);
-  if (selectedDimension.value === 'score') {
-    // 分数
-    return diff > 0 ? 'green' : 'red';
-  } else {
-    // 段次
-    return diff < 0 ? 'green' : 'red';
-  }
-};
-
-const runComparison = async () => {
-  const currentStudentId = userInfo?.student?.uid;
-  const selectedExamId = selectedExam.value;
-
-  // 验证必填项
-  if (!currentStudentId) {
-    message.warning('请先在个人信息中绑定学生账号');
-    return;
-  }
-  if (!selectedExamId) {
-    message.warning('请选择考试');
-    return;
-  }
-  if (!opponentClass.value) {
-    message.warning('请选择对手班级');
-    return;
-  }
-  if (!opponentName.value) {
-    message.warning('请输入对手姓名');
-    return;
-  }
-  if (!selectedDimension) {
-    message.warning('请选择对比维度（分数或段次）');
-    return;
-  }
-
-  try {
-    // 获取对手学生信息
-    const normalizedInputName = opponentName.value.trim().replace(/\s/g, "").toLowerCase();
-    const opponentStudent = opponentStudents.value.find((s: any) => {
-      const normalizedStudentName = s.name.trim().replace(/\s/g, "").toLowerCase();
-      return normalizedStudentName === normalizedInputName;
-    });
-    
-    if (!opponentStudent) {
-      message.warning('未找到该对手学生，请确认姓名是否正确');
-      return;
-    }
-
-    const opponentStudentId = opponentStudent.uid;
-  
-    // 调用后端接口
-    const response = await fetch(
-      `/api/analysis/compare_with_student?student_id=${currentStudentId}&compare_student_id=${opponentStudentId}&selected_exam_id=${selectedExamId}`
+// 手动输入对手姓名
+const handleManualInput = (value: string) => {
+  if (value) {
+    finalOpponentName.value = value;
+    const matchedStudent = opponentStudents.value.find(
+      (s: any) => s.name.toLowerCase() === value.toLowerCase()
     );
-    const res = await response.json();
-    if (res.code === 200) {
+    finalOpponentId.value = matchedStudent?.id || value;
+  } else {
+    finalOpponentId.value = undefined;
+    finalOpponentName.value = '未知对手';
+  }
+};
+
+// 计算总分差值
+const totalScoreDiff = computed(() => {
+  const currentTotal = getScoreValue(currentStudentData.value, 'sum');
+  const opponentTotal = getScoreValue(compareStudentData.value, 'sum');
+  return currentTotal - opponentTotal;
+});
+
+// 获取优势科目（本人分数 > 对手）
+const getAdvantageSubjects = () => {
+  return scoreComparisonData.value
+    .filter(item => item.subject !== '总分' && Number(item.diff) > 0)
+    .map(item => item.subject);
+};
+
+// 获取劣势科目
+const getDisadvantageSubjects = () => {
+  return scoreComparisonData.value
+    .filter(item => item.subject !== '总分' && Number(item.diff) < 0)
+    .map(item => item.subject);
+};
+
+// 执行对比（同时获取分数和段次数据）
+const runComparison = async () => {
+  if (!selectedExamId.value || !finalOpponentId.value || !userInfo?.student?.uid) {
+    message.warning('请选择完整的对比条件（考试+对手班级+对手）');
+    return;
+  }
+
+  try {
+    loading.value = true;
+    hasSearched.value = true;
+    showComparisonTables.value = false;
+
+    const res = await getCompareWithStudent({
+      student_id: userInfo.student.uid,
+      compare_student_id: finalOpponentId.value,
+      selected_exam_id: selectedExamId.value.toString()
+    });
+
+    if (res.code === 200 && res.data) {
       currentStudentData.value = res.data.current_student;
       compareStudentData.value = res.data.compare_student;
-      resultData.value = res.data.result;
-      showComparisonTable.value = true;
+      
+      // 格式化分数对比数据
+      scoreComparisonData.value = Object.entries(subjectMap).map(([en, cn]) => {
+        const currentVal = getScoreValue(currentStudentData.value, en);
+        const compareVal = getScoreValue(compareStudentData.value, en);
+        return {
+          subject: cn,
+          current: currentVal,
+          opponent: compareVal,
+          diff: (currentVal - compareVal).toFixed(2)
+        };
+      });
+
+      // 格式化段次对比数据（优化：明确“班级段次”和“年级段次”）
+      rankComparisonData.value = Object.entries(subjectMap).map(([en, cn]) => {
+        const currentClassRank = getClassRankValue(currentStudentData.value, en);
+        const compareClassRank = getClassRankValue(compareStudentData.value, en);
+        const currentGradeRank = getGradeRankValue(currentStudentData.value, en);
+        const compareGradeRank = getGradeRankValue(compareStudentData.value, en);
+        return {
+          subject: cn,
+          currentClass: currentClassRank,
+          opponentClass: compareClassRank,
+          currentGrade: currentGradeRank,
+          opponentGrade: compareGradeRank,
+          classDiff: currentClassRank - compareClassRank,
+          gradeDiff: currentGradeRank - compareGradeRank
+        };
+      });
+
+      showComparisonTables.value = true;
     } else {
-      message.error(res.msg || '对比失败');
+      message.error(res?.msg || '获取对比数据失败');
     }
-  } catch (error) {
-    message.error('请求失败，请重试');
-    console.error('请求失败', error);
+  } catch (err) {
+    message.error('获取对比数据失败');
+    console.error(err);
+  } finally {
+    loading.value = false;
   }
 };
 
-onMounted(() => {
-  fetchExamList();
-  fetchOpponentClasses();
+// 获取分数值
+const getScoreValue = (data: any, subject: string) => {
+  return subject === 'sum' ? (data.sum_ || 0) : (data[subject] || 0);
+};
+
+// 获取班级段次值
+const getClassRankValue = (data: any, subject: string) => {
+  return subject === 'sum' ? (data.sumB || 0) : (data[`${subject}B`] || 0);
+};
+
+// 获取年级段次值
+const getGradeRankValue = (data: any, subject: string) => {
+  return subject === 'sum' ? (data.sumD || 0) : (data[`${subject}D`] || 0);
+};
+
+// 分数差值样式（正数优于对手，绿色；负数红色）
+const getScoreDiffClass = (diff: string) => {
+  const diffNum = Number(diff);
+  return diffNum > 0 ? 'positive' : diffNum < 0 ? 'negative' : 'zero';
+};
+
+// 段次差值样式（负数优于对手，绿色；正数红色）
+const getRankDiffClass = (diff: number) => {
+  return diff < 0 ? 'positive' : diff > 0 ? 'negative' : 'zero';
+};
+
+// 对比按钮禁用状态
+const isCompareBtnDisabled = computed(() => {
+  return (
+    loading.value || 
+    !selectedClassId.value || 
+    !selectedExamId.value || 
+    !opponentClassId.value || 
+    !finalOpponentId.value
+  );
 });
+
+// 分数表格列定义
+const scoreColumns = computed(() => [
+  { title: '学科', dataIndex: 'subject', key: 'subject', width: 100 },
+  { 
+    title: `${userInfo?.student?.name || '本人'}`, 
+    dataIndex: 'current', 
+    key: 'current',
+    width: 120,
+    customRender: ({ value }: { value: any }) => value.toFixed(2)
+  },
+  { 
+    title: `${finalOpponentName.value}`, 
+    dataIndex: 'opponent', 
+    key: 'opponent',
+    width: 120,
+    customRender: ({ value }: { value: any }) => value.toFixed(2)
+  },
+  { title: '分差（本人-对手）', dataIndex: 'diff', key: 'diff', width: 140 }
+]);
+
+// 段次表格列定义
+const rankColumns = computed(() => [
+  { title: '学科', dataIndex: 'subject', key: 'subject', width: 100 },
+  // 班级段次
+  { 
+    title: `${userInfo?.student?.name || '本人'}（班级名次）`, 
+    dataIndex: 'currentClass', 
+    key: 'currentClass',
+    width: 120,
+    customRender: ({ value }: { value: any }) => value || '0'
+  },
+  { 
+    title: `${finalOpponentName.value}（班级名次）`, 
+    dataIndex: 'opponentClass', 
+    key: 'opponentClass',
+    width: 120,
+    customRender: ({ value }: { value: any }) => value || '0'
+  },
+  { 
+    title: '班级名次差（本人-对手）', 
+    dataIndex: 'classDiff', 
+    key: 'classDiff', 
+    width: 140 
+  },
+  // 年级段次
+  { 
+    title: `${userInfo?.student?.name || '本人'}（年级名次）`, 
+    dataIndex: 'currentGrade', 
+    key: 'currentGrade',
+    width: 120,
+    customRender: ({ value }: { value: any }) => value || '0'
+  },
+  { 
+    title: `${finalOpponentName.value}（年级名次）`, 
+    dataIndex: 'opponentGrade', 
+    key: 'opponentGrade',
+    width: 120,
+    customRender: ({ value }: { value: any }) => value || '0'
+  },
+  { 
+    title: '年级名次差（本人-对手）', 
+    dataIndex: 'gradeDiff', 
+    key: 'gradeDiff', 
+    width: 140 
+  }
+]);
+
+// 页面加载时初始化数据
+onMounted(init);
 </script>
 
-<style scoped>
+<style scoped lang="less">
 .student-challenge-page {
   padding: 20px;
   position: relative;
   height: 100%;
   overflow-y: auto;
   box-sizing: border-box;
-  font-family: sans-serif;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+
+  .header {
+    background: linear-gradient(120deg, #4b6cb7, #1890ff);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    color: white;
+    
+    h2 {
+      margin: 0 0 10px 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.9;
+    }
+  }
+
+  .filter-section {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    margin-bottom: 24px;
+    margin-top: 2%;
+    
+    .filter-item {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      
+      .label {
+        width: 80px;
+        font-weight: 600;
+        color: #333;
+        text-align: right;
+        margin-right: 10px;
+        white-space: nowrap;
+      }
+      
+      :deep(.ant-select),
+      :deep(.ant-input) {
+        flex: 1;
+      }
+    }
+
+    .compare-button {
+      height: 38px;
+      padding: 0 32px;
+    }
+  }
+
+  .description {
+    margin: 0 0 20px 0;
+    font-size: 0.9em;
+    color: red;
+    line-height: 1.5;
+  }
+
+  .loading-spin {
+    display: block;
+    margin: 80px auto;
+  }
+
+  .challenge-result-card {
+  background: #f9f9f9;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    color: #333;
+    font-size: 1.5rem;
+
+    .result-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      margin-right: 8px;
+      font-weight: bold;
+    }
+
+    .success {
+      color: #52c41a;
+      font-size: 1rem;
+    }
+    .success-icon {
+      background: #52c41a;
+      color: white;
+    }
+
+    .error {
+      color: #f5222d; /* 失败文字红色 */
+    }
+    .error-icon {
+      background: #f5222d;
+      color: white;
+    }
+  }
+
+  .subject-analysis {
+    line-height: 1.8;
+
+    .advantage-label {
+      font-weight: 600;
+      color: #52c41a;
+    }
+    .advantage-subject {
+      color: #52c41a;
+      margin-right: 8px;
+    }
+
+    .disadvantage-label {
+      font-weight: 600;
+      color: #f5222d;
+    }
+    .disadvantage-subject {
+      color: #f5222d;
+      margin-right: 8px;
+    }
+  }
 }
 
-.page-header h2 {
-  text-align: center;
-  margin-top: 10px;
-  margin-bottom: 20px;
-  font-size: 24px;
-  color: #333;
-  font-weight: 600;
-}
+  .comparison-results {
+    width: 100%;
+  }
 
-.filter-input-card {
-  margin-bottom: 20px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 10px;
-}
+  .analysis-card {
+    margin-bottom: 24px;
+    
+    .chart-card {
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      font-size: 1.3rem;
+      
+      :deep(.ant-card-head) {
+        background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
+        border-bottom: 1px solid #e8e8e8;
+        padding: 0 16px;
+        
+        .ant-card-head-title {
+          font-weight: 600;
+          color: #333;
+          font-size: 16px;
+        }
+      }
+      
+      :deep(.ant-card-body) {
+        padding: 20px;
+      }
+    }
+  }
 
-.input-row {
-  display: flex;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #eee;
-}
+  .table-container {
+    overflow-x: auto;
+  }
 
-.input-row:last-child {
-  border-bottom: none;
-}
+  :deep(.ant-table) {
+    width: 100%;
+    
+    .ant-table-thead > tr > th {
+      background-color: #f7f9fc;
+      font-weight: 600;
+      text-align: center;
+    }
+    
+    .ant-table-tbody > tr > td {
+      text-align: center;
+      vertical-align: middle;
+    }
+  }
 
-.form-label {
-  width: 80px;
-  flex-shrink: 0;
-  color: #555;
-  text-align: right;
-  margin-right: 10px;
-  font-size: 1rem;
-}
+  .no-data {
+    background: white;
+    border-radius: 12px;
+    padding: 80px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    text-align: center;
+    margin-bottom: 20px;
+  }
 
-.form-select,
-.form-input {
-  flex-grow: 1;
-  padding: 8px 10px;
-  font-size: 1em;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-left: 0;
-  outline: none;
-  transition: border-color 0.3s;
-}
+  .positive {
+    color: #52c41a; // 绿色表示优于对手
+  }
 
-.form-select:focus,
-.form-input:focus {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-}
+  .negative {
+    color: #f5222d; // 红色表示弱于对手
+  }
 
-.description {
-  margin-bottom: 10px;
-  font-size: 0.9em;
-  color: red;
-}
+  .zero {
+    color: #535353; // 黑色表示持平
+  }
+  
+  // 响应式设计
+  @media (max-width: 768px) {
+    padding: 12px;
 
-.compare-button {
-  display: block;
-  width: 80%;
-  margin: 20px auto;
-  padding: 10px 30px;
-  background: linear-gradient(to bottom, #007bff, #0056b3);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1.1em;
-}
+    .filter-section {
+      padding: 16px;
+    }
 
-.comparison-table-section {
-  width: 100%;
-  overflow-x: auto;
-  margin-top: 20px;
-}
+    .filter-item {
+      flex-direction: column;
+      align-items: stretch;
 
-.results-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+      .label {
+        width: 100%;
+        text-align: left;
+        margin-bottom: 8px;
+      }
+    }
 
-.results-table th,
-.results-table td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: center;
-  white-space: nowrap;
-}
+    .compare-button {
+      width: 100%;
+      padding: 0;
+    }
 
-.results-table th {
-  background-color: #f2f2f2;
-}
+    .analysis-card :deep(.ant-card-body) {
+      padding: 12px;
+    }
 
-.results-table .red {
-  color: red;
-}
-
-.results-table .green {
-  color: green;
+    :deep(.ant-table) {
+      font-size: 14px;
+    }
+  }
 }
 </style>
