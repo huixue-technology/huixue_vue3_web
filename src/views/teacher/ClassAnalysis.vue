@@ -108,7 +108,6 @@ import { getClassAnalysis } from '@/servers/api/analysis';
 import { getClassesApi } from '@/servers/api/classes';
 import { message } from 'ant-design-vue';
 import { useUserStore } from '@/store';
-import { Row, Col, Card, Button } from "ant-design-vue";
 
 // 状态定义
 const userStore = useUserStore();
@@ -193,48 +192,7 @@ const getSubjectDetails = (student: any) => {
   return details;
 };
 
-// 主科分数段数据处理
-const mainScoreSectionsData = computed(() => {
-  const result: any[] = [];
-  
-  // 获取所有分数段范围（去重并排序）
-  const allRanges = new Set<string>();
-  
-  // 收集主科数据
-  classAnalysisData.value.main_score_section.forEach((subjectObj: any) => {
-    Object.entries(subjectObj).forEach(([enSubject, sections]) => {
-      (sections as any[]).forEach((section: any) => {
-        const range = Object.keys(section)[0];
-        allRanges.add(range);
-      });
-    });
-  });
-  
-  // 将分数段按从高到低排序
-  const sortedRanges = Array.from(allRanges).sort((a, b) => {
-    const aMin = parseInt(a.split('-')[0]);
-    const bMin = parseInt(b.split('-')[0]);
-    return bMin - aMin;
-  });
-  
-  // 为每个分数段创建一行数据
-  sortedRanges.forEach(range => {
-    const row: any = { range };
-    
-    // 添加主科数据
-    classAnalysisData.value.main_score_section.forEach((subjectObj: any) => {
-      Object.entries(subjectObj).forEach(([enSubject, sections]) => {
-        const cnSubject = subjectMap[enSubject as keyof typeof subjectMap] || enSubject;
-        const section = (sections as any[]).find((s: any) => Object.keys(s)[0] === range);
-        row[enSubject] = section ? section[range] : 0;
-      });
-    });
-    
-    result.push(row);
-  });
-  
-  return result;
-});
+
 
 // 副科分数段数据处理
 const selectScoreSectionsData = computed(() => {
@@ -279,58 +237,6 @@ const selectScoreSectionsData = computed(() => {
   return result;
 });
 
-// 主科表格列定义
-const mainScoreSectionsColumns = computed(() => [
-  { 
-    title: '分数段', 
-    dataIndex: 'range', 
-    fixed: 'left',
-    width: 120
-  },
-  ...classAnalysisData.value.main_score_section.flatMap((subjectObj: any) => 
-    Object.keys(subjectObj).map(enSubject => {
-      const cnSubject = subjectMap[enSubject as keyof typeof subjectMap] || enSubject;
-      return {
-        title: cnSubject,
-        dataIndex: enSubject,
-        align: 'center',
-        width: 100
-      };
-    })
-  )
-]);
-
-// 副科表格列定义
-const selectScoreSectionsColumns = computed(() => [
-  { 
-    title: '分数段', 
-    dataIndex: 'range', 
-    fixed: 'left',
-    width: 120
-  },
-  ...classAnalysisData.value.select_score_section.flatMap((subjectObj: any) => 
-    Object.keys(subjectObj).map(enSubject => {
-      const cnSubject = subjectMap[enSubject as keyof typeof subjectMap] || enSubject;
-      return {
-        title: cnSubject,
-        dataIndex: enSubject,
-        align: 'center',
-        width: 100
-      };
-    })
-  )
-]);
-
-// 格式化分数段数据
-const formattedScoreSections = computed(() => {
-  // 对总分分数段进行倒序处理
-  const reversedSections = [...classAnalysisData.value.sum_score_section].reverse();
-  return reversedSections.map((record: any, index: number) => {
-    const key = Object.keys(record)[0] || '';
-    const value = Object.values(record)[0] ?? 0;
-    return { key: index, range: key, count: value };
-  });
-});
 
 // 表格列定义
 const excellentStudentColumns = [
@@ -347,11 +253,6 @@ const dangerStudentColumns = [
   { title: '年级排名', dataIndex: 'sumD' }
 ];
 
-// 分数段表格列（主科/副科/总分通用）
-const sectionColumns = [
-  { title: '分数段', dataIndex: 'range' },
-  { title: '人数', dataIndex: 'count' }
-];
 
 // 学生科目详情表格列
 const subjectDetailColumns = [
