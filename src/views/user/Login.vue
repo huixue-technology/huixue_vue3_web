@@ -38,7 +38,9 @@
          登录
          </a-button>
          或者
-         <router-link to="/user/register">注册</router-link>
+         <router-link to="/user/register">学生注册</router-link>
+         |
+         <router-link to="/user/teacher-register">教师注册</router-link>
       </a-form-item>
    </a-form>
 </div>

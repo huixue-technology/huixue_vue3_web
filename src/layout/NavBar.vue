@@ -21,6 +21,14 @@ onMounted(()=>{
 
 })
 const items =  computed<MenuProps['items']>(()=>{
+  // 在登录/注册页面不初始化用户信息
+  const path = window.location.hash.slice(1);
+  const isAuthPage = path.startsWith('/user/login') || path.startsWith('/user/register') || path.startsWith('/user/teacher-register');
+  
+  if (isAuthPage) {
+    return [];
+  }
+  
   const user = userStore.getUserInfo();
   const menuItems: MenuProps['items'] = [];
 
@@ -28,7 +36,7 @@ const items =  computed<MenuProps['items']>(()=>{
     // 获取用户信息
   const u = userStore.getUserInfo();
   console.log(u)
-  if(u.role === null) {
+  if(u.role === null || u.role === undefined) {
     router.push('/user/login')
     return
   }

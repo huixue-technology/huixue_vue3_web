@@ -60,114 +60,97 @@
         <a-form-item  label="邮箱">
           <a-input v-model:value="email" placeholder="" disabled />
         </a-form-item>
-        <a-form-item label="所在学校">
-          <a-select
-            v-model:value="schoolName"
-            @change="onSchoolChange"
-            style="width: 100%"
-            placeholder="请选择学校"
-          >
-            <a-select-option v-for="school in schoolList" :key="school.name" :value="school.school_id">
-              {{ school.name }}
-            </a-select-option>
-          </a-select>
+        <!-- 输入学生姓名 -->
+        <a-form-item label="学生姓名">
+          <a-input-search
+            v-model:value="inputStuName"
+            placeholder="请输入学生姓名"
+            enter-button="搜索"
+            @search="onSearchStudent"
+          />
         </a-form-item>
-        <!-- 增加年级选项 -->
-        <a-form-item label="年级">
-          <a-select
-            v-model:value="gradeId"
-            @change="onGradeChange"
-            style="width: 100%"
-            placeholder="请选择年级"
-          >
-            <a-select-option v-for="grade in gradeList" :key="grade">
-              {{ grade }}
-            </a-select-option>
-          </a-select>
-         </a-form-item>
-        <a-form-item label="所在班级">
+        
+        <!-- 显示学生所在班级列表 -->
+        <a-form-item label="所在班级" v-if="classList.length > 0">
           <a-select
             v-model:value="classId"
-            @change="onClassChange"
             style="width: 100%"
             placeholder="请选择班级"
+            :options="classList.map(cls => ({ label: `${cls.name} (${cls.school_name})`, value: cls.id }))"
           >
-            <a-select-option v-for="cls in classList" :key="cls.id">
-              {{ cls.name }}
-            </a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="姓名">
-          <a-select
-            v-model:value="stuName"
-            style="width: 100%"
-            @change="onStudentChange"
-            placeholder="请选择学生"
-          >
-            <a-select-option v-for="student in studentList" :key="student.id" :value="student.name">
-              {{ student.name }}
-            </a-select-option>
-          </a-select>
+        
+        <!-- 学生信息确认 -->
+        <a-form-item label="确认学生" v-if="selectedStudent">
+          <a-descriptions size="small" :column="1">
+            <a-descriptions-item label="学生姓名">{{ selectedStudent.name }}</a-descriptions-item>
+            <a-descriptions-item label="考号">{{ selectedStudent.uid }}</a-descriptions-item>
+            <a-descriptions-item label="学校">{{ selectedStudent.school_name || selectedStudent.school }}</a-descriptions-item>
+            <a-descriptions-item label="年级">{{ selectedStudent.grade }}</a-descriptions-item>
+          </a-descriptions>
         </a-form-item>
       </a-form>
-
     </a-modal>
   </div>
   </div>
 </template>
 
-
-
 <script lang="ts" setup>
-import { ref, reactive, onMounted } from 'vue';
-import { message, type DescriptionsProps,type Form, type FormItem, type Input,Modal } from 'ant-design-vue';
+import { ref, watch } from 'vue';
+import { message, type DescriptionsProps } from 'ant-design-vue';
 import { useUserStore } from '@/store';
-// 导入putUserDetailApi
 import { putUserBindStatus, putUserDetailApi } from '@/servers/api/user';
-import { getSchoolApi } from '@/servers/api/school'; // 新增
-import { getClassesApi } from '@/servers/api/classes'; // 新增
-import { getStudentApi } from '@/servers/api/student'; // 新增
+import { getSchoolApi } from '@/servers/api/school';
+import { getClassesApi, getClassesDetailApi } from '@/servers/api/classes';
+import { getStudentApi } from '@/servers/api/student';
 import { useLogout } from '@/composables/useLogout';
-import grade from '@/router/modules/grade';
-const size = ref<DescriptionsProps['size']>('default');
-const schoolList = ref<any[]>([]); // 新增 学校列表
-const classList = ref<any[]>([]); // 新增 班级列表
-const gradeList = ref<any[]>([]); // 新增 年级列表
-const studentList = ref<any[]>([]); // 新增 学生列表
-const schoolId = ref(); // 新增 当前选中学校
-const schoolName = ref();
-const classId = ref(0); // 新增 当前选中班级
-const gradeId = ref('0');
 
+// 定义响应式变量
+const size = ref<DescriptionsProps['size']>('default');
+const schoolList = ref<any[]>([]);
+const classList = ref<any[]>([]);
+const studentList = ref<any[]>([]);
+const open = ref<boolean>(false);
+const bindOpen = ref<boolean>(false);
+const email = ref('');
+const phone = ref('');
+const name = ref('');
+const inputStuName = ref('');
+const classId = ref<number | undefined>(undefined);
+const selectedStudent = ref<any>(null);
+
+// 获取用户信息
+const userStore = useUserStore();
+const userData = userStore.userInfo;
+
+// 定义函数
 const onChange = (e: any) => {
   console.log('size checked', e.target.value);
   size.value = e.target.value;
 };
 
-const open = ref<boolean>(false);//控制修改页面弹出
-const bindOpen = ref<boolean>(false);//控制绑定页面弹出
-const email = ref('');
-const phone = ref('');
-const name = ref('');
-const role = ref('');
-const class_id = ref('');
-const stuName = ref('');
-const school = ref('');
-
-const userStore = useUserStore();
-const userData = userStore.userInfo;
 const showModifyModal = () => {
   open.value = true;
-  email.value = userData.email??'';
-  phone.value = userData.phone??'';
+  email.value = userData.email ?? '';
+  phone.value = userData.phone ?? '';
 };
+
 const showBindModal = () => {
   bindOpen.value = true;
-  name.value = userData.name??'';
-  email.value = userData.email??'';
+  name.value = userData.name ?? '';
+  email.value = userData.email ?? '';
+  resetBindForm();
 };
-const handleOk1 = () =>{
-  // 构造包含user_id的params对象和用户信息对象
+
+const resetBindForm = () => {
+  inputStuName.value = '';
+  classList.value = [];
+  classId.value = undefined;
+  selectedStudent.value = null;
+};
+
+const handleOk1 = () => {
   const params = { user_id: String(userData.id) };
   const userInfo = {
     phone: phone.value,
@@ -175,108 +158,145 @@ const handleOk1 = () =>{
     name: userData.name,
     password: userData.password
   };
-  
+
   const { logout } = useLogout();
-  
-  // 调用putUserDetailApi并传递正确的参数
-  putUserDetailApi(params, userInfo).then((res: any)=>{
+
+  putUserDetailApi(params, userInfo).then((res: any) => {
     console.log(res);
-    // 刷新用户信息
     message.success('修改成功,请重新登录');
     logout();
     return;
-    
   });
-  
+
   open.value = false;
 };
-const handleOk2 = () =>{
-  // 构造包含user_id的params对象和用户信息对象
-  const params = { id: String(userData.id),school: String(schoolName.value),class_id: String(classId.value),stuName: String(stuName.value)};
-  
+
+const handleOk2 = () => {
+  if (!classId.value) {
+    message.warning('请选择班级');
+    return;
+  }
+
+  if (!selectedStudent.value) {
+    message.warning('未找到学生信息');
+    return;
+  }
+
+  const params = {
+    id: String(userData.id),
+    school: String(selectedStudent.value.school_name || selectedStudent.value.school),
+    class_id: String(classId.value),
+    stuName: String(selectedStudent.value.name)
+  };
+
   const { logout } = useLogout();
-  putUserBindStatus(params).then((res: any)=>{
-    if(res.code === 200){
+  putUserBindStatus(params).then((res: any) => {
+    if (res.code === 200) {
       message.success('绑定成功');
       logout();
-    }else{
+    } else {
       message.error('绑定失败');
     }
-});
-}
+  });
+};
 
-onMounted(() => {
-  getSchoolApi({}).then((res: any) => {
+const onSearchStudent = async (value: string) => {
+  if (!value.trim()) {
+    message.warning('请输入学生姓名');
+    return;
+  }
 
-    schoolList.value = res.data;
-    schoolId.value = schoolList.value[0].school_id;
-    schoolName.value = schoolList.value[0].name;
-    console.log(schoolId.value);
-    getClassesApi({ school_id: schoolId.value }).then((res: any) => {
-      console.log(res.data);
-      getGradeList(res.data)
+  try {
+    const res = await getStudentApi({ name: value, size: 100 });
+    if (res.code === 200) {
+      if (res.data && res.data.length > 0) {
+        studentList.value = res.data;
+        await getClassListByStudents(res.data);
+        
+      } else {
+        message.info('未找到该学生');
+        classList.value = [];
+        classId.value = undefined;
+        selectedStudent.value = null;
+      }
+    } else {
+      message.error(res.message || '查询学生信息失败');
+    }
+  } catch (error) {
+    message.error('查询学生信息异常');
+    console.error(error);
+  }
+};
+
+const getClassListByStudents = async (students: any[]) => {
+  try {
+    classList.value = [];
+    classId.value = undefined;
+    selectedStudent.value = null;
+    console.log('Getting class list for students:', students);
+    // 获取所有涉及到的班级ID
+    const classIds = Array.from(new Set(students.map(s => s.class_id)));
+
+    // 获取每个班级的信息
+    const classInfoMap: Record<number, any> = {};
+    
+    // 并行获取所有班级详情
+    const classPromises = classIds.map(classId => 
+      getClassesDetailApi({ class_id: classId }).catch(() => null)
+    );
+    
+    const classResults = await Promise.all(classPromises);
+    
+    console.log('classResults:', classResults);
+    classResults.forEach(result => {
+      if (result && result.code === 200 && result.data) {
+        classInfoMap[result.data[0].id] = result.data[0];
+      }
     });
-  });
-});
+    console.log('classInfoMap:', classInfoMap);
+    // 构建最终的班级列表
+    const finalClassList: any[] = [];
+    students.forEach(student => {
+      const classInfo = classInfoMap[student.class_id];
+      if (classInfo) {
+        finalClassList.push({
+          id: student.class_id,
+          name: classInfo.name,
+          school_name: student.school_name || student.school
+        });
+      }
+    });
 
+    classList.value = finalClassList;
 
-// 获取某个年级的所有班级列表
-const getGradeList = async (data: any) => { 
-  // 获取所有班级一共有多少个年级，年级为班级id前两个字符
-  gradeList.value =Array.from(new Set(data.map((item: any) => String(item.id).substring(0, 2))));
-  gradeId.value = gradeList.value[0];
-  console.log(gradeList.value);
-  await getClassesApi({ name: gradeId.value }).then((res: any) => {
-    getClassList(res.data);
-  });
-};
-
-const getClassList = async (data: any) => { 
-  // 获取所有班级
-  classList.value = data;
-  classId.value = classList.value[0].id;
-  console.log(classList.value);
-  onClassChange(classId.value)
-};
-
-// 新增学校选择事件处理
-const onSchoolChange = async (value: number) => {
-  schoolId.value = value;
-  // schoolName.value = schoolList.value.find((item: any) => item.id === value).name;
-  const res = await getClassesApi(schoolId.value);
-  if (res.code === 200) { 
-    getGradeList(res.data)
-  }else{
-    message.error(res.message)
+    // 如果有班级列表，自动选中第一个
+    if (finalClassList.length > 0) {
+      classId.value = finalClassList[0].id;
+      // 手动触发班级选择变化，设置选中的学生
+      onClassChange(finalClassList[0].id);
+    }
+  } catch (error) {
+    message.error('获取班级信息异常');
+    console.error(error);
   }
 };
 
-// 新增年级选择事件处理
-const onGradeChange = async (value: number) => { 
-  console.log(`selected ${value}`);
-  gradeId.value = String(value);
-  const res = await getClassesApi({ school_id: schoolId.value, name: String(value) });
-  if (res.code === 200) { 
-    classList.value = res.data;
-  }
-};
-
-// 新增班级选择事件处理
-const onClassChange = async (value: number) => {
-  console.log(`selected ${schoolName.value}`);
+// 当班级选择变化时的处理函数
+const onClassChange = (value: number) => {
   classId.value = value;
-  const res = await getStudentApi({ class_id: value,school: schoolName.value,size:100 });
-  if (res.code === 200){
-    studentList.value = res.data;
-    stuName.value = studentList.value[0]?.name;
-  }else{
-    message.error(res.message);
+  // 查找选中的学生
+  const matchedStudent = studentList.value.find(s => s.class_id === value);
+  if (matchedStudent) {
+    selectedStudent.value = matchedStudent;
   }
 };
 
-const onStudentChange = (value:string) =>{
-  stuName.value = value;
-}
+// 监听班级选择变化
+watch(classId, (newVal) => {
+  if (newVal) {
+    onClassChange(newVal);
+  }
+});
 </script>
 
 <style scoped>
@@ -290,5 +310,4 @@ const onStudentChange = (value:string) =>{
 .my-info-button{
   margin-top: 16px;
 }
-
 </style>

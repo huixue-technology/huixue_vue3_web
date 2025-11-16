@@ -132,6 +132,18 @@ declare namespace API {
     class_id: string;
     /** 选中考试id */
     selected_exam_id: string;
+    /** 科目筛选(如: sum_, Yuwen, Shuxue等) */
+    subject?: string;
+    /** 排序方向(asc:升序, desc:降序) */
+    order_direction?: string;
+    /** 最低分数 */
+    min_score?: number;
+    /** 最高分数 */
+    max_score?: number;
+    /** 分数线上下范围(如: ±10分) */
+    pass_line_offset?: number;
+    /** 分数线id */
+    pass_line_id?: number;
   };
 
   type getClassScoreParams = {

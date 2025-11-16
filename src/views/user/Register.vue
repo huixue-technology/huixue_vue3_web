@@ -123,6 +123,8 @@
          </a-button>
          或者
          <router-link to="/user/login">登录</router-link>
+         |
+         <router-link to="/user/teacher-register">教师注册</router-link>
       </a-form-item>
    </a-form>
 </div>
@@ -398,5 +400,4 @@ onMounted(() => {
    left: 40%;
    width: 20%;
 }
-
 </style>

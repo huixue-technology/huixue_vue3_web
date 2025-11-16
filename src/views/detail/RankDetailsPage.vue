@@ -162,6 +162,28 @@ const dynamicSubjects = computed(() => {
   return subjects;
 });
 
+// 姓名脱敏函数
+const maskName = (name: string, isCurrentUser: boolean) => {
+  // 如果是当前用户，不脱敏
+  if (isCurrentUser) {
+    return name;
+  }
+  console.log(isCurrentUser)
+  // 如果姓名为空，返回空字符串
+  if (!name) {
+    return '';
+  }
+  
+  // 根据姓名长度进行脱敏处理
+  if (name.length === 2) {
+    // 双字姓名显示为X*
+    return name.charAt(0) + '*';
+  } else {
+    // 三字及以上姓名显示为X**X（保留首尾字，中间用*替代）
+    return name.charAt(0) + '**'
+  }
+};
+
 // 初始化数据
 onMounted(async () => {
   const userInfo = userStore.userInfo;
@@ -195,7 +217,7 @@ const initStudentInfo = async (userInfo: any) => {
     
     const studentClassId = studentInfoData.class_id;
     if (studentClassId) {
-      await fetchClassDetails(studentClassId);
+      await fetchClassDetails(studentClassId.toString());
       await fetchExamsByStudent(userInfo.role);
     } else {
       message.warning('未找到学生所在班级信息');
@@ -243,21 +265,30 @@ const fetchExamsByStudent = async (studentUid: string) => {
 // 获取班级详情
 const fetchClassDetails = async (classId: string) => {
   try {
-    const response = await api.classes.getClassesApi({ id: classId });
+    // 修复类型错误：getClassesApi 不接受 id 参数，应该使用 class_id 参数
+    const response = await api.classes.getClassesApi({ school_id: classId });
     if (response.data && response.data.length > 0) {
       classes.value = response.data;
       selectedClassId.value = classId;
     } else {
+      // 修复类型错误：为 Classes 对象提供所有必需的属性
       classes.value = [{
-        id: classId,
-        name: `班级 ${classId}`
+        id: parseInt(classId),
+        name: `班级 ${classId}`,
+        header: '', // 班主任ID
+        school_id: classId, // 学校ID
+        subject_selection: '' // 选科
       }];
       selectedClassId.value = classId;
     }
   } catch (err) {
+    // 修复类型错误：为 Classes 对象提供所有必需的属性
     classes.value = [{
-      id: classId,
-      name: `班级 ${classId}`
+      id: parseInt(classId),
+      name: `班级 ${classId}`,
+      header: '', // 班主任ID
+      school_id: classId, // 学校ID
+      subject_selection: '' // 选科
     }];
     selectedClassId.value = classId;
   }
@@ -286,8 +317,8 @@ const queryRankDetails = async () => {
 
     // 1. 获取目标学生成绩
     const targetRes = await api.grade.getGradeApi({
-      student_id: Number(currentStudentId.value),
-      exam_id: Number(selectedExamId.value),
+      student_id: parseInt(currentStudentId.value),
+      exam_id: parseInt(selectedExamId.value),
     });
 
     if (!targetRes.data || targetRes.data.length === 0) {
@@ -298,17 +329,17 @@ const queryRankDetails = async () => {
 
     // 2. 获取前三名学生
     const top3Res = await api.grade.getGradeApi({
-      class_id: Number(selectedClassId.value),
-      exam_id: Number(selectedExamId.value),
-      size: 3,
-      sort: 'sumB,asc'
+      class_id: parseInt(selectedClassId.value),
+      exam_id: parseInt(selectedExamId.value),
+      size: 3
+      // 移除不支持的 sort 参数
     });
     top3Students.value = (top3Res.data || []).map(transformGradeToStudent);
 
     // 3. 使用新接口获取前后10名学生
     const rankRes = await api.grade.getStudentGradeRank({
-      student_id: Number(currentStudentId.value),
-      selected_exam_id: Number(selectedExamId.value),
+      student_id: currentStudentId.value,
+      selected_exam_id: selectedExamId.value,
     });
 
     // 4. 处理接口返回的前后10名数据
@@ -319,7 +350,7 @@ const queryRankDetails = async () => {
     
     // 确保目标学生在列表中
     const isTargetInList = aroundStudents.some(
-      s => s.studentId === currentStudentId.value
+      (s: any) => s.studentId === currentStudentId.value
     );
     if (!isTargetInList) {
       fullClassStudents.value.push(targetStudentData);
@@ -335,7 +366,7 @@ const queryRankDetails = async () => {
 
 // 转换成绩数据为学生格式
 const transformGradeToStudent = (grade: any) => {
-  const baseData = {
+  const baseData: any = {
     studentId: grade.student_id,
     name: grade.student_name || '',
     totalScore: grade.sum_,
@@ -382,6 +413,9 @@ const displayedStudents = computed(() => {
   // 添加前三名
   top3Students.value.forEach(student => {
     if (student.studentId && !addedStudentIds.has(student.studentId)) {
+      // 对前三名学生也进行脱敏处理
+      const isCurrentUser = student.studentId == currentStudentId.value;
+      student.name = maskName(student.name, isCurrentUser);
       finalList.push(student);
       addedStudentIds.add(student.studentId);
     }
@@ -390,6 +424,9 @@ const displayedStudents = computed(() => {
   // 添加前后10名学生
   fullClassStudents.value.forEach(student => {
     if (student.studentId && !addedStudentIds.has(student.studentId)) {
+      // 对学生姓名进行脱敏处理
+      const isCurrentUser = student.studentId === currentStudentId.value;
+      student.name = maskName(student.name, isCurrentUser);
       finalList.push(student);
       addedStudentIds.add(student.studentId);
     }

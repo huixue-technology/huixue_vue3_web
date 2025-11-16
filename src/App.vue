@@ -1,6 +1,6 @@
 <template>
 <div class="index">
-    <NavBar v-if="!['/user/login', '/user/register'].includes($route.path)" />
+    <NavBar v-if="showNavBar" />
     <div class="index-router-view">
       <router-view />
     </div>
@@ -13,6 +13,15 @@
 
 <script setup lang="ts">
 import NavBar from '@/layout/NavBar.vue';
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+
+const showNavBar = computed(() => {
+  const hideNavRoutes = ['/user/login', '/user/register', '/user/teacher-register'];
+  return !hideNavRoutes.includes(route.path);
+});
 </script>
 <style>
 

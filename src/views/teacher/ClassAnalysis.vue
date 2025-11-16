@@ -94,54 +94,6 @@
           </a-table>
         </a-card>
       </div>
-
-      <!-- 分段统计卡片容器 -->
-      <div class="segment-analysis-container">
-        <!-- 主科分段统计 -->
-        <div class="analysis-card segment-card">
-          <a-card title="主科成绩分段统计（满分150分）" class="chart-card">
-            <div class="table-container">
-              <a-table
-                :data-source="mainScoreSectionsData"
-                :columns="mainScoreSectionsColumns"
-                bordered
-                pagination="false"
-                :scroll="{ x: 'max-content' }"
-              />
-            </div>
-          </a-card>
-        </div>
-
-        <!-- 副科分段统计 -->
-        <div class="analysis-card segment-card">
-          <a-card title="副科成绩分段统计（满分100分）" class="chart-card">
-            <div class="table-container">
-              <a-table
-                :data-source="selectScoreSectionsData"
-                :columns="selectScoreSectionsColumns"
-                bordered
-                pagination="false"
-                :scroll="{ x: 'max-content' }"
-              />
-            </div>
-          </a-card>
-        </div>
-
-        <!-- 总分分段统计 -->
-        <div class="analysis-card segment-card">
-          <a-card title="总分分段统计（满分750分）" class="chart-card">
-            <div class="table-container">
-              <a-table
-                :data-source="formattedScoreSections"
-                bordered
-                :columns="sectionColumns"
-                pagination="false"
-                :scroll="{ x: 'max-content' }"
-              />
-            </div>
-          </a-card>
-        </div>
-      </div>
     </div>
 
     <!-- 加载状态 -->

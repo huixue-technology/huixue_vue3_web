@@ -6,17 +6,18 @@ type teacher_info = {
     school_id:string,
     phone:string,
     subject:string,
-    name:string
+    name:string,
+    class_id: string,
 }
 
 type class_info = {
     header: string,
     class_id: number,
     name: string,
+    subject_selection: string,
     school_id: string
 }
-
 export {
     teacher_info,
-    class_info
+    class_info,
 }

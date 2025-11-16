@@ -25,6 +25,7 @@
               {{ show.bindState ? '已绑定' : '未绑定' }}
             </span>
           </a-descriptions-item>
+          <a-descriptions-item label="班级">{{ show.class_id }}</a-descriptions-item>
         </a-descriptions>
       </a-card>
     </div>
@@ -35,8 +36,10 @@
         <a-form-item label="用户名">
           <a-input v-model:value="show.username" placeholder="请输入用户名" />
         </a-form-item>
-        <a-form-item label="工号">
-          <a-input v-model:value="show.role" placeholder="请输入绑定id" />
+        <a-form-item label="班级">
+          <a-select v-model:value="show.class_id" placeholder="请选择班级">
+            <a-select-option v-for="value in class_list" :value="value.value">{{ value.name }}</a-select-option>
+          </a-select>
         </a-form-item>
         <a-form-item label="联系方式">
           <a-input v-model:value="show.phone" placeholder="请输入联系方式" />
@@ -53,27 +56,31 @@ import { putUserDetailApi } from "@/servers/api/user";
 import { teacher_info } from "@/views/teacher/types";
 import { message, Modal, type DescriptionsProps } from "ant-design-vue";
 import {useLogout} from "@/composables/useLogout";
-import { Card, Button, Form, Input } from "ant-design-vue";
+import { getClassesApi, getClassesDetailApi, putClassesDetailApi } from '@/servers/api/classes';
 
 const user = useUserStore();
 const show = ref<teacher_info>({
   bindState: false,
   email: '暂无',
-  username: '暂无',
   role: '未绑定',
+  username: '暂无',
+  class_id: '未绑定',
   school_id: '暂无',
   phone: '暂无',
   subject: '暂无',
   name: '暂无'
 });
-
+const class_list = ref<{ name: string; value: string }[]>([]);
 const open = ref<boolean>(false);
 const loading = ref<boolean>(false);
 const {logout} = useLogout();
 
 onMounted(async () => {
   const teacher_info = user.getUserInfo();
-  console.log(teacher_info['teacher'])
+
+  // 获取班级列表
+  const r = await getClassesApi({});
+  class_list.value = r.data.map((class_info:any) => ({name:class_info.name,value:class_info.id})); // 要加[]
   if (teacher_info.bind_state) {
     show.value = {
       bindState: teacher_info.bind_state,
@@ -83,13 +90,21 @@ onMounted(async () => {
       school_id: teacher_info.teacher.school_id || '暂无',
       phone: teacher_info.phone || '暂无' ,
       subject: teacher_info.teacher.subject || '暂无',
-      name: teacher_info.teacher.name
+      name: teacher_info.teacher.name || '暂无',
+      class_id: '未绑定',
     };
   }else{
     show.value.bindState = teacher_info.bind_state;
     show.value.email = teacher_info.email || '暂无';
     show.value.username = teacher_info.name || '暂无';
     show.value.phone = teacher_info.phone || '暂无'
+  }
+  const re = await getClassesApi({ header: teacher_info.role });
+  console.log("re", re)
+  if (re.code === 200) {
+    show.value.class_id = re.data[0].id;
+  } else {
+    message.error(re.data || '获取班级信息失败');
   }
 });
 
@@ -105,16 +120,37 @@ const handleOk = async () => {
       email: show.value.email,
       phone: show.value.phone,
       name: show.value.username,
-      role: show.value.role,
       bind_state: true
     });
 
-    if (res.code === 200) {
-      message.success('绑定成功');
-      open.value = false;
-      await logout()
-    } else {
+    if (res.code !== 200) {
       message.error(res.data || '绑定失败');
+      return 
+    }
+
+    // 修改班级表的班主任为该教师
+    const r = await getClassesDetailApi({ class_id: Number(show.value.class_id) });
+    if (r.code === 200) {
+      const params = {
+        class_id: show.value.class_id,
+        header : show.value.role
+      }
+      const data = r.data[0]
+      const re = await putClassesDetailApi(
+        { class_id: Number(params.class_id) }, 
+        { 
+          header: params.header, 
+          name: data.name || data.id, 
+          school_id: data.school_id || '', 
+          subject_selection: data.subject_selection || '' }
+      );
+      if (re.code === 200) {
+        message.success('修改班级信息成功');
+      } else {
+        message.error(re.data || '修改班级信息失败');
+      }
+    }else {
+      message.error(r.data || '修改班级信息失败');
     }
   } catch (error) {
     message.error('绑定过程中出现错误');
