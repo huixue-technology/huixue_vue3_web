@@ -140,10 +140,20 @@ declare namespace API {
     min_score?: number;
     /** 最高分数 */
     max_score?: number;
+    /** 靠前排名 */
+    min_rank?: number;
+    /** 靠后排名 */
+    max_rank?: number;
     /** 分数线上下范围(如: ±10分) */
     pass_line_offset?: number;
     /** 分数线id */
     pass_line_id?: number;
+    /** 学生id */
+    student_id?: string;
+    /** 最小班级排名 */
+    min_class_rank?: number;
+    /** 最大班级排名 */
+    max_class_rank?: number;
   };
 
   type getClassScoreParams = {
@@ -579,6 +589,8 @@ declare namespace API {
     uid: string;
     /** 教师姓名 */
     name: string;
+    /** 教师密码 */
+    password: string;
     /** 所教科目 */
     subject?: string;
     /** 学校ID */

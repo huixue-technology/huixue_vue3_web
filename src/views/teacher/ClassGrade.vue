@@ -27,7 +27,28 @@
             </a-select>
           </div>
         </a-col>
-        
+        <a-col :span="24" :md="6">
+              <div class="filter-item">
+                <span class="filter-label">学生查询：</span>
+                <a-select
+                  v-model:value="selectedStudentId"
+                  placeholder="输入学生姓名或ID搜索"
+                  style="width: 100%"
+                  show-search
+                  :filter-option="false"
+                  @search="handleStudentSearch"
+                  @change="filter_change"
+                >
+                  <a-select-option
+                    v-for="student in filteredStudents"
+                    :key="student.id"
+                    :value="student.id"
+                  >
+                    {{ student.name }} ({{ student.id }})
+                  </a-select-option>
+                </a-select>
+              </div>
+            </a-col>
         <a-col :span="24" :md="6">
           <div class="filter-item">
             <span class="filter-label">科目筛选：</span>
@@ -49,63 +70,46 @@
             </a-select>
           </div>
         </a-col>
-        
-        
         <a-col :span="24" :md="6">
-          <div class="filter-item">
-            <span class="filter-label">分数范围：</span>
-            <a-input-number 
-              v-model:value="passLineOffset" 
-              placeholder="分数范围" 
-              style="width: 100%"
+
+            <ScoreRangeFilter
+              :passLineOffset="passLineOffset || 0"
+              :selectedPassLineId="selectedPassLineId"
+              :passLineList="passLineList"
+              @update:passLineOffset="val => passLineOffset = val"
+              @update:selectedPassLineId="val => selectedPassLineId = val"
+              @filterChange="filter_change"
             />
-          </div>
+			
         </a-col>
-        <a-col :span="24" :md="6">
-          <div class="filter-item">
-            <span class="filter-label">分数线：</span>
-            <a-select 
-              v-model:value="selectedPassLineId" 
-              placeholder="选择分数线" 
-              style="width: 100%"
-              allow-clear
-              @change="filter_change"
-            >
-              <a-select-option :value="null">不筛选</a-select-option>
-              <a-select-option 
-                v-for="line in passLineList" 
-                :key="line.id" 
-                :value="line.id"
-              >
-                {{ line.line_name }}
-              </a-select-option>
-            </a-select>
-          </div>
-        </a-col>
+		
       </a-row>
       
       <a-row :gutter="16" style="margin-top: 16px;">
         <a-col :span="24" :md="6">
-          <div class="filter-item">
-            <span class="filter-label">最低分：</span>
-            <a-input-number 
-              v-model:value="minScore" 
-              placeholder="最低分" 
-              style="width: 100%"
-            />
-          </div>
+          <!-- 成绩区间筛选组件 -->
+          <GradeRangeFilter 
+            :selectedType="selectedRangeType"
+            :selectedRange="selectedRange"
+            :maxValue="{
+              score: 100,
+              gradeRank: gradeTotalCount || 500,
+              classRank: scoreList.length  // 班级排名最大值设为班级学生总数
+            }"
+            :classId="classInfo?.class_id"
+            :selectedExamId="selectedExamId"
+            :subject="selectedSubject"
+            :orderDirection="sortOrder"
+            :passLineOffset="passLineOffset"
+            :passLineId="selectedPassLineId"
+            :studentId="currentStudentId"
+            @update:selectedType="val => selectedRangeType = val"
+            @update:selectedRange="val => selectedRange = val"
+            @filterChange="handleRangeFilterChange"
+          />
         </a-col>
         
-        <a-col :span="24" :md="6">
-          <div class="filter-item">
-            <span class="filter-label">最高分：</span>
-            <a-input-number 
-              v-model:value="maxScore" 
-              placeholder="最高分" 
-              style="width: 100%"
-            />
-          </div>
-        </a-col>
+    
         
         <a-col :span="24" :md="6">
           <div class="filter-item">
@@ -121,7 +125,7 @@
             </a-select>
           </div>
         </a-col>
-        
+
         <a-col :span="24" :md="6">
           <div class="filter-actions">
             <a-button type="primary" style="margin-right: 10px;" @click="filter_change">确定</a-button>
@@ -172,18 +176,19 @@
         </a-col>
       </a-row>
     </div>
-    <ExamSummarize :exam_id="selectedExamId" :class_id="classInfo?.class_id" />
+	
+
     <!-- 成绩表格区域 -->
     <div class="table-section">
       <a-card title="班级成绩详情" class="score-card">
         <div class="table-container">
           <a-table
-              :columns="columns"
-              :data-source="scoreList"
-              bordered
-              row-key="studentId"
-              :pagination="{ pageSize: 100}"
-              :scroll="{ x: true }"
+            :columns="columns"
+            :data-source="scoreList"
+            bordered
+            row-key="studentId"
+            :pagination="{ pageSize: 100}"
+            :scroll="{ x: true, y: 600 }"  
           >
           <template #bodyCell="{ column, record }">
             <template v-if="column.dataIndex === 'totalScore'">
@@ -201,7 +206,7 @@
       </div>
       </a-card>
     </div>
-
+    <ExamSummarize :exam_id="selectedExamId" :class_id="classInfo?.class_id" />
     <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
   </div>
 </template>
@@ -210,13 +215,15 @@
 import { onMounted, ref, computed } from "vue";
 import { getClassesApi } from "@/servers/api/classes";
 import { useUserStore } from "@/store";
+import { getStudentApi } from "@/servers/api/student";
 import { class_info } from "@/views/teacher/types";
 import { message } from "ant-design-vue";
 import { getClassExam } from "@/servers/api/grade";
 import { getExamApi } from "@/servers/api/exam";
 import { getClassGrade } from "@/servers/api/grade";
 import { getPassLine } from "@/servers/api/analysis";
-import { useRouter } from "vue-router";
+import ScoreRangeFilter from '@/components/ScoreRangeFilter.vue';
+import GradeRangeFilter from '@/components/GradeRangeFilter.vue'
 import ExamSummarize from "@/views/teacher/ExamSummarize.vue";
 interface ScoreItem {
   studentId: string;
@@ -243,7 +250,6 @@ interface PassLineItem {
 
 // 状态管理
 const user = useUserStore();
-const router = useRouter();
 const classInfo = ref<class_info>();
 const classExamList = ref<number[]>([]);
 const selectedExamId = ref<number>(0);
@@ -252,6 +258,7 @@ const scoreList = ref<ScoreItem[]>([]);
 const loading = ref(false);
 const passLine = ref(0);
 const subjects = ref<string[]>([]);
+const currentStudentId = ref('');
 
 // 新增筛选状态
 const selectedSubject = ref<string>(''); // 科目筛选
@@ -268,7 +275,11 @@ const classAvg = ref<ClassStats>({ totalScore: 0 });
 const classMax = ref<ClassStats>({ totalScore: 0 });
 const classMin = ref<ClassStats>({ totalScore: 0 });
 const passRate = ref(0);
-
+// 新增学生相关响应式变量
+const studentList = ref<any[]>([]); // 所有学生列表
+const filteredStudents = ref<any[]>([]); // 筛选后的学生列表
+const searchKeyword = ref(''); // 学生搜索关键词
+const selectedStudentId = ref(''); // 选中的学生ID
 const subject_list = {
   Yuwen: '语文',
   Shuxue: '数学',
@@ -311,33 +322,19 @@ const subjectMap: Record<string, string> = {
   DiliD: '校名',
 };
 
-const chineseSubjectOrder = [
-  'Yuwen', 'Shuxue', 'Yingyu',
-  'Lishi', 'Zhengzhi', 'Dili',
-  'Wuli', 'Huaxue', 'Shengwu'
-];
+const selectedRangeType = ref<null | 'score' | 'gradeRank' | 'classRank'>(null);
+const selectedRange = ref<null | { start: number; end: number }>(null);
+const gradeTotalCount = ref(0); // 年级总人数，用于段次计算
 
 const sortFieldsByChinese = (fields: string[]) => {
   const scoreFields = fields.filter(field => !/[BD]$/.test(field));
   const rankFields = fields.filter(field => /[BD]$/.test(field));
-  const sortedScoreFields = [...scoreFields].sort((a, b) => {
-    const indexA = chineseSubjectOrder.indexOf(a);
-    const indexB = chineseSubjectOrder.indexOf(b);
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
-    return indexA - indexB;
-  });
   const sortedFields: string[] = [];
-  sortedScoreFields.forEach(scoreField => {
-    sortedFields.push(scoreField);
-    if (rankFields.includes(`${scoreField}B`)) {
-      sortedFields.push(`${scoreField}B`);  // 班级排名
-    }
-    if (rankFields.includes(`${scoreField}D`)) {
-      sortedFields.push(`${scoreField}D`);  // 年级排名
-    }
+  scoreFields.forEach(scoreField => {
+    sortedFields.push(scoreField); // 分数
+    if (rankFields.includes(`${scoreField}B`)) sortedFields.push(`${scoreField}B`); // 班名
+    if (rankFields.includes(`${scoreField}D`)) sortedFields.push(`${scoreField}D`); // 校名
   });
-
   return sortedFields;
 };
 
@@ -522,39 +519,98 @@ const fetchPassLineList = async (examId: number) => {
     passLineList.value = [];
   }
 };
+// 新增获取班级学生列表方法
+const fetchClassStudents = async () => {
+  if (!classInfo.value?.class_id) return;
+  try {
+    const res = await getStudentApi({ 
+      class_id: classInfo.value.class_id 
+    });
+    if (res.code === 200 && res.data) {
+      studentList.value = res.data.map((item: any) => ({
+        id: item.uid,
+        name: item.name
+      }));
+      filteredStudents.value = [...studentList.value];
+    }
+  } catch (err) {
+    console.error('获取班级学生列表失败:', err);
+  }
+};
 
+// 新增学生搜索处理方法
+const handleStudentSearch = (value: string) => {
+  searchKeyword.value = value;
+  if (!value) {
+    filteredStudents.value = [...studentList.value];
+    return;
+  }
+  
+  const filtered = studentList.value.filter(student => 
+    student.name.toLowerCase().includes(value.toLowerCase()) ||
+    student.id.toString().includes(value.toLowerCase())
+  );
+  filteredStudents.value = filtered;
+};
+
+// 在现有状态中添加
+const studentId = ref<string>(''); // 学生ID筛选
+// 更新add_filter函数以处理段次筛选参数
 const add_filter = (params: any) => {
-  // 添加筛选参数
-    if (selectedSubject.value) {
-      params.subject = selectedSubject.value;
-    }
-    
-    if (sortOrder.value) {
-      params.order_direction = sortOrder.value;
-    }
-    
-    if (minScore.value !== null) {
-      params.min_score = minScore.value;
-    }
-    
-    if (maxScore.value !== null) {
-      params.max_score = maxScore.value;
-    }
-    
-    if (passLineOffset.value !== null) {
-      params.pass_line_offset = passLineOffset.value;
-    }
-    
-    if (selectedPassLineId.value !== null) {
-      params.pass_line_id = selectedPassLineId.value;
-    }
-    if (selectedPassLineId.value !== null && passLineOffset.value == null) {
-      message.warning('没有选择分数线波动范围，默认10');
-      passLineOffset.value = 10;
+  // 保留原有逻辑
+  if (selectedSubject.value) {
+    params.subject = selectedSubject.value;
+  }
+  
+  if (sortOrder.value) {
+    params.order_direction = sortOrder.value;
+  }
+  
+  // 处理分数区间参数
+  if (minScore.value !== null) {
+    params.min_score = minScore.value;
+  }
+  
+  if (maxScore.value !== null) {
+    params.max_score = maxScore.value;
+  }
+  
+  // 处理段次区间参数
+  if (minRank.value !== null) {
+    params.min_rank = minRank.value;
+  }
+  
+  if (maxRank.value !== null) {
+    params.max_rank = maxRank.value;
+  }
+  
+  if (passLineOffset.value !== null) {
+    params.pass_line_offset = passLineOffset.value;
+  }
+  
+  if (selectedPassLineId.value !== null) {
+    params.pass_line_id = selectedPassLineId.value;
+  }
+  
+  if (studentId.value) {
+    params.student_id = studentId.value;
+  }
+  // 新增班级排名参数处理
+  if (minClassRank.value !== null) {
+    params.min_class_rank = minClassRank.value;
+  }
+  
+  if (maxClassRank.value !== null) {
+    params.max_class_rank = maxClassRank.value;
+  }
+  if (selectedStudentId.value) {
+      params.student_id = selectedStudentId.value;
     }
 };
 
-const filter_change = (subject :string)=> {
+
+// 将参数改为可选
+const filter_change = (subject?: string)=> {
   console.log('Subject changed:', subject);
   handleExamChange(selectedExamId.value)
 }
@@ -663,12 +719,54 @@ const resetFilters = () => {
   passRate.value = 0;
   passLine.value = 0;
   passLineList.value = [];
+  selectedRangeType.value = null;
+  selectedRange.value = null;
+  minScore.value = null;
+  maxScore.value = null;
+  minRank.value = null;
+  maxRank.value = null;
+  minClassRank.value = null;  // 新增
+  maxClassRank.value = null;  // 新增
+  selectedStudentId.value = '';
+  searchKeyword.value = '';
+  filteredStudents.value = [...studentList.value];
   
   if (selectedExamId.value) {
     handleExamChange(selectedExamId.value);
   }
 };
 
+
+// 新增班级排名筛选参数
+const minClassRank = ref<number | null>(null);
+const maxClassRank = ref<number | null>(null);
+// 在现有状态中添加段次相关变量
+const minRank = ref<number | null>(null);
+const maxRank = ref<number | null>(null);
+
+// 修改handleRangeFilterChange方法
+const handleRangeFilterChange = (data: any) => {
+  // 重置原有区间参数
+  minScore.value = null;
+  maxScore.value = null;
+  minRank.value = null;
+  maxRank.value = null;
+  minClassRank.value = null;
+  maxClassRank.value = null;
+
+  // 根据筛选类型设置对应参数
+  if (data.type === 'score') {
+    minScore.value = data.min_score;
+    maxScore.value = data.max_score;
+  } else if (data.type === 'gradeRank') {
+    minRank.value = data.min_rank;
+    maxRank.value = data.max_rank;
+  } else if (data.type === 'classRank') {
+    minClassRank.value = data.min_class_rank;
+    maxClassRank.value = data.max_class_rank;
+  }
+
+};
 onMounted(async () => {
   teacherId.value = user.getUserInfo().role;
   if (!teacherId.value) {
@@ -710,7 +808,9 @@ onMounted(async () => {
   } catch (err) {
     message.error('初始化失败');
   }
+  await fetchClassStudents();
 });
+
 </script>
 
 <style scoped lang="less">
@@ -824,7 +924,16 @@ onMounted(async () => {
         color: #fa8c16;
       }
     }
+    :deep(.filter-container) {
+      margin-bottom: 20px;
+    }
     
+    :deep(.filter-section) {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
     .pass-line-card {
       border-top: 4px solid #722ed1;
       
