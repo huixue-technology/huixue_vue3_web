@@ -186,13 +186,14 @@
               :columns="rankColumns"
               :pagination="false"
             >
-              <template #bodyCell="{ column, record }">
-                <template v-if="column.dataIndex === 'classDiff' || column.dataIndex === 'gradeDiff'">
-                  <span :class="getRankDiffClass(Number(record[column.dataIndex]))">
-                    {{ record[column.dataIndex] }}
-                  </span>
-                </template>
-              </template>
+            <template #bodyCell="{ column, record }">
+            <template v-if="column.dataIndex === 'classDiff'">
+              <span :class="getRankDiffClass(record.classDiffRaw)">{{ record.classDiff }}</span>
+            </template>
+            <template v-else-if="column.dataIndex === 'gradeDiff'">
+              <span :class="getRankDiffClass(record.gradeDiffRaw)">{{ record.gradeDiff }}</span>
+            </template>
+          </template>
             </a-table>
           </div>
         </a-card>
@@ -260,6 +261,15 @@ const subjectMap = {
   'sum': '总分'
 };
 
+// 解析年级
+const getCurrentGrade = () => {
+  if (selectedClassId.value) {
+    const classIdStr = selectedClassId.value.toString();
+    return classIdStr.slice(0, 2);
+  }
+  return '';
+};
+
 // 初始化：获取班级、考试列表
 const init = async () => {
   try {
@@ -289,9 +299,14 @@ const init = async () => {
     // 3. 获取对手班级列表（排除当前班级）
     const allClassesRes = await getClassesApi({ school_id: userInfo?.student?.school_id });
     if (allClassesRes.code === 200) {
-      opponentClassList.value = allClassesRes.data.filter(
-        (cls: any) => cls.id !== selectedClassId.value
-      );
+      const currentGrade = getCurrentGrade();
+      opponentClassList.value = allClassesRes.data
+        .filter((cls: any) => cls.id !== selectedClassId.value)
+        .filter((cls: any) => {
+          const classIdStr = cls.id.toString();
+          const classGrade = classIdStr.slice(0, 2);
+          return classGrade === currentGrade;
+        });
     }
   } catch (err) {
     message.error('初始化数据失败');
@@ -430,22 +445,28 @@ const runComparison = async () => {
         };
       });
 
-      // 格式化段次对比数据（优化：明确“班级段次”和“年级段次”）
+      // 格式化段次对比数据
       rankComparisonData.value = Object.entries(subjectMap).map(([en, cn]) => {
-        const currentClassRank = getClassRankValue(currentStudentData.value, en);
-        const compareClassRank = getClassRankValue(compareStudentData.value, en);
-        const currentGradeRank = getGradeRankValue(currentStudentData.value, en);
-        const compareGradeRank = getGradeRankValue(compareStudentData.value, en);
-        return {
-          subject: cn,
-          currentClass: currentClassRank,
-          opponentClass: compareClassRank,
-          currentGrade: currentGradeRank,
-          opponentGrade: compareGradeRank,
-          classDiff: currentClassRank - compareClassRank,
-          gradeDiff: currentGradeRank - compareGradeRank
-        };
-      });
+      const currentClassRank = getClassRankValue(currentStudentData.value, en);
+      const compareClassRank = getClassRankValue(compareStudentData.value, en);
+      const currentGradeRank = getGradeRankValue(currentStudentData.value, en);
+      const compareGradeRank = getGradeRankValue(compareStudentData.value, en);
+
+      const classDiffRaw = currentClassRank - compareClassRank; 
+      const gradeDiffRaw = currentGradeRank - compareGradeRank;
+
+      return {
+        subject: cn,
+        currentClass: currentClassRank,
+        opponentClass: compareClassRank,
+        currentGrade: currentGradeRank,
+        opponentGrade: compareGradeRank,
+        classDiff: Math.abs(classDiffRaw), 
+        gradeDiff: Math.abs(gradeDiffRaw),
+        classDiffRaw,
+        gradeDiffRaw,
+      };
+    });
 
       showComparisonTables.value = true;
     } else {
@@ -480,11 +501,19 @@ const getScoreDiffClass = (diff: string) => {
   return diffNum > 0 ? 'positive' : diffNum < 0 ? 'negative' : 'zero';
 };
 
-// 段次差值样式（负数优于对手，绿色；正数红色）
-const getRankDiffClass = (diff: number) => {
-  return diff < 0 ? 'positive' : diff > 0 ? 'negative' : 'zero';
+// 段次差值样式
+const getRankDiffClass = (diffRaw: number) => {
+  if (diffRaw < 0) {
+    // 本人名次 - 对手名次 < 0 → 绿色
+    return 'positive';
+  } else if (diffRaw > 0) {
+    // 本人名次 - 对手名次 > 0 → 红色
+    return 'negative';
+  } else {
+    // 并列 → 黑色
+    return 'zero';
+  }
 };
-
 // 对比按钮禁用状态
 const isCompareBtnDisabled = computed(() => {
   return (
@@ -535,10 +564,10 @@ const rankColumns = computed(() => [
     customRender: ({ value }: { value: any }) => value || '0'
   },
   { 
-    title: '班级名次差（本人-对手）', 
+    title: '班级名次差', 
     dataIndex: 'classDiff', 
     key: 'classDiff', 
-    width: 140 
+    width: 140,
   },
   // 年级段次
   { 
@@ -556,10 +585,10 @@ const rankColumns = computed(() => [
     customRender: ({ value }: { value: any }) => value || '0'
   },
   { 
-    title: '年级名次差（本人-对手）', 
+    title: '年级名次差', 
     dataIndex: 'gradeDiff', 
     key: 'gradeDiff', 
-    width: 140 
+    width: 140,
   }
 ]);
 
@@ -768,6 +797,18 @@ onMounted(init);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     text-align: center;
     margin-bottom: 20px;
+  }
+
+  :deep(.ant-table-tbody .positive) {
+  color: #52c41a !important; // 绿色：优于对手
+  }
+
+  :deep(.ant-table-tbody .negative) {
+    color: #f5222d !important; // 红色：弱于对手
+  }
+
+  :deep(.ant-table-tbody .zero) {
+    color: #535353 !important; // 黑色：持平
   }
 
   .positive {

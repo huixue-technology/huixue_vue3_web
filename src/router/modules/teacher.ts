@@ -24,4 +24,9 @@ export default [
         path: '/student_analysis',
         component: () => import('@/views/teacher/StudentAnalysis.vue'),
     },
+    {
+        name: '/student_compare',
+        path: '/student_compare',
+        component: () => import('@/views/teacher/StudentCompare.vue'),
+    },
 ]
