@@ -1,7 +1,7 @@
 <template>
   <div class="table-section">
-    <div style="display: flex; align-items: center; margin-bottom: 15px;">
-        <h2 class="exam-title">对比：</h2>
+    <div class="section-header">
+        <h3 class="exam-title">考试对比分析</h3>
         <a-select
             placeholder="请选择考试"
             style="min-width: 150px; margin-left: 15px;"
@@ -12,14 +12,16 @@
         </a-select> 
     </div>
     <p class="description">说明：<span style="color: red;">红色</span>表明较上次考试退步的名次，<span style="color: green;">绿色</span>表明较上次考试进步的名次。</p>
-    <a-table
-      :columns="currentExamColumns"
-      :data-source="tableData"
-      :pagination="false"
-      size="middle"
-      style="font-size: larger;"
-      bordered
-    />
+    <div class="table-wrapper">
+      <a-table
+        :columns="currentExamColumns"
+        :data-source="tableData"
+        :pagination="false"
+        size="middle"
+        style="font-size: larger;"
+        bordered
+      />
+    </div>
   </div>
 </template>
 
@@ -190,14 +192,28 @@ const dynamicSubjectNames = computed(() => {
 </script>
 
 <style scoped>
+.section-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 .exam-title {
-    text-align: left;
     margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.table-wrapper {
+  overflow-x: auto;
 }
 
 .table-section {
   background: white;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
@@ -206,5 +222,9 @@ const dynamicSubjectNames = computed(() => {
   margin-top: 10px;
   font-size: 0.9em;
   margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #ddd;
 }
 </style>

@@ -29,11 +29,11 @@ export default [
         name: 'studentChallenge',
         component: () => import('@/views/challenge/StudentChallengePage.vue')
     },
-    {
-      path: '/mistakes',
-      name: 'Mistakes',
-      component: () => import('@/views/mistake/Mistakes.vue'),
-    },
+    // {
+    //   path: '/mistakes',
+    //   name: 'Mistakes',
+    //   component: () => import('@/views/mistake/Mistakes.vue'),
+    // },
     {
         path: '/detail',
         name: 'rankDetails',

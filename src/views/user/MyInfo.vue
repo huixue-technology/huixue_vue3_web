@@ -1,104 +1,191 @@
 <template>
   <div class="my-info-container">
-    <div>
-    <a-radio-group v-model:value="size" @change="onChange">
-      <a-radio value="default">默认大小</a-radio>
-      <a-radio value="middle">中等</a-radio>
-      <a-radio value="small">较小</a-radio>
-    </a-radio-group>
-    <br />
-    <br />
-    <a-descriptions bordered title="个人信息展示" :size="size" class = "my-info-container">
-      <template #extra>
-        <div>
-          <a-button type="dashed" @click="showBindModal">绑定学生信息</a-button>
+    <div class="profile-header">
+      <h2 class="user-name">{{ userData.name }} 的个人中心</h2>
+      <div class="user-role">{{ userData?.student ? '学生用户' : '教师用户' }}</div>
+    </div>
+
+    <div class="cards-container">
+      <div class="profile-card card">
+        <div class="card-header">
+          <span class="card-title">基本信息</span>
         </div>
-        <div class = "my-info-button">
-          <a-button type="primary" @click="showModifyModal">修改信息</a-button>
+        <div class="card-body">
+          <div class="actions">
+            <a-button type="primary" @click="showModifyModal">
+              <EditOutlined /> 编辑信息
+            </a-button>
+          </div>
+          
+          <a-row :gutter="[24, 24]">
+            <a-col :span="24">
+              <div class="info-item">
+                <span class="info-label">用户姓名：</span>
+                <span class="info-value">{{ userData.name }}</span>
+              </div>
+            </a-col>
+            
+            <a-col :span="24">
+              <div class="info-item">
+                <span class="info-label">登录邮箱：</span>
+                <span class="info-value">{{ userData.email }}</span>
+              </div>
+            </a-col>
+            
+            <a-col :span="24" v-if="userData.phone">
+              <div class="info-item">
+                <span class="info-label">联系方式：</span>
+                <span class="info-value">{{ userData.phone }}</span>
+              </div>
+            </a-col>
+          </a-row>
         </div>
-      </template>
-      
-      <a-descriptions-item label="用户姓名">{{ userData.name }}</a-descriptions-item>
-      <a-descriptions-item label="学生姓名">{{ userData?.student?.name }}</a-descriptions-item>
-      <a-descriptions-item label="考号">{{ userData?.student?.uid }}</a-descriptions-item>
-      <a-descriptions-item label="学校">{{ userData?.student?.school }}</a-descriptions-item>
-      <a-descriptions-item label="班级编号">{{ userData?.student?.class_id }}</a-descriptions-item>
-      <a-descriptions-item label="年级">{{ userData?.student?.grade }}</a-descriptions-item>
-      <a-descriptions-item label="选科情况">{{ userData?.student?.subject_selection }}</a-descriptions-item>
-      <a-descriptions-item label="是否在读">{{userData?.student?.state==1?'在读':'不在读'}}</a-descriptions-item>
-      <a-descriptions-item label="个人邮箱">{{ userData.email }}</a-descriptions-item>
-      <a-descriptions-item label="联系方式">{{ userData.phone }}</a-descriptions-item>
-      <a-descriptions-item label="个人简介">
-        Data disk type: MongoDB
-        
-       
-      </a-descriptions-item>
-    </a-descriptions>
+      </div>
+
+      <div class="profile-card card" v-if="userData?.student">
+        <div class="card-header">
+          <span class="card-title">学生信息</span>
+        </div>
+        <div class="card-body">
+          <div class="actions">
+            <a-button type="dashed" @click="showBindModal">
+              <SwapOutlined /> 更换绑定
+            </a-button>
+          </div>
+          
+          <a-row :gutter="[24, 24]">
+            <a-col :span="12">
+              <div class="info-item">
+                <span class="info-label">学生姓名：</span>
+                <span class="info-value">{{ userData?.student?.name }}</span>
+              </div>
+            </a-col>
+            
+            <a-col :span="12">
+              <div class="info-item">
+                <span class="info-label">考号：</span>
+                <span class="info-value">{{ userData?.student?.uid }}</span>
+              </div>
+            </a-col>
+            
+            <a-col :span="12">
+              <div class="info-item">
+                <span class="info-label">学校：</span>
+                <span class="info-value">{{ userData?.student?.school }}</span>
+              </div>
+            </a-col>
+            
+            <a-col :span="12">
+              <div class="info-item">
+                <span class="info-label">班级编号：</span>
+                <span class="info-value">{{ userData?.student?.class_id }}</span>
+              </div>
+            </a-col>
+            
+            <a-col :span="12">
+              <div class="info-item">
+                <span class="info-label">年级：</span>
+                <span class="info-value">{{ userData?.student?.grade }}</span>
+              </div>
+            </a-col>
+            
+            <a-col :span="12">
+              <div class="info-item">
+                <span class="info-label">选科情况：</span>
+                <span class="info-value">{{ userData?.student?.subject_selection }}</span>
+              </div>
+            </a-col>
+            
+            <a-col :span="12">
+              <div class="info-item">
+                <span class="info-label">是否在读：</span>
+                <span class="info-value" :class="{'status-active': userData?.student?.state == 1}">
+                  {{ userData?.student?.state == 1 ? '在读' : '不在读' }}
+                </span>
+              </div>
+            </a-col>
+          </a-row>
+        </div>
+      </div>
+
+      <div class="profile-card card" v-else>
+        <div class="card-header">
+          <span class="card-title">绑定学生信息</span>
+        </div>
+        <div class="card-body">
+          <div class="actions">
+            <a-button type="primary" @click="showBindModal">
+              <UserAddOutlined /> 绑定学生
+            </a-button>
+          </div>
+          
+          <a-empty description="暂未绑定学生信息" />
+        </div>
+      </div>
+    </div>
     
- 
-  </div>
-  <div>
-    <a-modal v-model:open="open" title="修改信息" @ok="handleOk1">
-      <a-form >
-        <a-form-item label="个人邮箱">
-          <a-input v-model:value="email" placeholder="请输入个人邮箱" />
-        </a-form-item>
-        <a-form-item  label="联系方式">
-          <a-input v-model:value="phone" placeholder="请输入联系方式" />
-        </a-form-item>
-      </a-form>
+    <div>
+      <a-modal v-model:open="open" title="修改信息" @ok="handleOk1" :confirm-loading="confirmLoading">
+        <a-form>
+          <a-form-item label="个人邮箱">
+            <a-input v-model:value="email" placeholder="请输入个人邮箱" />
+          </a-form-item>
+          <a-form-item label="联系方式">
+            <a-input v-model:value="phone" placeholder="请输入联系方式" />
+          </a-form-item>
+        </a-form>
+      </a-modal>
+    </div>
 
-    </a-modal>
-  </div>
-
-  <div>
-    <a-modal v-model:open="bindOpen" title="绑定学生信息" @ok="handleOk2" >
-      <a-form >
-        <a-form-item label="昵称">
-          <a-input v-model:value="name" placeholder="" disabled />
-        </a-form-item>
-        <a-form-item  label="邮箱">
-          <a-input v-model:value="email" placeholder="" disabled />
-        </a-form-item>
-        <!-- 输入学生姓名 -->
-        <a-form-item label="学生姓名">
-          <a-input-search
-            v-model:value="inputStuName"
-            placeholder="请输入学生姓名"
-            enter-button="搜索"
-            @search="onSearchStudent"
-          />
-        </a-form-item>
-        
-        <!-- 显示学生所在班级列表 -->
-        <a-form-item label="所在班级" v-if="classList.length > 0">
-          <a-select
-            v-model:value="classId"
-            style="width: 100%"
-            placeholder="请选择班级"
-            :options="classList.map(cls => ({ label: `${cls.name} (${cls.school_name})`, value: cls.id }))"
-          >
-          </a-select>
-        </a-form-item>
-        
-        <!-- 学生信息确认 -->
-        <a-form-item label="确认学生" v-if="selectedStudent">
-          <a-descriptions size="small" :column="1">
-            <a-descriptions-item label="学生姓名">{{ selectedStudent.name }}</a-descriptions-item>
-            <a-descriptions-item label="考号">{{ selectedStudent.uid }}</a-descriptions-item>
-            <a-descriptions-item label="学校">{{ selectedStudent.school_name || selectedStudent.school }}</a-descriptions-item>
-            <a-descriptions-item label="年级">{{ selectedStudent.grade }}</a-descriptions-item>
-          </a-descriptions>
-        </a-form-item>
-      </a-form>
-    </a-modal>
-  </div>
+    <div>
+      <a-modal v-model:open="bindOpen" title="绑定学生信息" @ok="handleOk2" :confirm-loading="bindConfirmLoading">
+        <a-form>
+          <a-form-item label="昵称">
+            <a-input v-model:value="name" placeholder="" disabled />
+          </a-form-item>
+          <a-form-item label="邮箱">
+            <a-input v-model:value="email" placeholder="" disabled />
+          </a-form-item>
+          <!-- 输入学生姓名 -->
+          <a-form-item label="学生姓名">
+            <a-input-search
+              v-model:value="inputStuName"
+              placeholder="请输入学生姓名"
+              enter-button="搜索"
+              @search="onSearchStudent"
+            />
+          </a-form-item>
+          
+          <!-- 显示学生所在班级列表 -->
+          <a-form-item label="所在班级" v-if="classList.length > 0">
+            <a-select
+              v-model:value="classId"
+              style="width: 100%"
+              placeholder="请选择班级"
+              :options="classList.map(cls => ({ label: `${cls.name} (${cls.school_name})`, value: cls.id }))"
+            >
+            </a-select>
+          </a-form-item>
+          
+          <!-- 学生信息确认 -->
+          <a-form-item label="确认学生" v-if="selectedStudent">
+            <a-descriptions size="small" :column="1">
+              <a-descriptions-item label="学生姓名">{{ selectedStudent.name }}</a-descriptions-item>
+              <a-descriptions-item label="考号">{{ selectedStudent.uid }}</a-descriptions-item>
+              <a-descriptions-item label="学校">{{ selectedStudent.school_name || selectedStudent.school }}</a-descriptions-item>
+              <a-descriptions-item label="年级">{{ selectedStudent.grade }}</a-descriptions-item>
+            </a-descriptions>
+          </a-form-item>
+        </a-form>
+      </a-modal>
+    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref, watch } from 'vue';
-import { message, type DescriptionsProps } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
+import { EditOutlined, SwapOutlined, UserAddOutlined } from '@ant-design/icons-vue';
 import { useUserStore } from '@/store';
 import { putUserBindStatus, putUserDetailApi } from '@/servers/api/user';
 import { getSchoolApi } from '@/servers/api/school';
@@ -107,7 +194,6 @@ import { getStudentApi } from '@/servers/api/student';
 import { useLogout } from '@/composables/useLogout';
 
 // 定义响应式变量
-const size = ref<DescriptionsProps['size']>('default');
 const schoolList = ref<any[]>([]);
 const classList = ref<any[]>([]);
 const studentList = ref<any[]>([]);
@@ -119,16 +205,12 @@ const name = ref('');
 const inputStuName = ref('');
 const classId = ref<number | undefined>(undefined);
 const selectedStudent = ref<any>(null);
+const confirmLoading = ref<boolean>(false);
+const bindConfirmLoading = ref<boolean>(false);
 
 // 获取用户信息
 const userStore = useUserStore();
 const userData = userStore.userInfo;
-
-// 定义函数
-const onChange = (e: any) => {
-  console.log('size checked', e.target.value);
-  size.value = e.target.value;
-};
 
 const showModifyModal = () => {
   open.value = true;
@@ -151,6 +233,7 @@ const resetBindForm = () => {
 };
 
 const handleOk1 = () => {
+  confirmLoading.value = true;
   const params = { user_id: String(userData.id) };
   const userInfo = {
     phone: phone.value,
@@ -164,11 +247,13 @@ const handleOk1 = () => {
   putUserDetailApi(params, userInfo).then((res: any) => {
     console.log(res);
     message.success('修改成功,请重新登录');
-    logout();
-    return;
+    setTimeout(() => {
+      logout();
+    }, 1500);
+  }).finally(() => {
+    confirmLoading.value = false;
+    open.value = false;
   });
-
-  open.value = false;
 };
 
 const handleOk2 = () => {
@@ -182,6 +267,7 @@ const handleOk2 = () => {
     return;
   }
 
+  bindConfirmLoading.value = true;
   const params = {
     id: String(userData.id),
     school: String(selectedStudent.value.school_name || selectedStudent.value.school),
@@ -193,10 +279,14 @@ const handleOk2 = () => {
   putUserBindStatus(params).then((res: any) => {
     if (res.code === 200) {
       message.success('绑定成功');
-      logout();
+      setTimeout(() => {
+        logout();
+      }, 1500);
     } else {
       message.error('绑定失败');
     }
+  }).finally(() => {
+    bindConfirmLoading.value = false;
   });
 };
 
@@ -299,15 +389,118 @@ watch(classId, (newVal) => {
 });
 </script>
 
-<style scoped>
-::v-deep(.ant-descriptions-item-label),
-::v-deep(.ant-descriptions-item-content) {
-  text-align: center;
+<style scoped lang="less">
+.my-info-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  
+  .profile-header {
+    text-align: center;
+    padding: 30px 0;
+    background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    
+    .user-name {
+      color: #fff;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    .user-role {
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 14px;
+    }
+  }
+  
+  .cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  
+  .card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    
+    .card-header {
+      background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
+      border-bottom: 1px solid #e8e8e8;
+      padding: 16px 20px;
+      
+      .card-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+      }
+    }
+    
+    .card-body {
+      padding: 24px;
+      
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 20px;
+      }
+      
+      .info-item {
+        display: flex;
+        padding: 12px 0;
+        border-bottom: 1px dashed #f0f0f0;
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        .info-label {
+          flex: 0 0 100px;
+          font-weight: 500;
+          color: #666;
+        }
+        
+        .info-value {
+          flex: 1;
+          color: #333;
+          
+          &.status-active {
+            color: #52c41a;
+            font-weight: 500;
+          }
+        }
+      }
+    }
+  }
+  
+  :deep(.ant-card-body) {
+    padding: 24px;
+  }
 }
-::v-deep(.ant-descriptions-item-label) {
-  font-weight: bold;
-}
-.my-info-button{
-  margin-top: 16px;
+
+@media (max-width: 768px) {
+  .my-info-container {
+    padding: 12px;
+    
+    .card {
+      .card-body {
+        padding: 16px;
+        
+        .info-item {
+          .info-label {
+            flex: 0 0 80px;
+            font-size: 14px;
+          }
+          
+          .info-value {
+            font-size: 14px;
+          }
+        }
+      }
+    }
+  }
 }
 </style>

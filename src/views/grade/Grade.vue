@@ -1,59 +1,80 @@
 <template>
- <div class="container">
-    <a-row class="countdown-section">
-         <a-col :span="24" class="countdown-content">
+ <div class="grade-container">
+    <div class="header-section">
+        <div class="countdown-section">
             <div class="countdown-box">
                 <span class="countdown-label">⏳距离高考还有</span>
                 <span class="countdown-days">{{ daysUntilExam }}</span>
                 <span class="countdown-unit">天</span>
             </div>
-         </a-col>
-    </a-row>
-    <div class="select-section">
-        <h2>选择查询考试：</h2>
-       <a-select
-            placeholder="请选择考试"
-            style="width: auto;min-width: 200px"
-            @change="handleChange"
-            v-model:value="currentExamId"
-            class="exam-select"
-        >
-            <a-select-option v-for="item in examList" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
-        </a-select> 
-    </div>
-    
-    <!-- 左侧表格区域 -->
-    <div class="left-column">
-        <div class="table-section">
-            <a-table
-                size="large"
-                :columns="tableColumns"
-                :data-source="tableData"
-                :pagination="false"
-                class="grade-table"
-            >
-            </a-table>
         </div>
         
-        <!-- 对比表格组件 -->
-        <div class="compare-table-section" v-if="examList.length > 1">
-            <compare-table 
-                :student_id="parseInt(studentId)"
-                :selected_id="parseInt(currentExamId)"
-                :exam-list="examList.slice(1)"
-                :student-info="studentInfo"
-                @update:compareScoreData="updateCompareScoreData"
-            />
+        <div class="select-section">
+            <h2>选择查询考试：</h2>
+            <a-select
+                placeholder="请选择考试"
+                style="width: auto;min-width: 200px"
+                @change="handleChange"
+                v-model:value="currentExamId"
+                class="exam-select"
+            >
+                <a-select-option v-for="item in examList" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
+            </a-select> 
         </div>
     </div>
     
-    <!-- 右侧雷达图区域 -->
-    <div class="right-column">
-        <radar-chart 
-            :student-info="studentInfo"
-            :compare-score-data="compareScoreData"
-            :current-exam-data="currentExamDataArray"
-        />
+    <!-- 主要内容区域 -->
+    <div class="main-content">
+        <!-- 左侧区域 -->
+        <div class="left-column">
+            <div class="table-section card">
+                <div class="card-header">
+                    <h3 class="card-title">考试成绩</h3>
+                </div>
+                <div class="card-body">
+                    <a-table
+                        size="large"
+                        :columns="tableColumns"
+                        :data-source="tableData"
+                        :pagination="false"
+                        class="grade-table"
+                    >
+                    </a-table>
+                </div>
+            </div>
+            
+            <!-- 对比表格组件 -->
+            <div class="compare-table-section card" v-if="examList.length > 1">
+                <div class="card-header">
+                    <h3 class="card-title">考试对比分析</h3>
+                </div>
+                <div class="card-body">
+                    <compare-table 
+                        :student_id="parseInt(studentId)"
+                        :selected_id="parseInt(currentExamId)"
+                        :exam-list="examList.slice(1)"
+                        :student-info="studentInfo"
+                        @update:compareScoreData="updateCompareScoreData"
+                    />
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧雷达图区域 -->
+        <div class="right-column">
+            <div class="radar-chart-section card">
+<!--                <div class="card-header">-->
+<!--                    <h3 class="card-title">成绩雷达图</h3>-->
+<!--                </div>-->
+                <div class="card-body chart-container">
+                    <radar-chart 
+                        :student-info="studentInfo"
+                        :compare-score-data="compareScoreData"
+                        :current-exam-data="currentExamDataArray"
+                    />
+                </div>
+            </div>
+        </div>
     </div>
  </div>
 </template>
@@ -347,27 +368,33 @@ const handleChange = (value:string) => {
 </script>
 
 <style scoped lang="less">
-.container{
-    position:relative;
+.grade-container {
+    position: relative;
     height: 100vh;
     overflow-y: auto;
     padding: 20px;
-    background-color: #f5f5f5;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 20px;
     
-    .countdown-section {
-        width: 100%;
-        margin-bottom: 30px;
-        text-align: center;
+    .header-section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: center;
+        justify-content: space-between;
         
-        .countdown-content {
+        .countdown-section {
+            flex: 1;
+            min-width: 300px;
+            
             .countdown-box {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 border-radius: 15px;
                 padding: 20px;
                 box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                text-align: center;
                 
                 .countdown-label {
                     font-size: 20px;
@@ -388,78 +415,120 @@ const handleChange = (value:string) => {
                 }
             }
         }
-    }
-    
-    .select-section {
-        width: 100%;
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        margin-bottom: 20px;
-        padding: 15px;
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         
-        h2 {
-            margin: 0;
-            margin-right: 20px;
-            font-size: 18px;
-            color: #333;
-        }
-        
-        .exam-select {
-            min-width: 200px;
-        }
-    }
-    
-    .left-column {
-        flex: 1;
-        min-width: 300px;
-        
-        .table-section {
+        .select-section {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            padding: 15px;
             background: white;
-            border-radius: 10px;
+            border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
-            padding: 20px;
-            margin-bottom: 20px;
             
-            .grade-table {
-                :deep(.ant-table-thead > tr > th) {
-                    background-color: #fafafa;
-                    font-weight: bold;
-                    text-align: center;
+            h2 {
+                margin: 0;
+                margin-right: 20px;
+                font-size: 18px;
+                color: #333;
+            }
+            
+            .exam-select {
+                min-width: 200px;
+            }
+        }
+    }
+    
+    .main-content {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        flex: 1;
+        
+        .left-column {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            
+            .card {
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                
+                .card-header {
+                    background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
+                    border-bottom: 1px solid #e8e8e8;
+                    padding: 16px 20px;
+                    
+                    .card-title {
+                        margin: 0;
+                        font-size: 18px;
+                        font-weight: 600;
+                        color: #333;
+                    }
                 }
                 
-                :deep(.ant-table-tbody > tr > td) {
-                    text-align: center;
+                .card-body {
+                    padding: 20px;
+                    flex: 1;
+                }
+            }
+            
+            .table-section {
+                .grade-table {
+                    :deep(.ant-table-thead > tr > th) {
+                        background-color: #fafafa;
+                        font-weight: bold;
+                        text-align: center;
+                    }
+                    
+                    :deep(.ant-table-tbody > tr > td) {
+                        text-align: center;
+                    }
                 }
             }
         }
         
-        .compare-table-section {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
-            padding: 20px;
+        .right-column {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            
+            .radar-chart-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                
+                .chart-container {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    
+                    :deep(.chart-container) {
+                        flex: 1;
+                        padding: 0;
+                    }
+                }
+            }
         }
-    }
-    
-    .right-column {
-        flex: 1;
-        min-width: 300px;
     }
 }
 
 @media (max-width: 768px) {
-    .container {
+    .grade-container {
         padding: 10px;
-        flex-direction: column;
         
-        .countdown-section {
-            .countdown-content {
+        .header-section {
+            flex-direction: column;
+            
+            .countdown-section {
                 .countdown-box {
                     padding: 15px;
                     
@@ -476,15 +545,19 @@ const handleChange = (value:string) => {
                     }
                 }
             }
+            
+            .select-section {
+                flex-direction: column;
+                align-items: flex-start;
+                
+                h2 {
+                    margin-bottom: 10px;
+                }
+            }
         }
         
-        .select-section {
+        .main-content {
             flex-direction: column;
-            align-items: flex-start;
-            
-            h2 {
-                margin-bottom: 10px;
-            }
         }
     }
 }

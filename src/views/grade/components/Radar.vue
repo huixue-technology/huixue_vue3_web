@@ -101,23 +101,32 @@ const chartOption = computed(() => {
 <style scoped>
 .chart-container {
   background: white;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
+  height: 100%;
 }
 
 .radar-chart {
   width: 100%;
   min-height: 500px;
   font-size: larger;
+  flex: 1;
 }
 
 .description {
   margin-top: 10px;
   font-size: 0.9em;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  width: 100%;
+  text-align: center;
+  border: 1px dashed #ddd;
 }
 
 @media (max-width: 768px) {

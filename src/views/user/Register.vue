@@ -47,18 +47,6 @@
          </a-input>
       </a-form-item>
 
-      <a-form-item
-         label="联系方式"
-         name="phone"
-         :rules="[{ required: true, message: '请输入用户联系方式!' }]"
-      >
-         <a-input v-model:value="formparams.phone">
-         <template #prefix>
-            <MobileOutlined class="site-form-item-icon" />
-         </template>
-         </a-input>
-      </a-form-item>
-
       <!-- 角色绑定选择器 -->
       <a-form-item
          label="所在学校"
@@ -145,7 +133,6 @@ interface FormParams {
   email: string
   password: string
   name: string
-  phone: string
   schoolName: string
   classId: number
   stuName: string
@@ -171,14 +158,13 @@ const classId = ref(0) // 当前选中班级ID
 const stuName = ref('') // 当前选中学生姓名
 
 const disabled = computed(() => {
-  return !(formparams.email && formparams.password && formparams.name && formparams.phone && formparams.schoolName && formparams.classId && formparams.stuName);
+  return !(formparams.email && formparams.password && formparams.name  && formparams.schoolName && formparams.classId && formparams.stuName);
 });
 
 const formparams = reactive<FormParams>({
   email: '',
   password: '',
   name:'',
-  phone:'',
   schoolName: '',
   classId: 0,
   stuName: '',
