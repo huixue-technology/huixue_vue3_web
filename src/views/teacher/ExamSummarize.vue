@@ -332,37 +332,7 @@ const totalScoreOption = computed(() => {
   }
 }
 
-.filter-section {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  margin-bottom: 20px;
-  
-  .filter-item {
-    display: flex;
-    align-items: center;
-    
-    .filter-label {
-      width: 80px;
-      font-weight: 600;
-      color: #333;
-    }
-  }
-  
-  .filter-actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    height: 100%;
-  }
-}
 
-.analysis-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
 
 .analysis-card {
   background: #ffffff;
@@ -376,9 +346,6 @@ const totalScoreOption = computed(() => {
   transform: translateY(-2px);
 }
 
-.full-width {
-  width: 100%;
-}
 
 .segment-analysis-container {
   display: flex;

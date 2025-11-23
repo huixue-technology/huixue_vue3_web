@@ -1,7 +1,7 @@
 <template>
   <div class="class-grade-container">
     <div class="header">
-      <h2>{{classInfo?.name}}班级成绩分析</h2>
+      <h2>{{ classInfo?.name }}班级成绩分析</h2>
       <p>选择考试查看班级成绩详情</p>
     </div>
 
@@ -207,6 +207,7 @@
       </a-card>
     </div>
     <ExamSummarize :exam_id="selectedExamId" :class_id="classInfo?.class_id" />
+    <ClassAnalysis :selected-exam-id="selectedExamId" />
     <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
   </div>
 </template>
@@ -225,6 +226,7 @@ import { getPassLine } from "@/servers/api/analysis";
 import ScoreRangeFilter from '@/components/ScoreRangeFilter.vue';
 import GradeRangeFilter from '@/components/GradeRangeFilter.vue'
 import ExamSummarize from "@/views/teacher/ExamSummarize.vue";
+import ClassAnalysis from "@/views/teacher/ClassAnalysis.vue";
 interface ScoreItem {
   studentId: string;
   studentName: string;

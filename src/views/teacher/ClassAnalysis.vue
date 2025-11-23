@@ -1,44 +1,9 @@
 <template>
   <div class="class-analysis-container">
-    <div class="header">
-      <h2>班级分析</h2>
-      <p>选择考试查看班级分析详情</p>
-    </div>
-
-    <!-- 筛选区域 -->
-    <div class="filter-section">
-      <a-row :gutter="16">
-        <a-col :span="24" :md="8">
-          <div class="filter-item">
-            <span class="filter-label">选择考试：</span>
-            <a-select
-              v-model:value="selectedExamId"
-              placeholder="选择考试"
-              style="width: 100%"
-              @change="handleExamChange"
-              :disabled="loading"
-            >
-              <a-select-option
-                v-for="exam in examList"
-                :key="exam"
-                :value="exam"
-              >
-                考试{{ exam }}
-              </a-select-option>
-            </a-select>
-          </div>
-        </a-col>
-        <a-col :span="24" :md="16">
-          <div class="filter-actions">
-            <a-button type="primary" @click="resetFilters">重置筛选</a-button>
-          </div>
-        </a-col>
-      </a-row>
-    </div>
 
     <!-- 分析数据展示 -->
     <div v-if="!loading" class="analysis-content">
-      <div class="analysis-card full-width">
+      <div class="analysis-card">
         <a-card title="优秀学生及成绩详情" class="student-card">
           <a-table
             :data-source="formattedExcellentStudents"
@@ -102,21 +67,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import { getClassExam } from '@/servers/api/grade';
+import {ref, onMounted, computed, watch} from 'vue';
 import { getClassAnalysis } from '@/servers/api/analysis';
 import { getClassesApi } from '@/servers/api/classes';
 import { message } from 'ant-design-vue';
 import { useUserStore } from '@/store';
+import { defineProps } from 'vue';
 
+const props = defineProps<{
+  selectedExamId: number;
+}>();
 // 状态定义
 const userStore = useUserStore();
 const classId = ref<number>(0);
 const teacherId = ref<number>(0);
-const examList = ref<any[]>([]);
-const selectedExamId = ref<number>(0);
 const loading = ref(false);
-
+console.log('selectedExamId', props.selectedExamId)
 // 展开行状态管理（分别管理优秀学生和待关注学生的展开状态）
 const excellentExpandedRowKeys = ref<string[]>([]);
 const dangerExpandedRowKeys = ref<string[]>([]);
@@ -194,48 +160,6 @@ const getSubjectDetails = (student: any) => {
 
 
 
-// 副科分数段数据处理
-const selectScoreSectionsData = computed(() => {
-  const result: any[] = [];
-  
-  // 获取所有分数段范围（去重并排序）
-  const allRanges = new Set<string>();
-  
-  // 收集选考科目数据
-  classAnalysisData.value.select_score_section.forEach((subjectObj: any) => {
-    Object.entries(subjectObj).forEach(([enSubject, sections]) => {
-      (sections as any[]).forEach((section: any) => {
-        const range = Object.keys(section)[0];
-        allRanges.add(range);
-      });
-    });
-  });
-  
-  // 将分数段按从高到低排序
-  const sortedRanges = Array.from(allRanges).sort((a, b) => {
-    const aMin = parseInt(a.split('-')[0]);
-    const bMin = parseInt(b.split('-')[0]);
-    return bMin - aMin;
-  });
-  
-  // 为每个分数段创建一行数据
-  sortedRanges.forEach(range => {
-    const row: any = { range };
-    
-    // 添加选考科目数据
-    classAnalysisData.value.select_score_section.forEach((subjectObj: any) => {
-      Object.entries(subjectObj).forEach(([enSubject, sections]) => {
-        const cnSubject = subjectMap[enSubject as keyof typeof subjectMap] || enSubject;
-        const section = (sections as any[]).find((s: any) => Object.keys(s)[0] === range);
-        row[enSubject] = section ? section[range] : 0;
-      });
-    });
-    
-    result.push(row);
-  });
-  
-  return result;
-});
 
 
 // 表格列定义
@@ -280,13 +204,6 @@ const handleDangerExpand = (expanded: boolean, record: any) => {
   }
 };
 
-// 重置筛选
-const resetFilters = () => {
-  if (examList.value.length > 0) {
-    selectedExamId.value = examList.value[0];
-    fetchClassAnalysis();
-  }
-};
 
 // 初始化流程
 onMounted(async () => {
@@ -307,7 +224,6 @@ onMounted(async () => {
 
     teacherId.value = classRes.data[0].header;
     classId.value = classRes.data[0].id;
-    await fetchExamList();
   } catch (err) {
     message.error('初始化失败');
     console.error(err);
@@ -316,35 +232,19 @@ onMounted(async () => {
   }
 });
 
-// 获取考试列表
-const fetchExamList = async () => {
-  try {
-    loading.value = true;
-    const res = await getClassExam({ class_id: classId.value });
-    if (res.code === 200 && res.data.length > 0) {
-      examList.value = res.data;
-      selectedExamId.value = res.data[0];
-      await fetchClassAnalysis();
-    } else {
-      message.warning('该班级暂无考试数据');
-    }
-  } catch (err) {
-    message.error('获取考试列表失败');
-    console.error(err);
-  } finally {
-    loading.value = false;
-  }
-};
+watch(() => props.selectedExamId, (newValue) => {
+  fetchClassAnalysis();
+})
 
 // 获取班级分析数据
 const fetchClassAnalysis = async () => {
-  if (!selectedExamId.value || !classId.value) return;
+  if (!props.selectedExamId || !classId.value) return;
 
   try {
     loading.value = true;
     const res = await getClassAnalysis({
       class_id: classId.value,
-      exam_id: selectedExamId.value,
+      exam_id: props.selectedExamId,
     });
     if (res.code === 200) {
       classAnalysisData.value = {
@@ -365,17 +265,12 @@ const fetchClassAnalysis = async () => {
   }
 };
 
-// 处理考试选择变化
-const handleExamChange = async (examId: number) => {
-  selectedExamId.value = examId;
-  await fetchClassAnalysis();
-};
 </script>
 
 <style scoped>
 .class-analysis-container {
   padding: 20px;
-  height: 100vh;
+
   box-sizing: border-box;
   overflow-y: auto;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
@@ -403,35 +298,10 @@ const handleExamChange = async (examId: number) => {
   }
 }
 
-.filter-section {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  margin-bottom: 20px;
-  
-  .filter-item {
-    display: flex;
-    align-items: center;
-    
-    .filter-label {
-      width: 80px;
-      font-weight: 600;
-      color: #333;
-    }
-  }
-  
-  .filter-actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    height: 100%;
-  }
-}
 
 .analysis-content {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 20px;
 }
 
@@ -439,6 +309,7 @@ const handleExamChange = async (examId: number) => {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  width: 100%;
   transition: all 0.3s ease;
 }
 
@@ -447,36 +318,18 @@ const handleExamChange = async (examId: number) => {
   transform: translateY(-2px);
 }
 
-.full-width {
-  width: 100%;
-}
 
-.segment-analysis-container {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.segment-card {
-  flex: 1;
-  min-width: 300px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fc 100%);
-}
 
 .student-card, .chart-card {
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   overflow: hidden;
-  
+
   :deep(.ant-card-head) {
     background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
     border-bottom: 1px solid #e8e8e8;
     padding: 0 16px;
-    
-    .ant-card-head-title {
-      font-weight: 600;
-      color: #333;
-    }
+
   }
 }
 
@@ -490,12 +343,6 @@ const handleExamChange = async (examId: number) => {
   margin: 16px 0 0 48px;
 }
 
-/* 表格容器样式，确保可以横向滚动 */
-.table-container {
-  overflow-x: auto;
-  width: 100%;
-  padding: 10px 0;
-}
 
 /* 表格样式优化 */
 :deep(.ant-table-thead > tr > th) {
@@ -556,7 +403,7 @@ const handleExamChange = async (examId: number) => {
   .segment-analysis-container {
     flex-direction: column;
   }
-  
+
   .segment-card {
     min-width: 100%;
   }

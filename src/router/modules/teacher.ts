@@ -15,9 +15,9 @@ export default [
         component: () => import('@/views/teacher/ClassGrade.vue'),
     },
     {
-        name:'/class_analysis',
+        name:'/class_comprehensive_analysis',
         path: '/class_analysis',
-        component: () => import('@/views/teacher/ClassAnalysis.vue'),
+        component: () => import('@/views/teacher/ComAnalysis.vue'),
     },
     {
         name: '/student_analysis',
