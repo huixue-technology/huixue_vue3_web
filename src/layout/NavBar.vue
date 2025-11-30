@@ -76,11 +76,11 @@ const items =  computed<MenuProps['items']>(()=>{
           icon: () => h(ThunderboltOutlined),
           label: '学生对比',
         },
-        {
-          key: 'ai_assistant',
-          icon: () => h(ToolOutlined),
-          label: 'AI小助手'
-        }
+        // {
+        //   key: 'ai_assistant',
+        //   icon: () => h(ToolOutlined),
+        //   label: 'AI小助手'
+        // }
     );
   } else {
     menuItems.push(

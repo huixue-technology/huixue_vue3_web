@@ -266,15 +266,15 @@ const selectedExamId = ref<number>(0);
 
 // 科目映射
 const subjectMap: Record<string, string> = {
-  'Yuwen': '语文',
-  'Shuxue': '数学',
-  'Yingyu': '英语',
-  'Wuli': '物理',
-  'Huaxue': '化学',
-  'Shengwu': '生物',
-  'Lishi': '历史',
-  'Zhengzhi': '政治',
-  'Dili': '地理',
+  'yuwen': '语文',
+  'shuxue': '数学',
+  'yingyu': '英语',
+  'wuli': '物理',
+  'huaxue': '化学',
+  'shengwu': '生物',
+  'lishi': '历史',
+  'zhengzhi': '政治',
+  'dili': '地理',
   'sum_': '总分'
 };
 
@@ -314,12 +314,12 @@ const totalScore = computed(() => {
 
 const totalClassRank = computed(() => {
   const detail = scoreDetails.value[selectedExamId.value];
-  return detail ? detail.sumB || 0 : 0;
+  return detail ? detail.sumb || 0 : 0;
 });
 
 const totalGradeRank = computed(() => {
   const detail = scoreDetails.value[selectedExamId.value];
-  return detail ? detail.sumD || 0 : 0;
+  return detail ? detail.sumd || 0 : 0;
 });
 
 // 平均分相关计算
@@ -420,8 +420,8 @@ const scoreData = computed<ScoreDetail[]>(() => {
     subject: 'sum_',
     subjectName: '总分',
     score: scoreDetail.sum_ || 0,
-    classRank: scoreDetail.sumB || 0,
-    gradeRank: scoreDetail.sumD || 0
+    classRank: scoreDetail.sumb || 0,
+    gradeRank: scoreDetail.sumd || 0
   });
   
   // 添加各科成绩

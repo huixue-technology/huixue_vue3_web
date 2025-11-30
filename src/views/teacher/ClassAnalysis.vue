@@ -89,15 +89,15 @@ const dangerExpandedRowKeys = ref<string[]>([]);
 
 // 科目名称映射表
 const subjectMap = {
-  'Yuwen': '语文',
-  'Shuxue': '数学',
-  'Yingyu': '英语',
-  'Wuli': '物理',
-  'Huaxue': '化学',
-  'Shengwu': '生物',
-  'Lishi': '历史',
-  'Zhengzhi': '政治',
-  'Dili': '地理'
+  'yuwen': '语文',
+  'shuxue': '数学',
+  'yingyu': '英语',
+  'wuli': '物理',
+  'huaxue': '化学',
+  'shengwu': '生物',
+  'lishi': '历史',
+  'zhengzhi': '政治',
+  'dili': '地理'
 };
 
 // 班级分析数据
@@ -115,8 +115,8 @@ const formattedExcellentStudents = computed(() => {
     ...student,
     student_name: student.student_name || '未知',
     sum_: student.sum_ ?? 0,
-    sumB: student.sumB ?? 0,
-    sumD: student.sumD ?? 0,
+    sumb: student.sumb ?? 0,
+    sumd: student.sumd ?? 0,
     key: student.student_id || student.id 
   }));
 });
@@ -126,8 +126,8 @@ const formattedDangerStudents = computed(() => {
     ...student,
     student_name: student.student_name || student.name || '未知',
     sum_: student.sum_ ?? student.totalScore ?? 0,
-    sumB: student.sumB ?? 0,
-    sumD: student.sumD ?? 0,
+    sumb: student.sumb ?? 0,
+    sumd: student.sumd ?? 0,
     key: student.student_id || student.id 
   }));
 });
@@ -166,15 +166,15 @@ const getSubjectDetails = (student: any) => {
 const excellentStudentColumns = [
   { title: '姓名', dataIndex: 'student_name' },
   { title: '总分', dataIndex: 'sum_' },
-  { title: '班级排名', dataIndex: 'sumB' },
-  { title: '年级排名', dataIndex: 'sumD' }
+  { title: '班级排名', dataIndex: 'sumb' },
+  { title: '年级排名', dataIndex: 'sumd' }
 ];
 
 const dangerStudentColumns = [
   { title: '姓名', dataIndex: 'student_name' },
   { title: '总分', dataIndex: 'sum_' },
-  { title: '班级排名', dataIndex: 'sumB' },
-  { title: '年级排名', dataIndex: 'sumD' }
+  { title: '班级排名', dataIndex: 'sumb' },
+  { title: '年级排名', dataIndex: 'sumd' }
 ];
 
 

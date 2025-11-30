@@ -20,6 +20,11 @@ declare namespace API {
     teacher_ids: string[];
   };
 
+  type BatchStudent = {
+    /** 学生ID列表 */
+    student_ids: string[];
+  };
+
   type BindStatus = {
     /** 用户ID */
     id: string;
@@ -29,6 +34,11 @@ declare namespace API {
     class_id: string;
     /** 绑定的学生 */
     stuName: string;
+  };
+
+  type ClassAnalysis = {
+    /** 班级ID */
+    class_ids: number[];
   };
 
   type Classes = {
@@ -42,6 +52,11 @@ declare namespace API {
     school_id: string;
     /** 选科 */
     subject_selection: string;
+  };
+
+  type Compute = {
+    /** 班级ID */
+    class_id: string;
   };
 
   type deleteClassesDetailApiParams = {
@@ -124,7 +139,7 @@ declare namespace API {
 
   type getClassExamParams = {
     /** 班级ID */
-    class_id: number;
+    class_id: string;
   };
 
   type getClassGradeParams = {
@@ -132,7 +147,7 @@ declare namespace API {
     class_id: string;
     /** 选中考试id */
     selected_exam_id: string;
-    /** 科目筛选(如: sum_, Yuwen, Shuxue等) */
+    /** 科目筛选(如: sum_, yuwen, shuxue等) */
     subject?: string;
     /** 排序方向(asc:升序, desc:降序) */
     order_direction?: string;
@@ -169,7 +184,7 @@ declare namespace API {
     /** 对比学生id */
     compare_student_id: string;
     /** 选中考试id */
-    selected_exam_id: string;
+    selected_exam_id: number;
   };
 
   type getExamApiParams = {
@@ -206,13 +221,13 @@ declare namespace API {
     /** 每页记录数 */
     size?: number;
     /** 学生ID（可选） */
-    student_id?: number;
+    student_id?: string;
     /** 学校ID（可选） */
-    school_id?: number;
+    school_id?: string;
     /** 考试ID（可选） */
     exam_id?: number;
     /** 班级ID（可选） */
-    class_id?: number;
+    class_id?: string;
   };
 
   type getGradeDetailApiParams = {
@@ -281,7 +296,7 @@ declare namespace API {
 
   type getStudentGradeRankParams = {
     /** 选中考试id */
-    selected_exam_id: string;
+    selected_exam_id: number;
     /** 学生id */
     student_id: string;
   };
@@ -307,7 +322,7 @@ declare namespace API {
 
   type getUpDownDetailAnalysisParams = {
     /** 学生id */
-    student_id: number;
+    student_id: string;
     /** 最近几次成绩 */
     nums: number;
   };
@@ -353,65 +368,65 @@ declare namespace API {
     /** 总分 */
     sum_: number;
     /** 总分班次 */
-    sumB: number;
+    sumb: number;
     /** 总分段次 */
-    sumD: number;
+    sumd: number;
     /** 语文 */
-    Yuwen?: number;
+    yuwen?: number;
     /** 英语 */
-    Yingyu?: number;
+    yingyu?: number;
     /** 物理 */
-    Wuli?: number;
+    wuli?: number;
     /** 数学 */
-    Shuxue?: number;
+    shuxue?: number;
     /** 生物 */
-    Shengwu?: number;
+    shengwu?: number;
     /** 历史 */
-    Lishi?: number;
+    lishi?: number;
     /** 地理 */
-    Dili?: number;
+    dili?: number;
     /** 政治 */
-    Zhengzhi?: number;
+    zhengzhi?: number;
     /** 化学 */
-    Huaxue?: number;
+    huaxue?: number;
     /** 语文D */
-    YuwenD?: number;
+    yuwend?: number;
     /** 英语D */
-    YingyuD?: number;
+    yingyud?: number;
     /** 物理D */
-    WuliD?: number;
+    wulid?: number;
     /** 数学D */
-    ShuxueD?: number;
+    shuxued?: number;
     /** 生物D */
-    ShengwuD?: number;
+    shengwud?: number;
     /** 历史D */
-    LishiD?: number;
+    lishid?: number;
     /** 地理D */
-    DiliD?: number;
+    dilid?: number;
     /** 政治D */
-    ZhengzhiD?: number;
+    zhengzhid?: number;
     /** 化学D */
-    HuaxueD?: number;
+    huaxued?: number;
     /** 是否显示 */
     show?: boolean;
     /** 语文班次 */
-    YuwenB?: number;
+    yuwenb?: number;
     /** 英语班次 */
-    YingyuB?: number;
+    yingyub?: number;
     /** 物理班次 */
-    WuliB?: number;
+    wulib?: number;
     /** 数学班次 */
-    ShuxueB?: number;
+    shuxueb?: number;
     /** 生物班次 */
-    ShengwuB?: number;
+    shengwub?: number;
     /** 历史班次 */
-    LishiB?: number;
+    lishib?: number;
     /** 地理班次 */
-    DiliB?: number;
+    dilib?: number;
     /** 政治班次 */
-    ZhengzhiB?: number;
+    zhengzhib?: number;
     /** 化学班次 */
-    HuaxueB?: number;
+    huaxueb?: number;
   };
 
   type Login = {
@@ -429,43 +444,43 @@ declare namespace API {
     /** 总分 */
     sum_: number;
     /** 总分排名 */
-    sumD: number;
+    sumd: number;
     /** 语文 */
-    Yuwen: number;
+    yuwen: number;
     /** 语文排名 */
-    YuwenD: number;
+    yuwend: number;
     /** 英语 */
-    Yingyu: number;
+    yingyu: number;
     /** 英语排名 */
-    YingyuD: number;
+    yingyud: number;
     /** 物理 */
-    Wuli: number;
+    wuli: number;
     /** 物理排名 */
-    WuliD: number;
+    wulid: number;
     /** 数学 */
-    Shuxue: number;
+    shuxue: number;
     /** 数学排名 */
-    ShuxueD: number;
+    shuxued: number;
     /** 生物 */
-    Shengwu: number;
+    shengwu: number;
     /** 生物排名 */
-    ShengwuD: number;
+    shengwud: number;
     /** 历史 */
-    Lishi: number;
+    lishi: number;
     /** 历史排名 */
-    LishiD: number;
+    lishid: number;
     /** 地理 */
-    Dili: number;
+    dili: number;
     /** 地理排名 */
-    DiliD: number;
+    dilid: number;
     /** 政治 */
-    Zhengzhi: number;
+    zhengzhi: number;
     /** 政治排名 */
-    ZhengzhiD: number;
+    zhengzhid: number;
     /** 化学 */
-    Huaxue: number;
+    huaxue: number;
     /** 化学排名 */
-    HuaxueD: number;
+    huaxued: number;
   };
 
   type PassLineAnalysis = {
@@ -482,7 +497,7 @@ declare namespace API {
 
   type postCompareRankMultiExamParams = {
     /** 学生id */
-    student_id: number;
+    student_id: string;
     /** 选中考试id */
     selected_exam_id: number;
     /** 需要对比的考试id列表例："20250522,20250524" */
@@ -546,23 +561,23 @@ declare namespace API {
     /** 学校id */
     school_id: string;
     /** 语文 */
-    Yuwen: number;
+    yuwen: number;
     /** 英语 */
-    Yingyu: number;
+    yingyu: number;
     /** 物理 */
-    Wuli: number;
+    wuli: number;
     /** 数学 */
-    Shuxue: number;
+    shuxue: number;
     /** 生物 */
-    Shengwu: number;
+    shengwu: number;
     /** 历史 */
-    Lishi: number;
+    lishi: number;
     /** 地理 */
-    Dili: number;
+    dili: number;
     /** 政治 */
-    Zhengzhi: number;
+    zhengzhi: number;
     /** 化学 */
-    Huaxue: number;
+    huaxue: number;
     /** 总分 */
     sum_: number;
   };
@@ -582,6 +597,11 @@ declare namespace API {
     subject_selection?: number;
     /** 学生是否在读 */
     state?: boolean;
+  };
+
+  type StudentAverage = {
+    /** 学生ID */
+    student_id: number[];
   };
 
   type Teacher = {

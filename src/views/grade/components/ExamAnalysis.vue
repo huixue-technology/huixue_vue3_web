@@ -118,15 +118,15 @@ const handleUpandDown = (res:any) => {
     };
 
     // 添加各学科数据
-    addSubjectData('总分',res.data[0].compareB.sumB, res.data[0].compareD.sumD)
-    addSubjectData('语文', res.data[0].compareB.YuwenB, res.data[0].compareD.YingyuD);
-    addSubjectData('英语', res.data[0].compareB.YingyuB, res.data[0].compareD.YingyuD);
-    addSubjectData('物理', res.data[0].compareB.WuliB, res.data[0].compareD.WuliD);
-    addSubjectData('化学', res.data[0].compareB.HuaxueB, res.data[0].compareD.HuaxueD);
-    addSubjectData('生物', res.data[0].compareB.ShengwuB, res.data[0].compareD.ShengwuD);
-    addSubjectData('数学', res.data[0].compareB.ShuxueB, res.data[0].compareD.ShuxueD);
-    addSubjectData('历史', res.data[0].compareB.LishiB, res.data[0].compareD.LishiD);
-    addSubjectData('地理', res.data[0].compareB.DiliB, res.data[0].compareD.DiliD);
+    addSubjectData('总分',res.data[0].compareB.sumb, res.data[0].compareD.sumd)
+    addSubjectData('语文', res.data[0].compareB.yuwenb, res.data[0].compareD.yingyud);
+    addSubjectData('英语', res.data[0].compareB.yingyub, res.data[0].compareD.yingyud);
+    addSubjectData('物理', res.data[0].compareB.wulib, res.data[0].compareD.wulid);
+    addSubjectData('化学', res.data[0].compareB.huaxueb, res.data[0].compareD.huaxued);
+    addSubjectData('生物', res.data[0].compareB.shengwub, res.data[0].compareD.shengwud);
+    addSubjectData('数学', res.data[0].compareB.shuxueb, res.data[0].compareD.shuxued);
+    addSubjectData('历史', res.data[0].compareB.lishib, res.data[0].compareD.lishid);
+    addSubjectData('地理', res.data[0].compareB.dilib, res.data[0].compareD.dilid);
 }
 const debounce = (func: Function, wait: number) => {
   let timeout: number | null = null;

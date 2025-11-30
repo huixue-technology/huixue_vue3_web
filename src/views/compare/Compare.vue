@@ -54,27 +54,27 @@ type tableRuleProp = {
 // 3. 科目列表
 const subjects = ['总分','语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治']
 const fieldMappingRank = {
-    '语文': 'YuwenD',
-    '数学': 'ShuxueD',
-    '英语': 'YingyuD',
-    '物理': 'WuliD',
-    '化学': 'HuaxueD',
-    '生物': 'ShengwuD',
-    '历史': 'LishiD',
-    '地理': 'DiliD',
-    '政治': 'ZhengzhiD'
+    '语文': 'yuwend',
+    '数学': 'shuxued',
+    '英语': 'yingyud',
+    '物理': 'wulid',
+    '化学': 'huaxued',
+    '生物': 'shengwud',
+    '历史': 'lishid',
+    '地理': 'dilid',
+    '政治': 'zhengzhid'
   }
   // 字段映射
 const fieldMappingScore = {
-    '语文': 'Yuwen',
-    '数学': 'Shuxue',
-    '英语': 'Yingyu',
-    '物理': 'Wuli',
-    '化学': 'Huaxue',
-    '生物': 'Shengwu',
-    '历史': 'Lishi',
-    '地理': 'Dili',
-    '政治': 'Zhengzhi'
+    '语文': 'yuwen',
+    '数学': 'shuxue',
+    '英语': 'yingyu',
+    '物理': 'wuli',
+    '化学': 'huaxue',
+    '生物': 'shengwu',
+    '历史': 'lishi',
+    '地理': 'dili',
+    '政治': 'zhengzhi'
   }
 // 定义类型接口
 interface ScoreItem {
@@ -195,18 +195,18 @@ const generateTable = async (examData : any[], types: Object)=>{
       for (const line of passLineData) {
         let matchCount = 0;
         // 检查理科科目
-        if (item.Wuli !== undefined || item.Huaxue !== undefined || item.Shengwu !== undefined) {
-          if ((item.Wuli !== undefined && line.Wuli !== undefined) ||
-              (item.Huaxue !== undefined && line.Huaxue !== undefined) ||
-              (item.Shengwu !== undefined && line.Shengwu !== undefined)) {
+        if (item.wuli !== undefined || item.huaxue !== undefined || item.shengwu !== undefined) {
+          if ((item.wuli !== undefined && line.wuli !== undefined) ||
+              (item.huaxue !== undefined && line.huaxue !== undefined) ||
+              (item.shengwu !== undefined && line.shengwu !== undefined)) {
             matchCount++;
           }
         }
         // 检查文科科目
-        if (item.Lishi !== undefined || item.Zhengzhi !== undefined || item.Dili !== undefined) {
-          if ((item.Lishi !== undefined && line.Lishi !== undefined) ||
-              (item.Zhengzhi !== undefined && line.Zhengzhi !== undefined) ||
-              (item.Dili !== undefined && line.Dili !== undefined)) {
+        if (item.lishi !== undefined || item.zhengzhi !== undefined || item.dili !== undefined) {
+          if ((item.lishi !== undefined && line.lishi !== undefined) ||
+              (item.zhengzhi !== undefined && line.zhengzhi !== undefined) ||
+              (item.dili !== undefined && line.dili !== undefined)) {
             matchCount++;
           }
         }

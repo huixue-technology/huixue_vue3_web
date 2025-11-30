@@ -249,15 +249,15 @@ const rankComparisonData = ref<any[]>([]); // 段次对比数据
 
 // 学科名称映射
 const subjectMap = {
-  'Yuwen': '语文',
-  'Shuxue': '数学',
-  'Yingyu': '英语',
-  'Wuli': '物理',
-  'Huaxue': '化学',
-  'Shengwu': '生物',
-  'Lishi': '历史',
-  'Zhengzhi': '政治',
-  'Dili': '地理',
+  'yuwen': '语文',
+  'shuxue': '数学',
+  'yingyu': '英语',
+  'wuli': '物理',
+  'huaxue': '化学',
+  'shengwu': '生物',
+  'lishi': '历史',
+  'zhengzhi': '政治',
+  'dili': '地理',
   'sum': '总分'
 };
 
@@ -286,11 +286,13 @@ const init = async () => {
 
     // 2. 获取考试列表（默认选中最新考试）
     const examRes = await getClassExam({ class_id: selectedClassId.value });
+    console.log(examRes);
     if (examRes.code === 200 && examRes.data.length > 0) {
       examList.value = examRes.data.map((examId: number) => ({
         id: examId,
         name: `考试${examId}` // 或根据实际接口返回的名称赋值
       }));
+      
       if (examList.value.length > 0) {
         selectedExamId.value = examList.value[0].id;
       }
@@ -487,12 +489,12 @@ const getScoreValue = (data: any, subject: string) => {
 
 // 获取班级段次值
 const getClassRankValue = (data: any, subject: string) => {
-  return subject === 'sum' ? (data.sumB || 0) : (data[`${subject}B`] || 0);
+  return subject === 'sum' ? (data.sumb || 0) : (data[`${subject}B`] || 0);
 };
 
 // 获取年级段次值
 const getGradeRankValue = (data: any, subject: string) => {
-  return subject === 'sum' ? (data.sumD || 0) : (data[`${subject}D`] || 0);
+  return subject === 'sum' ? (data.sumd || 0) : (data[`${subject}D`] || 0);
 };
 
 // 分数差值样式（正数优于对手，绿色；负数红色）

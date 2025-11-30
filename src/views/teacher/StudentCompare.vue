@@ -339,27 +339,27 @@ interface StudentInfo {
 }
 
 interface SubjectScores {
-  Yuwen: number;
-  Shuxue: number;
-  Yingyu: number;
-  Wuli: number;
-  Huaxue: number;
-  Lishi: number;
-  Zhengzhi: number;
-  Shengwu: number;
-  Dili: number;
+  yuwen: number;
+  shuxue: number;
+  yingyu: number;
+  wuli: number;
+  huaxue: number;
+  lishi: number;
+  zhengzhi: number;
+  shengwu: number;
+  dili: number;
 }
 
 interface SubjectRanks {
-  Yuwen: number;
-  Shuxue: number;
-  Yingyu: number;
-  Wuli: number;
-  Huaxue: number;
-  Lishi: number;
-  Zhengzhi: number;
-  Shengwu: number;
-  Dili: number;
+  yuwen: number;
+  shuxue: number;
+  yingyu: number;
+  wuli: number;
+  huaxue: number;
+  lishi: number;
+  zhengzhi: number;
+  shengwu: number;
+  dili: number;
 }
 
 interface StudentResult {
@@ -369,35 +369,35 @@ interface StudentResult {
   exam_id: number;
   class_id: string;
   sum_: number;
-  sumB: number; // 班级总分排名
-  sumD: number; // 年级总分排名
-  Yuwen?: number;
-  YuwenB?: number; // 语文班级排名
-  YuwenD?: number; // 语文年级排名
-  Shuxue?: number;
-  ShuxueB?: number;
-  ShuxueD?: number;
-  Yingyu?: number;
-  YingyuB?: number;
-  YingyuD?: number;
-  Wuli?: number;
-  WuliB?: number;
-  WuliD?: number;
-  Huaxue?: number;
-  HuaxueB?: number;
-  HuaxueD?: number;
-  Lishi?: number;
-  LishiB?: number;
-  LishiD?: number;
-  Zhengzhi?: number;
-  ZhengzhiB?: number;
-  ZhengzhiD?: number;
-  Shengwu?: number;
-  ShengwuB?: number;
-  ShengwuD?: number;
-  Dili?: number;
-  DiliB?: number;
-  DiliD?: number;
+  sumb: number; // 班级总分排名
+  sumd: number; // 年级总分排名
+  yuwen?: number;
+  yuwenb?: number; // 语文班级排名
+  yuwend?: number; // 语文年级排名
+  shuxue?: number;
+  shuxueb?: number;
+  shuxued?: number;
+  yingyu?: number;
+  yingyub?: number;
+  yingyud?: number;
+  wuli?: number;
+  wulib?: number;
+  wulid?: number;
+  huaxue?: number;
+  huaxueb?: number;
+  huaxued?: number;
+  lishi?: number;
+  lishib?: number;
+  lishid?: number;
+  zhengzhi?: number;
+  zhengzhib?: number;
+  zhengzhid?: number;
+  shengwu?: number;
+  shengwub?: number;
+  shengwud?: number;
+  dili?: number;
+  dilib?: number;
+  dilid?: number;
 }
 
 interface ComparisonResult {
@@ -452,15 +452,15 @@ const searchKeyword2 = ref(''); // 学生2搜索关键词
 
 // 科目名称映射
 const subjectMap = {
-  'Yuwen': '语文',
-  'Shuxue': '数学',
-  'Yingyu': '英语',
-  'Wuli': '物理',
-  'Huaxue': '化学',
-  'Shengwu': '生物',
-  'Lishi': '历史',
-  'Zhengzhi': '政治',
-  'Dili': '地理'
+  'yuwen': '语文',
+  'shuxue': '数学',
+  'yingyu': '英语',
+  'wuli': '物理',
+  'huaxue': '化学',
+  'shengwu': '生物',
+  'lishi': '历史',
+  'zhengzhi': '政治',
+  'dili': '地理'
 };
 
 // 计算差值
@@ -803,73 +803,73 @@ const fetchComparisonData = async () => {
           compare: compare_student.sum_ || 0
         },
         class_rank: {
-          current: current_student.sumB || 0,
-          compare: compare_student.sumB || 0
+          current: current_student.sumb || 0,
+          compare: compare_student.sumb || 0
         },
         grade_rank: {
-          current: current_student.sumD || 0,
-          compare: compare_student.sumD || 0
+          current: current_student.sumd || 0,
+          compare: compare_student.sumd || 0
         },
         class_total: 0,
         grade_total: 0,
         subject_score: {
           current: {
-            Yuwen: current_student.Yuwen || 0,
-            Shuxue: current_student.Shuxue || 0,
-            Yingyu: current_student.Yingyu || 0,
-            Wuli: current_student.Wuli || 0,
-            Huaxue: current_student.Huaxue || 0,
-            Shengwu: current_student.Shengwu || 0,
-            Lishi: current_student.Lishi || 0,
-            Zhengzhi: current_student.Zhengzhi || 0,
-            Dili: current_student.Dili || 0,
+            yuwen: current_student.yuwen || 0,
+            shuxue: current_student.shuxue || 0,
+            yingyu: current_student.yingyu || 0,
+            wuli: current_student.wuli || 0,
+            huaxue: current_student.huaxue || 0,
+            shengwu: current_student.shengwu || 0,
+            lishi: current_student.lishi || 0,
+            zhengzhi: current_student.zhengzhi || 0,
+            dili: current_student.dili || 0,
           },
           compare: {
-            Yuwen: compare_student.Yuwen || 0,
-            Shuxue: compare_student.Shuxue || 0,
-            Yingyu: compare_student.Yingyu || 0,
-            Wuli: compare_student.Wuli || 0,
-            Huaxue: compare_student.Huaxue || 0,
-            Shengwu: compare_student.Shengwu || 0,
-            Lishi: compare_student.Lishi || 0,
-            Zhengzhi: compare_student.Zhengzhi || 0,
-            Dili: compare_student.Dili || 0,
+            yuwen: compare_student.yuwen || 0,
+            shuxue: compare_student.shuxue || 0,
+            yingyu: compare_student.yingyu || 0,
+            wuli: compare_student.wuli || 0,
+            huaxue: compare_student.huaxue || 0,
+            shengwu: compare_student.shengwu || 0,
+            lishi: compare_student.lishi || 0,
+            zhengzhi: compare_student.zhengzhi || 0,
+            dili: compare_student.dili || 0,
           }
         },
         subject_class_rank: {
           current: {
-            Yuwen: current_student.YuwenB || 0,
-            Shuxue: current_student.ShuxueB || 0,
-            Yingyu: current_student.YingyuB || 0,
-            Wuli: current_student.WuliB || 0,
-            Huaxue: current_student.HuaxueB || 0,
-            Shengwu: current_student.ShengwuB || 0,
-            Lishi: current_student.LishiB || 0,
-            Zhengzhi: current_student.ZhengzhiB || 0,
-            Dili: current_student.DiliB || 0,
+            yuwen: current_student.yuwenb || 0,
+            shuxue: current_student.shuxueb || 0,
+            yingyu: current_student.yingyub || 0,
+            wuli: current_student.wulib || 0,
+            huaxue: current_student.huaxueb || 0,
+            shengwu: current_student.shengwub || 0,
+            lishi: current_student.lishib || 0,
+            zhengzhi: current_student.zhengzhib || 0,
+            dili: current_student.dilib || 0,
           },
           compare: {
-            Yuwen: compare_student.YuwenB || 0,
-            Shuxue: compare_student.ShuxueB || 0,
-            Yingyu: compare_student.YingyuB || 0,
-            Wuli: compare_student.WuliB || 0,
-            Huaxue: compare_student.HuaxueB || 0,
-            Shengwu: compare_student.ShengwuB || 0,
-            Lishi: compare_student.LishiB || 0,
-            Zhengzhi: compare_student.ZhengzhiB || 0,
-            Dili: compare_student.DiliB || 0,
+            yuwen: compare_student.yuwenb || 0,
+            shuxue: compare_student.shuxueb || 0,
+            yingyu: compare_student.yingyub || 0,
+            wuli: compare_student.wulib || 0,
+            huaxue: compare_student.huaxueb || 0,
+            shengwu: compare_student.shengwub || 0,
+            lishi: compare_student.lishib || 0,
+            zhengzhi: compare_student.zhengzhib || 0,
+            dili: compare_student.dilib || 0,
           }
         },
         detail: {
           current: [
             { key: '总分', value: (current_student.sum_ || 0).toFixed(2) },
-            { key: '班级排名', value: `${current_student.sumB || 0} / -` },
-            { key: '年级排名', value: `${current_student.sumD || 0} / -` },
+            { key: '班级排名', value: `${current_student.sumb || 0} / -` },
+            { key: '年级排名', value: `${current_student.sumd || 0} / -` },
           ],
           compare: [
             { key: '总分', value: (compare_student.sum_ || 0).toFixed(2) },
-            { key: '班级排名', value: `${compare_student.sumB || 0} / -` },
-            { key: '年级排名', value: `${compare_student.sumD || 0} / -` },
+            { key: '班级排名', value: `${compare_student.sumb || 0} / -` },
+            { key: '年级排名', value: `${compare_student.sumd || 0} / -` },
           ]
         }
       };

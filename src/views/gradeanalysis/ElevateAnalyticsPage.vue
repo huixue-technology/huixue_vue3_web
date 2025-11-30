@@ -160,23 +160,23 @@ const scienceSubjects = ['物理', '化学', '生物'];
 const artsSubjects = ['政治', '历史', '地理'];
 const subjectFieldMap: Record<string, string> = {
   '总分': 'sum_',
-  '语文': 'Yuwen',
-  '数学': 'Shuxue',
-  '外语': 'Yingyu',
-  '物理': 'Wuli',
-  '化学': 'Huaxue',
-  '生物': 'Shengwu',
-  '政治': 'Zhengzhi',
-  '历史': 'Lishi',
-  '地理': 'Dili'
+  '语文': 'yuwen',
+  '数学': 'shuxue',
+  '外语': 'yingyu',
+  '物理': 'wuli',
+  '化学': 'huaxue',
+  '生物': 'shengwu',
+  '政治': 'zhengzhi',
+  '历史': 'lishi',
+  '地理': 'dili'
 };
 const currentSubjects = ref<string[]>(baseSubjects);
 
 function handleGradeDetail(gradeData: any) {
   // 判断文理科
-  if (gradeData.Wuli != null || gradeData.Huaxue != null || gradeData.Shengwu != null) {
+  if (gradeData.wuli != null || gradeData.huaxue != null || gradeData.shengwu != null) {
     currentSubjects.value = [...baseSubjects, ...scienceSubjects];
-  } else if (gradeData.Zhengzhi != null || gradeData.Lishi != null || gradeData.Dili != null) {
+  } else if (gradeData.zhengzhi != null || gradeData.lishi != null || gradeData.dili != null) {
     currentSubjects.value = [...baseSubjects, ...artsSubjects];
   } else {
     currentSubjects.value = baseSubjects;

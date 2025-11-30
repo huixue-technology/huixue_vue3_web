@@ -83,8 +83,8 @@ const comprehensiveAnalysisRaw = ref<any[]>([]);
 
 // 科目映射
 const subjects_map = ref<{[key: string]: string}>({
-  'Dili':'地理','Huaxue':'化学','Lishi':'历史','Shengwu':'生物','Shuxue':'数学',
-  'Wuli':'物理','Yingyu':'英语','Yuwen':'语文','Zhengzhi':'政治','sum_':'总分'
+  'dili':'地理','huaxue':'化学','lishi':'历史','shengwu':'生物','shuxue':'数学',
+  'wuli':'物理','yingyu':'英语','yuwen':'语文','zhengzhi':'政治','sum_':'总分'
 });
 
 // 学期选择
@@ -255,12 +255,12 @@ const bindStudentSubject = () => {
     message.warn('学生还未选科，默认显示所有科目');
     return;
   }
-  if (selected_subjects.indexOf('物') === -1) delete subjects_map.value.Wuli;
-  if (selected_subjects.indexOf('化') === -1) delete subjects_map.value.Huaxue;
-  if (selected_subjects.indexOf('政') === -1) delete subjects_map.value.Zhengzhi;
-  if (selected_subjects.indexOf('生') === -1) delete subjects_map.value.Shengwu;
-  if (selected_subjects.indexOf('史') === -1) delete subjects_map.value.Lishi;
-  if (selected_subjects.indexOf('地') === -1) delete subjects_map.value.Dili;
+  if (selected_subjects.indexOf('物') === -1) delete subjects_map.value.wuli;
+  if (selected_subjects.indexOf('化') === -1) delete subjects_map.value.huaxue;
+  if (selected_subjects.indexOf('政') === -1) delete subjects_map.value.zhengzhi;
+  if (selected_subjects.indexOf('生') === -1) delete subjects_map.value.shengwu;
+  if (selected_subjects.indexOf('史') === -1) delete subjects_map.value.lishi;
+  if (selected_subjects.indexOf('地') === -1) delete subjects_map.value.dili;
 };
 
 // 获取学生信息
@@ -337,7 +337,7 @@ const fetchExamStats = async () => {
       examAnalysisRaw.value = [];
     }
   } catch (err) {
-    message.error('获取考试统计数据失败');
+    message.error('获取考试统计数据失败,缺少考试分数线');
     examAnalysisRaw.value = [];
   }
 };

@@ -370,35 +370,35 @@ const transformGradeToStudent = (grade: any) => {
     studentId: grade.student_id,
     name: grade.student_name || '',
     totalScore: grade.sum_,
-    classRank: grade.sumB,
-    overallRank: grade.sumD,
-    chineseScore: grade.Yuwen,
-    chineseClassRank: grade.YuwenB,
-    chineseOverallRank: grade.YuwenD,
-    mathScore: grade.Shuxue,
-    mathClassRank: grade.ShuxueB,
-    mathOverallRank: grade.ShuxueD,
-    englishScore: grade.Yingyu,
-    englishClassRank: grade.YingyuB,
-    englishOverallRank: grade.YingyuD
+    classRank: grade.sumb,
+    overallRank: grade.sumd,
+    chineseScore: grade.yuwen,
+    chineseClassRank: grade.yuwenb,
+    chineseOverallRank: grade.yuwend,
+    mathScore: grade.shuxue,
+    mathClassRank: grade.shuxueb,
+    mathOverallRank: grade.shuxued,
+    englishScore: grade.yingyu,
+    englishClassRank: grade.yingyub,
+    englishOverallRank: grade.yingyud
   };
 
   // 动态添加选考科目数据
   dynamicSubjects.value.forEach(subject => {
     const subjectKeyMap: Record<string, string> = {
-      'physics': 'Wuli',
-      'chemistry': 'Huaxue',
-      'biology': 'Shengwu',
-      'history': 'Lishi',
-      'geography': 'Dili',
-      'politics': 'Zhengzhi'
+      'physics': 'wuli',
+      'chemistry': 'huaxue',
+      'biology': 'shengwu',
+      'history': 'lishi',
+      'geography': 'dili',
+      'politics': 'zhengzhi'
     };
     
     const apiKey = subjectKeyMap[subject.key];
     if (apiKey) {
       baseData[`${subject.key}Score`] = grade[apiKey];
-      baseData[`${subject.key}ClassRank`] = grade[`${apiKey}B`];
-      baseData[`${subject.key}OverallRank`] = grade[`${apiKey}D`];
+      baseData[`${subject.key}ClassRank`] = grade[`${apiKey}b`];
+      baseData[`${subject.key}OverallRank`] = grade[`${apiKey}d`];
     }
   });
 

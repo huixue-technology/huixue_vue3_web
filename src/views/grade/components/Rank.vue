@@ -16,8 +16,8 @@ const props = defineProps({
 
 const rankOption = computed(() => {
   const subjects = props.gradeData.map((item: any) => item.name);
-  const classRanks = props.gradeData.map((item: any) => item.sumB);
-  const gradeRanks = props.gradeData.map((item: any) => item.sumD);
+  const classRanks = props.gradeData.map((item: any) => item.sumb);
+  const gradeRanks = props.gradeData.map((item: any) => item.sumd);
   console.log(classRanks)
   return{
     title: {

@@ -193,8 +193,8 @@ interface Exam {
 type TableData = {
     name: string;
     sum_: number;
-    sumB: number;
-    sumD: number;
+    sumb: number;
+    sumd: number;
     maxB: number;
     passLine: number;
 }; 
@@ -244,93 +244,93 @@ const handleGradeDetail = (gradeData:API.Grade) => {
     {
         name: '总分',
         sum_: gradeData.sum_ || 0,
-        sumB: gradeData.sumB || 0,
-        sumD: gradeData.sumD || 0,
+        sumb: gradeData.sumb || 0,
+        sumd: gradeData.sumd || 0,
         maxB: gradeData.sum_ || 0, // Assuming maxB is total score for now
         passLine: 0,
     },
     {
         name: '语文',
-        sum_: gradeData.Yuwen || 0,
-        sumB: gradeData.YuwenB || 0,
-        sumD: gradeData.YuwenD || 0,
-        maxB: gradeData.Yuwen || 0,
+        sum_: gradeData.yuwen || 0,
+        sumb: gradeData.yuwenb || 0,
+        sumd: gradeData.yuwend || 0,
+        maxB: gradeData.yuwen || 0,
         passLine: 0,
     },
     {
         name: '英语',
-        sum_: gradeData.Yingyu || 0,
-        sumB: gradeData.YingyuB || 0,
-        sumD: gradeData.YingyuD || 0,
-        maxB: gradeData.Yingyu || 0,
+        sum_: gradeData.yingyu || 0,
+        sumb: gradeData.yingyub || 0,
+        sumd: gradeData.yingyud || 0,
+        maxB: gradeData.yingyu || 0,
         passLine: 0,
     },
     {
         name: '数学',
-        sum_: gradeData.Shuxue || 0,
-        sumB: gradeData.ShuxueB || 0,
-        sumD: gradeData.ShuxueD || 0,
-        maxB: gradeData.Shuxue || 0,
+        sum_: gradeData.shuxue || 0,
+        sumb: gradeData.shuxueb || 0,
+        sumd: gradeData.shuxued || 0,
+        maxB: gradeData.shuxue || 0,
         passLine: 0,
     }
 ];
-if (gradeData.Wuli != null &&  gradeData.Wuli!=0) {
+if (gradeData.wuli != null &&  gradeData.wuli!=0) {
     tableData.value.push({
         name: '物理',
-        sum_: gradeData.Wuli || 0,
-        sumB: gradeData.WuliB || 0,
-        sumD: gradeData.WuliD || 0,
-        maxB: gradeData.Wuli || 0,
+        sum_: gradeData.wuli || 0,
+        sumb: gradeData.wulib || 0,
+        sumd: gradeData.wulid || 0,
+        maxB: gradeData.wuli || 0,
         passLine: 0,
     });
 }
-if (gradeData.Huaxue != null &&  gradeData.Huaxue!=0) {
+if (gradeData.huaxue != null &&  gradeData.huaxue!=0) {
     tableData.value.push({
         name: '化学',
-        sum_: gradeData.Huaxue || 0,
-        sumB: gradeData.HuaxueB || 0,
-        sumD: gradeData.HuaxueD || 0,
-        maxB: gradeData.Huaxue || 0,
+        sum_: gradeData.huaxue || 0,
+        sumb: gradeData.huaxueb || 0,
+        sumd: gradeData.huaxued || 0,
+        maxB: gradeData.huaxue || 0,
         passLine: 0,
     })
 }
-if (gradeData.Shengwu!= null &&  gradeData.Shengwu!=0) {
+if (gradeData.shengwu!= null &&  gradeData.shengwu!=0) {
     tableData.value.push({
         name: '生物',
-        sum_: gradeData.Shengwu || 0,
-        sumB: gradeData.ShengwuB || 0,
-        sumD: gradeData.ShengwuD || 0,
-        maxB: gradeData.Shengwu || 0,
+        sum_: gradeData.shengwu || 0,
+        sumb: gradeData.shengwub || 0,
+        sumd: gradeData.shengwud || 0,
+        maxB: gradeData.shengwu || 0,
         passLine: 0,
     });
 }
-if (gradeData.Lishi != null &&  gradeData.Lishi!=0) {
+if (gradeData.lishi != null &&  gradeData.lishi!=0) {
     tableData.value.push({
         name: '历史',
-        sum_: gradeData.Lishi || 0,
-        sumB: gradeData.LishiB || 0,
-        sumD: gradeData.LishiD || 0,
-        maxB: gradeData.Lishi || 0,
+        sum_: gradeData.lishi || 0,
+        sumb: gradeData.lishib || 0,
+        sumd: gradeData.lishid || 0,
+        maxB: gradeData.lishi || 0,
         passLine: 0,
     });
 }
-if (gradeData.Dili!= null &&  gradeData.Dili!=0) {
+if (gradeData.dili!= null &&  gradeData.dili!=0) {
     tableData.value.push({
         name: '地理',
-        sum_: gradeData.Dili || 0,
-        sumB: gradeData.DiliB || 0,
-        sumD: gradeData.DiliD || 0,
-        maxB: gradeData.Dili || 0,
+        sum_: gradeData.dili || 0,
+        sumb: gradeData.dilib || 0,
+        sumd: gradeData.dilid || 0,
+        maxB: gradeData.dili || 0,
         passLine: 0,
     });
 }
-if (gradeData.Zhengzhi != null && gradeData.Zhengzhi!=0) {
+if (gradeData.zhengzhi != null && gradeData.zhengzhi!=0) {
         tableData.value.push({
         name: '政治',
-        sum_: gradeData.Zhengzhi || 0,
-        sumB: gradeData.ZhengzhiB || 0,
-        sumD: gradeData.ZhengzhiD || 0,
-        maxB: gradeData.Zhengzhi || 0,
+        sum_: gradeData.zhengzhi || 0,
+        sumb: gradeData.zhengzhib || 0,
+        sumd: gradeData.zhengzhid || 0,
+        maxB: gradeData.zhengzhi || 0,
         passLine: 0,
     });
 }
@@ -346,11 +346,11 @@ const  tableColumns = [{
         align: 'center',
     },{
         title: '班级排名',
-        dataIndex:'sumB',
+        dataIndex:'sumb',
         align: 'center',
     },{
         title: '年级排名',
-        dataIndex: 'sumD',
+        dataIndex: 'sumd',
         align: 'center',
     }
 ]

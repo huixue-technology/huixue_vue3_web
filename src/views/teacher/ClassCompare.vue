@@ -275,21 +275,21 @@ interface StudentInfo {
   student_id: number;
   student_name: string;
   sum_: number; // 总分
-  sumB: number; // 班级排名
+  sumb: number; // 班级排名
   [key: string]: any;
 }
 
 interface SubjectScores {
   sum_: number;
-  Yuwen: number;
-  Shuxue: number;
-  Yingyu: number;
-  Wuli: number;
-  Huaxue: number;
-  Lishi: number;
-  Zhengzhi: number;
-  Shengwu: number;
-  Dili: number;
+  yuwen: number;
+  shuxue: number;
+  yingyu: number;
+  wuli: number;
+  huaxue: number;
+  lishi: number;
+  zhengzhi: number;
+  shengwu: number;
+  dili: number;
 }
 
 interface ComparisonResult {
@@ -330,15 +330,15 @@ const comparisonData = ref<ComparisonResult | null>(null);
 const currentClass = ref<ClassInfo>({ id: 0, name: '', header: 0, school_id: 0, subject_selection: '' });
 // 科目名称映射
 const subjectMap = {
-  'Yuwen': '语文',
-  'Shuxue': '数学',
-  'Yingyu': '英语',
-  'Wuli': '物理',
-  'Huaxue': '化学',
-  'Shengwu': '生物',
-  'Lishi': '历史',
-  'Zhengzhi': '政治',
-  'Dili': '地理'
+  'yuwen': '语文',
+  'shuxue': '数学',
+  'yingyu': '英语',
+  'wuli': '物理',
+  'huaxue': '化学',
+  'shengwu': '生物',
+  'lishi': '历史',
+  'zhengzhi': '政治',
+  'dili': '地理'
 };
 
 // 计算差值
@@ -407,7 +407,7 @@ const subjectTopColumns = computed(() => [
 ]);
 
 const topStudentColumns = [
-  { title: '班级排名', dataIndex: 'sumB', key: 'sumB' },
+  { title: '班级排名', dataIndex: 'sumb', key: 'sumb' },
   { title: '姓名', dataIndex: 'student_name', key: 'student_name' },
   { title: '总分', dataIndex: 'sum_', key: 'sum_', render: (val: number) => formatScore(val) }
 ];

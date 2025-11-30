@@ -98,3 +98,18 @@ export async function getStudentExamApi(
     ...(options || {}),
   });
 }
+
+/** 根据学生ID列表批量获取学生信息 POST /api/student/batch_get_students_by_id */
+export async function postBatchGetStudentApi(
+  body: API.BatchStudent,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/student/batch_get_students_by_id", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
+    ...(options || {}),
+  });
+}

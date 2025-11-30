@@ -232,7 +232,7 @@ interface ScoreItem {
   studentName: string;
   totalScore: number; 
   classRank: number;
-  sumD: number; 
+  sumd: number; 
   [key: string]: any; 
 }
 
@@ -283,45 +283,45 @@ const filteredStudents = ref<any[]>([]); // 筛选后的学生列表
 const searchKeyword = ref(''); // 学生搜索关键词
 const selectedStudentId = ref(''); // 选中的学生ID
 const subject_list = {
-  Yuwen: '语文',
-  Shuxue: '数学',
-  Yingyu: '英语',
-  Wuli: '物理',
-  Lishi: '历史',
-  Huaxue: '化学',
-  Shengwu: '生物',
-  Zhengzhi: '政治',
-  Dili: '地理',
+  yuwen: '语文',
+  shuxue: '数学',
+  yingyu: '英语',
+  wuli: '物理',
+  lishi: '历史',
+  huaxue: '化学',
+  shengwu: '生物',
+  zhengzhi: '政治',
+  dili: '地理',
 }
 const subjectMap: Record<string, string> = {
   // 分数字段
-  Yuwen: '语文',
-  Shuxue: '数学',
-  Yingyu: '英语',
-  Wuli: '物理',
-  Lishi: '历史',
-  Huaxue: '化学',
-  Shengwu: '生物',
-  Zhengzhi: '政治',
-  Dili: '地理',
-  YuwenB: '班名',
-  ShuxueB: '班名',
-  YingyuB: '班名',
-  WuliB: '班名',
-  LishiB: '班名',
-  HuaxueB: '班名',
-  ShengwuB: '班名',
-  ZhengzhiB: '班名',
-  DiliB: '班名',
-  YuwenD: '校名',
-  ShuxueD: '校名',
-  YingyuD: '校名',
-  WuliD: '校名',
-  LishiD: '校名',
-  HuaxueD: '校名',
-  ShengwuD: '校名',
-  ZhengzhiD: '校名',
-  DiliD: '校名',
+  yuwen: '语文',
+  shuxue: '数学',
+  yingyu: '英语',
+  wuli: '物理',
+  lishi: '历史',
+  huaxue: '化学',
+  shengwu: '生物',
+  zhengzhi: '政治',
+  dili: '地理',
+  yuwenb: '班名',
+  shuxueb: '班名',
+  yingyub: '班名',
+  wulib: '班名',
+  lishib: '班名',
+  huaxueb: '班名',
+  shengwub: '班名',
+  zhengzhib: '班名',
+  dilib: '班名',
+  yuwend: '校名',
+  shuxued: '校名',
+  yingyud: '校名',
+  wulid: '校名',
+  lishid: '校名',
+  huaxued: '校名',
+  shengwud: '校名',
+  zhengzhid: '校名',
+  dilid: '校名',
 };
 
 const selectedRangeType = ref<null | 'score' | 'gradeRank' | 'classRank'>(null);
@@ -329,13 +329,13 @@ const selectedRange = ref<null | { start: number; end: number }>(null);
 const gradeTotalCount = ref(0); // 年级总人数，用于段次计算
 
 const sortFieldsByChinese = (fields: string[]) => {
-  const scoreFields = fields.filter(field => !/[BD]$/.test(field));
-  const rankFields = fields.filter(field => /[BD]$/.test(field));
+  const scoreFields = fields.filter(field => !/[bd]$/.test(field));
+  const rankFields = fields.filter(field => /[bd]$/.test(field));
   const sortedFields: string[] = [];
   scoreFields.forEach(scoreField => {
     sortedFields.push(scoreField); // 分数
-    if (rankFields.includes(`${scoreField}B`)) sortedFields.push(`${scoreField}B`); // 班名
-    if (rankFields.includes(`${scoreField}D`)) sortedFields.push(`${scoreField}D`); // 校名
+    if (rankFields.includes(`${scoreField}b`)) sortedFields.push(`${scoreField}b`); // 班名
+    if (rankFields.includes(`${scoreField}d`)) sortedFields.push(`${scoreField}d`); // 校名
   });
   return sortedFields;
 };
@@ -355,7 +355,7 @@ const columns = computed(() => {
   const sumColumns = [
     { title: '总分', dataIndex: 'totalScore', key: 'totalScore', width: 100 },
     { title: '班名', dataIndex: 'classRank', key: 'classRank', width: 100 },
-    { title: '校名', dataIndex: 'sumD', key: 'sumD', width: 100 }
+    { title: '校名', dataIndex: 'sumd', key: 'sumd', width: 100 }
   ];
 
   return [...baseColumns,...sumColumns, ...subjectColumns];
@@ -429,7 +429,7 @@ const fetchPassLine = async (examId: number) => {
     const res = await getPassLine({ exam_id: examId });
     if (res.data && res.data.length > 0) {
       // 根据科目判断文理科（示例：含物理则为理科，含历史则为文科）
-      const isScience = subjects.value.includes('Wuli');
+      const isScience = subjects.value.includes('wuli');
       const targetLine = res.data.find((line: any) => 
         isScience ? line.line_name.includes('物') : line.line_name.includes('史')
       );
@@ -442,27 +442,27 @@ const fetchPassLine = async (examId: number) => {
 };
 
 const extractAllFields = (rawItem: any) => {
-  const excludeFields = ['student_id', 'student_name','name', 'sum_', 'sumB', 'sumD', 'class_id', 'exam_id', 'id', 'school_id', 'show'];
+  const excludeFields = ['student_id', 'student_name','name', 'sum_', 'sumb', 'sumd', 'class_id', 'exam_id', 'id', 'school_id', 'show'];
   const allFields = Object.keys(rawItem);
   
   // 查看该班级是物理方向、历史方向还是未选科
   if (! classInfo.value?.subject_selection.includes('物') && ! classInfo.value?.subject_selection.includes('理')) {
-    excludeFields.push('Wuli')
+    excludeFields.push('wuli')
   }
   if (! classInfo.value?.subject_selection.includes('史')) {
-    excludeFields.push('Lishi')
+    excludeFields.push('lishi')
   }
   if (! classInfo.value?.subject_selection.includes('地')) {
-    excludeFields.push('Dili')
+    excludeFields.push('dili')
   }
   if (! classInfo.value?.subject_selection.includes('政')) {
-    excludeFields.push('Zhengzhi')
+    excludeFields.push('zhengzhi')
   }
   if (! classInfo.value?.subject_selection.includes('化')) {
-    excludeFields.push('Huaxue')
+    excludeFields.push('huaxue')
   }
   if (! classInfo.value?.subject_selection.includes('生')) {
-    excludeFields.push('Shengwu')
+    excludeFields.push('shengwu')
   }
   return allFields.filter(field => !excludeFields.includes(field));
 };
@@ -657,8 +657,8 @@ const handleExamChange = async (examId: number) => {
               studentId: "*"+String(item.student_id || item.studentId || '').slice(-5,-1),
               studentName: item.student_name || item.studentName || '未知学生',
               totalScore: item.sum_ !== undefined ? item.sum_ : (item.totalScore || 0),
-              classRank: item.sumB !== undefined ? item.sumB : (item.classRank || 0),
-              sumD: item.sumD !== undefined ? item.sumD : (item.sumD || 0),
+              classRank: item.sumb !== undefined ? item.sumb : (item.classRank || 0),
+              sumd: item.sumd !== undefined ? item.sumd : (item.sumd || 0),
             };
             validFields.forEach(field => {
               scoreItem[field] = item[field] !== undefined ? item[field] : 0;
