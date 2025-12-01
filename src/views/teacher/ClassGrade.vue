@@ -1,7 +1,7 @@
 <template>
   <div class="class-grade-container">
     <div class="header">
-      <h2>{{ classInfo?.name }}班级成绩分析</h2>
+      <h2>{{classInfo?.name}}班级成绩分析</h2>
       <p>选择考试查看班级成绩详情</p>
     </div>
 
@@ -61,8 +61,8 @@
             >
               <a-select-option value="">全部科目</a-select-option>
               <a-select-option 
-                v-for="subject,idx in subject_list" 
-                :key="subject" 
+                v-for="(subject,idx) in subject_list" 
+                :key="idx" 
                 :value="idx"
               >
                 {{ subject }}
@@ -71,7 +71,6 @@
           </div>
         </a-col>
         <a-col :span="24" :md="6">
-
             <ScoreRangeFilter
               :passLineOffset="passLineOffset || 0"
               :selectedPassLineId="selectedPassLineId"
@@ -80,9 +79,7 @@
               @update:selectedPassLineId="val => selectedPassLineId = val"
               @filterChange="filter_change"
             />
-			
         </a-col>
-		
       </a-row>
       
       <a-row :gutter="16" style="margin-top: 16px;">
@@ -108,9 +105,6 @@
             @filterChange="handleRangeFilterChange"
           />
         </a-col>
-        
-    
-        
         <a-col :span="24" :md="6">
           <div class="filter-item">
             <span class="filter-label">排序方式：</span>
@@ -125,7 +119,6 @@
             </a-select>
           </div>
         </a-col>
-
         <a-col :span="24" :md="6">
           <div class="filter-actions">
             <a-button type="primary" style="margin-right: 10px;" @click="filter_change">确定</a-button>
@@ -159,13 +152,13 @@
         <a-col :span="12" :lg="4">
           <div class="summary-card pass-line-card">
             <div class="card-title">一本线</div>
-            <div class="card-value">{{ passLine }}</div>
+            <div class="card-value">{{ loadingPassLine ? '加载中' : passLine }}</div>
           </div>
         </a-col>
         <a-col :span="12" :lg="4">
           <div class="summary-card pass-rate-card">
             <div class="card-title">一本率</div>
-            <div class="card-value">{{ passRate }}%</div>
+            <div class="card-value">{{ loadingPassLine ? '加载中' : `${passRate}%` }}</div>
           </div>
         </a-col>
         <a-col :span="12" :lg="4">
@@ -176,7 +169,6 @@
         </a-col>
       </a-row>
     </div>
-	
 
     <!-- 成绩表格区域 -->
     <div class="table-section">
@@ -192,12 +184,13 @@
           >
           <template #bodyCell="{ column, record }">
             <template v-if="column.dataIndex === 'totalScore'">
-              <span :class="getScoreClass(record.totalScore)">
-                {{ record.totalScore }}
+              <!-- 分数线加载中显示"加载中"，避免初始0的干扰 -->
+              <span :class="loadingPassLine ? 'normal-score' : getScoreClass(record.totalScore, record.classRank)">
+                {{ loadingPassLine ? '加载中' : record.totalScore }}
               </span>
             </template>
             <template v-if="column.dataIndex === 'classRank'">
-              <span :class="getRankClass(record.classRank)">
+              <span :class="getRankClass(record.classRank, record.totalScore)">
                 {{ record.classRank }}
               </span>
             </template>
@@ -207,8 +200,7 @@
       </a-card>
     </div>
     <ExamSummarize :exam_id="selectedExamId" :class_id="classInfo?.class_id" />
-    <ClassAnalysis :selected-exam-id="selectedExamId" />
-    <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
+    <a-spin v-if="loading || loadingPassLine" tip="加载中..." class="loading-spin" />
   </div>
 </template>
 
@@ -226,13 +218,13 @@ import { getPassLine } from "@/servers/api/analysis";
 import ScoreRangeFilter from '@/components/ScoreRangeFilter.vue';
 import GradeRangeFilter from '@/components/GradeRangeFilter.vue'
 import ExamSummarize from "@/views/teacher/ExamSummarize.vue";
-import ClassAnalysis from "@/views/teacher/ClassAnalysis.vue";
+
 interface ScoreItem {
   studentId: string;
   studentName: string;
   totalScore: number; 
   classRank: number;
-  sumd: number; 
+  sumD: number; 
   [key: string]: any; 
 }
 
@@ -261,6 +253,8 @@ const loading = ref(false);
 const passLine = ref(0);
 const subjects = ref<string[]>([]);
 const currentStudentId = ref('');
+// 新增：标记分数线是否加载完成（解决初始0的问题）
+const loadingPassLine = ref(true);
 
 // 新增筛选状态
 const selectedSubject = ref<string>(''); // 科目筛选
@@ -277,69 +271,90 @@ const classAvg = ref<ClassStats>({ totalScore: 0 });
 const classMax = ref<ClassStats>({ totalScore: 0 });
 const classMin = ref<ClassStats>({ totalScore: 0 });
 const passRate = ref(0);
-// 新增学生相关响应式变量
+
+// 学生相关响应式变量
 const studentList = ref<any[]>([]); // 所有学生列表
 const filteredStudents = ref<any[]>([]); // 筛选后的学生列表
 const searchKeyword = ref(''); // 学生搜索关键词
 const selectedStudentId = ref(''); // 选中的学生ID
+
+// 科目映射配置
 const subject_list = {
-  yuwen: '语文',
-  shuxue: '数学',
-  yingyu: '英语',
-  wuli: '物理',
-  lishi: '历史',
-  huaxue: '化学',
-  shengwu: '生物',
-  zhengzhi: '政治',
-  dili: '地理',
-}
-const subjectMap: Record<string, string> = {
-  // 分数字段
-  yuwen: '语文',
-  shuxue: '数学',
-  yingyu: '英语',
-  wuli: '物理',
-  lishi: '历史',
-  huaxue: '化学',
-  shengwu: '生物',
-  zhengzhi: '政治',
-  dili: '地理',
-  yuwenb: '班名',
-  shuxueb: '班名',
-  yingyub: '班名',
-  wulib: '班名',
-  lishib: '班名',
-  huaxueb: '班名',
-  shengwub: '班名',
-  zhengzhib: '班名',
-  dilib: '班名',
-  yuwend: '校名',
-  shuxued: '校名',
-  yingyud: '校名',
-  wulid: '校名',
-  lishid: '校名',
-  huaxued: '校名',
-  shengwud: '校名',
-  zhengzhid: '校名',
-  dilid: '校名',
+  Yuwen: '语文',
+  Shuxue: '数学',
+  Yingyu: '英语',
+  Wuli: '物理',
+  Lishi: '历史',
+  Huaxue: '化学',
+  Shengwu: '生物',
+  Zhengzhi: '政治',
+  Dili: '地理',
 };
 
+const subjectMap: Record<string, string> = {
+  // 分数字段
+  Yuwen: '语文',
+  Shuxue: '数学',
+  Yingyu: '英语',
+  Wuli: '物理',
+  Lishi: '历史',
+  Huaxue: '化学',
+  Shengwu: '生物',
+  Zhengzhi: '政治',
+  Dili: '地理',
+  // 班级排名字段
+  YuwenB: '班名',
+  ShuxueB: '班名',
+  YingyuB: '班名',
+  WuliB: '班名',
+  LishiB: '班名',
+  HuaxueB: '班名',
+  ShengwuB: '班名',
+  ZhengzhiB: '班名',
+  DiliB: '班名',
+  // 学校排名字段
+  YuwenD: '校名',
+  ShuxueD: '校名',
+  YingyuD: '校名',
+  WuliD: '校名',
+  LishiD: '校名',
+  HuaxueD: '校名',
+  ShengwuD: '校名',
+  ZhengzhiD: '校名',
+  DiliD: '校名',
+};
+
+// 区间筛选相关状态
 const selectedRangeType = ref<null | 'score' | 'gradeRank' | 'classRank'>(null);
 const selectedRange = ref<null | { start: number; end: number }>(null);
 const gradeTotalCount = ref(0); // 年级总人数，用于段次计算
 
+// 排名筛选相关状态
+const minClassRank = ref<number | null>(null);
+const maxClassRank = ref<number | null>(null);
+const minRank = ref<number | null>(null);
+const maxRank = ref<number | null>(null);
+
+/**
+ * 按中文科目顺序排序字段
+ * @param fields 字段列表
+ * @returns 排序后的字段列表
+ */
 const sortFieldsByChinese = (fields: string[]) => {
-  const scoreFields = fields.filter(field => !/[bd]$/.test(field));
-  const rankFields = fields.filter(field => /[bd]$/.test(field));
+  const scoreFields = fields.filter(field => !/[BD]$/.test(field));
+  const rankFields = fields.filter(field => /[BD]$/.test(field));
   const sortedFields: string[] = [];
   scoreFields.forEach(scoreField => {
-    sortedFields.push(scoreField); // 分数
-    if (rankFields.includes(`${scoreField}b`)) sortedFields.push(`${scoreField}b`); // 班名
-    if (rankFields.includes(`${scoreField}d`)) sortedFields.push(`${scoreField}d`); // 校名
+    sortedFields.push(scoreField); // 分数字段
+    if (rankFields.includes(`${scoreField}B`)) sortedFields.push(`${scoreField}B`); // 班级排名
+    if (rankFields.includes(`${scoreField}D`)) sortedFields.push(`${scoreField}D`); // 学校排名
   });
   return sortedFields;
 };
 
+/**
+ * 表格列配置（计算属性）
+ */
 const columns = computed(() => {
   const baseColumns = [
     { title: '学号', dataIndex: 'studentId', key: 'studentId', width: 100 },
@@ -355,49 +370,51 @@ const columns = computed(() => {
   const sumColumns = [
     { title: '总分', dataIndex: 'totalScore', key: 'totalScore', width: 100 },
     { title: '班名', dataIndex: 'classRank', key: 'classRank', width: 100 },
-    { title: '校名', dataIndex: 'sumd', key: 'sumd', width: 100 }
+    { title: '校名', dataIndex: 'sumD', key: 'sumD', width: 100 }
   ];
 
-  return [...baseColumns,...sumColumns, ...subjectColumns];
+  return [...baseColumns, ...sumColumns, ...subjectColumns];
 });
 
-// 获取成绩等级类名
-const getScoreClass = (score: number) => {
-  // 先检查是否有一本线数据
-  if (passLine.value > 0) {
-    // 如果成绩小于一本线，返回红色字体样式
-    if (score < passLine.value) {
-      return 'below-pass-line';
-    }
-    // 如果成绩在一本线上下10分范围内，返回黄色背景样式
-    if (Math.abs(score - passLine.value) <= 10) {
-      return 'near-pass-line';
-    }
+const getScoreClass = (score: number, classRank: number = 999) => {
+  if (classRank <= 10) {
+    return 'normal-score';
   }
-  // 原有的成绩等级样式
-  return score >= 90 ? 'excellent-score' : score >= 80 ? 'good-score' : 'normal-score';
+  if (loadingPassLine.value) return 'normal-score';
+  if (passLine.value <= 0) return 'normal-score';
+  const diff = score - passLine.value;
+  if (diff >= 10) return 'normal-score'; // 超线10分以上→黑色
+  if (diff >= 0 && diff < 10) return 'above-pass-line-near'; // 超线0-10分→绿色
+  if (diff >= -10 && diff < 0) return 'below-pass-line-near'; // 离线0-10分→橙色
+  return 'below-pass-line-far'; // 离线10分以上→红色
 };
 
-const getRankClass = (rank: number) => {
-  if (rank <= 3) return 'top-rank';
-  if (rank <= 10) return 'good-rank';
-  return '';
+const getRankClass = (rank: number, score: number) => {
+  // 加入分数线判断，覆盖原有纯排名规则
+  if (loadingPassLine.value || passLine.value <= 0) {
+    // 分数线未加载时，沿用原有排名颜色
+    return rank <= 3 ? 'top-rank' : rank <= 10 ? 'good-rank' : '';
+  }
+  const diff = score - passLine.value;
+  // 按分数线规则控制排名列颜色
+  if (diff >= 10) return ''; // 超线10分以上 → 无特殊颜色
+  if (diff >= 0) return 'above-pass-line-near'; // 超线0-10分 → 绿色
+  return 'below-pass-line-near'; // 线下 → 橙色
 };
 
 const calculateStats = (scores: ScoreItem[]) => {
   if (!scores.length) return;
-  const stats: Record<string, number[]> = {
-    totalScore: []
-  };
-  subjects.value.forEach(subject => {
-    stats[subject] = [];
-  });
+  const stats: Record<string, number[]> = { totalScore: [] };
+  subjects.value.forEach(subject => { stats[subject] = []; });
+
   scores.forEach(item => {
     stats.totalScore.push(item.totalScore);
-    // subjects.value.forEach(subject => {
-    //   stats[subject].push(item[subject] || 0);
-    // });
+    subjects.value.forEach(subject => {
+      stats[subject].push(item[subject] || 0);
+    });
   });
+
+  // 计算平均分
   const avg: ClassStats = {
     totalScore: stats.totalScore.reduce((a, b) => a + b, 0) / stats.totalScore.length
   };
@@ -405,67 +422,82 @@ const calculateStats = (scores: ScoreItem[]) => {
     avg[subject] = stats[subject].reduce((a, b) => a + b, 0) / stats[subject].length;
   });
   classAvg.value = avg;
-  const max: ClassStats = {
-    totalScore: Math.max(...stats.totalScore)
-  };
+
+  // 计算最高分
+  const max: ClassStats = { totalScore: Math.max(...stats.totalScore) };
   subjects.value.forEach(subject => {
     max[subject] = Math.max(...stats[subject]);
   });
   classMax.value = max;
-  const min: ClassStats = {
-    totalScore: Math.min(...stats.totalScore)
-  };
+
+  // 计算最低分
+  const min: ClassStats = { totalScore: Math.min(...stats.totalScore) };
   subjects.value.forEach(subject => {
     min[subject] = Math.min(...stats[subject]);
   });
   classMin.value = min;
-  const passCount = stats.totalScore.filter(score => score >= passLine.value).length;
-  passRate.value = Math.round((passCount / stats.totalScore.length) * 100);
+
+  // 计算一本率（需等待分数线加载完成）
+  if (!loadingPassLine.value && passLine.value > 0) {
+    const passCount = stats.totalScore.filter(score => score >= passLine.value).length;
+    passRate.value = Math.round((passCount / stats.totalScore.length) * 100);
+  } else {
+    passRate.value = 0;
+  }
 };
 
 // 获取对应考试的一本线
+
 const fetchPassLine = async (examId: number) => {
+  loadingPassLine.value = true; // 开始加载，标记为true
   try {
     const res = await getPassLine({ exam_id: examId });
     if (res.data && res.data.length > 0) {
-      // 根据科目判断文理科（示例：含物理则为理科，含历史则为文科）
-      const isScience = subjects.value.includes('wuli');
+      // 根据科目判断文理科（含物理=理科，含历史=文科）
+      const isScience = subjects.value.includes('Wuli');
       const targetLine = res.data.find((line: any) => 
         isScience ? line.line_name.includes('物') : line.line_name.includes('史')
       );
       passLine.value = targetLine ? targetLine.sum_ : 0;
+    } else {
+      passLine.value = 0;
     }
   } catch (err) {
     console.error('获取一本线失败:', err);
     passLine.value = 0;
+  } finally {
+    loadingPassLine.value = false; // 加载完成，标记为false
+    calculateStats(scoreList.value); // 重新计算一本率
   }
 };
 
 const extractAllFields = (rawItem: any) => {
-  const excludeFields = ['student_id', 'student_name','name', 'sum_', 'sumb', 'sumd', 'class_id', 'exam_id', 'id', 'school_id', 'show'];
+  const excludeFields = ['student_id', 'student_name','name', 'sum_', 'sumB', 'sumD', 'class_id', 'exam_id', 'id', 'school_id', 'show'];
   const allFields = Object.keys(rawItem);
   
-  // 查看该班级是物理方向、历史方向还是未选科
-  if (! classInfo.value?.subject_selection.includes('物') && ! classInfo.value?.subject_selection.includes('理')) {
-    excludeFields.push('wuli')
+  // 根据班级选科排除未选科目
+  if (!classInfo.value?.subject_selection.includes('物') && !classInfo.value?.subject_selection.includes('理')) {
+    excludeFields.push('Wuli');
   }
-  if (! classInfo.value?.subject_selection.includes('史')) {
-    excludeFields.push('lishi')
+  if (!classInfo.value?.subject_selection.includes('史')) {
+    excludeFields.push('Lishi');
   }
-  if (! classInfo.value?.subject_selection.includes('地')) {
-    excludeFields.push('dili')
+  if (!classInfo.value?.subject_selection.includes('地')) {
+    excludeFields.push('Dili');
   }
-  if (! classInfo.value?.subject_selection.includes('政')) {
-    excludeFields.push('zhengzhi')
+  if (!classInfo.value?.subject_selection.includes('政')) {
+    excludeFields.push('Zhengzhi');
   }
-  if (! classInfo.value?.subject_selection.includes('化')) {
-    excludeFields.push('huaxue')
+  if (!classInfo.value?.subject_selection.includes('化')) {
+    excludeFields.push('Huaxue');
   }
-  if (! classInfo.value?.subject_selection.includes('生')) {
-    excludeFields.push('shengwu')
+  if (!classInfo.value?.subject_selection.includes('生')) {
+    excludeFields.push('Shengwu');
   }
+  
   return allFields.filter(field => !excludeFields.includes(field));
 };
+
 
 const filterInvalidSubjects = (allFields: string[], rawData: any[]) => {
   const mainSubjects = allFields.filter(field => !/[BD]$/.test(field));
@@ -488,14 +520,10 @@ const filterInvalidSubjects = (allFields: string[], rawData: any[]) => {
   return allFields.filter(field => !excludedFields.includes(field));
 };
 
-// 获取年级考试列表
 const fetchGradeExams = async (classId: number) => {
   try {
-    // 通过班级ID前两位推断年级
     const classIdStr = classId.toString();
-    const gradePrefix = classIdStr.substring(0, 2);
-    
-    // 获取年级所有考试
+    const gradePrefix = classIdStr.substring(0, 2); // 取班级ID前两位作为年级前缀
     const examRes = await getExamApi({});
     if (examRes.code === 200) {
       gradeExamList.value = examRes.data.filter((exam: any) => 
@@ -507,27 +535,22 @@ const fetchGradeExams = async (classId: number) => {
   }
 };
 
-// 获取分数线列表
+
 const fetchPassLineList = async (examId: number) => {
   try {
     const res = await getPassLine({ exam_id: examId });
-    if (res.data && res.data.length > 0) {
-      passLineList.value = res.data;
-    } else {
-      passLineList.value = [];
-    }
+    passLineList.value = res.data || [];
   } catch (err) {
     console.error('获取分数线列表失败:', err);
     passLineList.value = [];
   }
 };
-// 新增获取班级学生列表方法
+
+
 const fetchClassStudents = async () => {
   if (!classInfo.value?.class_id) return;
   try {
-    const res = await getStudentApi({ 
-      class_id: classInfo.value.class_id 
-    });
+    const res = await getStudentApi({ class_id: classInfo.value.class_id });
     if (res.code === 200 && res.data) {
       studentList.value = res.data.map((item: any) => ({
         id: item.uid,
@@ -540,155 +563,83 @@ const fetchClassStudents = async () => {
   }
 };
 
-// 新增学生搜索处理方法
+
 const handleStudentSearch = (value: string) => {
   searchKeyword.value = value;
   if (!value) {
     filteredStudents.value = [...studentList.value];
     return;
   }
-  
-  const filtered = studentList.value.filter(student => 
+  filteredStudents.value = studentList.value.filter(student => 
     student.name.toLowerCase().includes(value.toLowerCase()) ||
     student.id.toString().includes(value.toLowerCase())
   );
-  filteredStudents.value = filtered;
 };
 
-// 在现有状态中添加
-const studentId = ref<string>(''); // 学生ID筛选
-// 更新add_filter函数以处理段次筛选参数
+
 const add_filter = (params: any) => {
-  // 保留原有逻辑
-  if (selectedSubject.value) {
-    params.subject = selectedSubject.value;
-  }
-  
-  if (sortOrder.value) {
-    params.order_direction = sortOrder.value;
-  }
-  
-  // 处理分数区间参数
-  if (minScore.value !== null) {
-    params.min_score = minScore.value;
-  }
-  
-  if (maxScore.value !== null) {
-    params.max_score = maxScore.value;
-  }
-  
-  // 处理段次区间参数
-  if (minRank.value !== null) {
-    params.min_rank = minRank.value;
-  }
-  
-  if (maxRank.value !== null) {
-    params.max_rank = maxRank.value;
-  }
-  
-  if (passLineOffset.value !== null) {
-    params.pass_line_offset = passLineOffset.value;
-  }
-  
-  if (selectedPassLineId.value !== null) {
-    params.pass_line_id = selectedPassLineId.value;
-  }
-  
-  if (studentId.value) {
-    params.student_id = studentId.value;
-  }
-  // 新增班级排名参数处理
-  if (minClassRank.value !== null) {
-    params.min_class_rank = minClassRank.value;
-  }
-  
-  if (maxClassRank.value !== null) {
-    params.max_class_rank = maxClassRank.value;
-  }
-  if (selectedStudentId.value) {
-      params.student_id = selectedStudentId.value;
-    }
+  if (selectedSubject.value) params.subject = selectedSubject.value;
+  if (sortOrder.value) params.order_direction = sortOrder.value;
+  if (minScore.value !== null) params.min_score = minScore.value;
+  if (maxScore.value !== null) params.max_score = maxScore.value;
+  if (minRank.value !== null) params.min_rank = minRank.value;
+  if (maxRank.value !== null) params.max_rank = maxRank.value;
+  if (passLineOffset.value !== null) params.pass_line_offset = passLineOffset.value;
+  if (selectedPassLineId.value !== null) params.pass_line_id = selectedPassLineId.value;
+  if (selectedStudentId.value) params.student_id = selectedStudentId.value;
+  if (minClassRank.value !== null) params.min_class_rank = minClassRank.value;
+  if (maxClassRank.value !== null) params.max_class_rank = maxClassRank.value;
 };
 
 
-// 将参数改为可选
-const filter_change = (subject?: string)=> {
-  console.log('Subject changed:', subject);
-  handleExamChange(selectedExamId.value)
-}
+const filter_change = (subject?: string) => {
+  console.log('筛选变更，重新加载数据:', subject);
+  handleExamChange(selectedExamId.value);
+};
 
 
 const handleExamChange = async (examId: number) => {
   if (!examId || !classInfo.value?.class_id) return;
   loading.value = true;
+  loadingPassLine.value = true; // 重置分数线加载状态
   try {
-    // 使用新的 getClassGrade API，支持更多筛选参数
     const params: any = {
       class_id: classInfo.value.class_id.toString(),
       selected_exam_id: examId.toString()
     };
-    // 添加筛选参数
-    add_filter(params);
+    add_filter(params); // 组装筛选参数
     const res = await getClassGrade(params);
-    console.log('API Response:', res); // 调试日志
-    
+    console.log('成绩数据响应:', res);
+
     if (res.code === 200) {
-      // 检查是否有数据
-      const hasData = res.data && 
-        ((Array.isArray(res.data) && res.data.length > 0) || 
-         (res.data.gradeList && res.data.gradeList.length > 0));
-      if (hasData) {
-        // 处理不同格式的响应数据
-        let rawData = [];
-        if (Array.isArray(res.data)) {
-          rawData = res.data;
-        } else if (res.data.gradeList && Array.isArray(res.data.gradeList)) {
-          rawData = res.data.gradeList;
-        }
-        if (rawData.length > 0) {
-          // 提取所有字段
-          const allFields = extractAllFields(rawData[0]);
-          const validFields = filterInvalidSubjects(allFields, rawData);
-          subjects.value = validFields;
-          
-          // 处理成绩数据
-          const rawScores = rawData.map((item: any) => {
-            const scoreItem: ScoreItem = {
-              studentId: "*"+String(item.student_id || item.studentId || '').slice(-5,-1),
-              studentName: item.student_name || item.studentName || '未知学生',
-              totalScore: item.sum_ !== undefined ? item.sum_ : (item.totalScore || 0),
-              classRank: item.sumb !== undefined ? item.sumb : (item.classRank || 0),
-              sumd: item.sumd !== undefined ? item.sumd : (item.sumd || 0),
-            };
-            validFields.forEach(field => {
-              scoreItem[field] = item[field] !== undefined ? item[field] : 0;
-            });
-            return scoreItem;
+      const rawData = Array.isArray(res.data) ? res.data : (res.data?.gradeList || []);
+      if (rawData.length > 0) {
+        const allFields = extractAllFields(rawData[0]);
+        const validFields = filterInvalidSubjects(allFields, rawData);
+        subjects.value = validFields;
+        scoreList.value = rawData.map((item: any) => {
+          const scoreItem: ScoreItem = {
+            studentId: "*" + String(item.student_id || item.studentId || '').slice(-5, -1),
+            studentName: item.student_name || item.studentName || '未知学生',
+            totalScore: item.sum_ !== undefined ? item.sum_ : (item.totalScore || 0),
+            classRank: item.sumB !== undefined ? item.sumB : (item.classRank || 0),
+            sumD: item.sumD !== undefined ? item.sumD : (item.sumD || 0),
+          };
+          validFields.forEach(field => {
+            scoreItem[field] = item[field] !== undefined ? item[field] : 0;
           });
-          
-          scoreList.value = rawScores;
-          
-          // 获取考试名称
-          // examName.value = res.data.exam_name || `考试 ${examId}`;
-          
-          await fetchPassLine(examId);
-          calculateStats(scoreList.value);
-          
-          // 获取分数线列表
-          await fetchPassLineList(examId);
-          
-          // 成功获取数据的消息
-          message.success('成绩数据获取成功');
-          return;
-        }
+          return scoreItem;
+        });
+        await fetchPassLine(examId);
+        await fetchPassLineList(examId);
+        
+        message.success('成绩数据加载成功');
+        return;
       }
     }
-    
-    // 如果到这里说明没有有效数据
-    message.warning('暂无成绩数据');
+    message.warning('当前考试暂无成绩数据');
     scoreList.value = [];
     subjects.value = [];
-    // 重置统计信息
     classAvg.value = { totalScore: 0 };
     classMax.value = { totalScore: 0 };
     classMin.value = { totalScore: 0 };
@@ -696,59 +647,53 @@ const handleExamChange = async (examId: number) => {
     passLine.value = 0;
   } catch (err) {
     console.error('获取成绩失败:', err);
+    message.error('成绩数据加载失败，请重试');
     scoreList.value = [];
     subjects.value = [];
   } finally {
     loading.value = false;
+    loadingPassLine.value = false; // 确保加载失败时也更新状态
   }
 };
 
-// 重置筛选
+
 const resetFilters = () => {
-  console.log('Resetting filters...');
+  console.log('重置筛选条件');
   selectedExamId.value = classExamList.value.length > 0 ? classExamList.value[0] : 0;
   selectedSubject.value = '';
   sortOrder.value = 'desc';
   minScore.value = null;
   maxScore.value = null;
+  minRank.value = null;
+  maxRank.value = null;
+  minClassRank.value = null;
+  maxClassRank.value = null;
+  // 分数线筛选
   passLineOffset.value = null;
   selectedPassLineId.value = null;
-  scoreList.value = [];
-  subjects.value = [];
+  passLineList.value = [];
+  // 学生筛选
+  selectedStudentId.value = '';
+  searchKeyword.value = '';
+  filteredStudents.value = [...studentList.value];
+  // 区间筛选组件状态
+  selectedRangeType.value = null;
+  selectedRange.value = null;
+  // 统计数据重置
   classAvg.value = { totalScore: 0 };
   classMax.value = { totalScore: 0 };
   classMin.value = { totalScore: 0 };
   passRate.value = 0;
   passLine.value = 0;
-  passLineList.value = [];
-  selectedRangeType.value = null;
-  selectedRange.value = null;
-  minScore.value = null;
-  maxScore.value = null;
-  minRank.value = null;
-  maxRank.value = null;
-  minClassRank.value = null;  // 新增
-  maxClassRank.value = null;  // 新增
-  selectedStudentId.value = '';
-  searchKeyword.value = '';
-  filteredStudents.value = [...studentList.value];
-  
+  loadingPassLine.value = true; // 重置加载状态
+  // 重新加载数据
   if (selectedExamId.value) {
     handleExamChange(selectedExamId.value);
   }
 };
 
-
-// 新增班级排名筛选参数
-const minClassRank = ref<number | null>(null);
-const maxClassRank = ref<number | null>(null);
-// 在现有状态中添加段次相关变量
-const minRank = ref<number | null>(null);
-const maxRank = ref<number | null>(null);
-
-// 修改handleRangeFilterChange方法
 const handleRangeFilterChange = (data: any) => {
-  // 重置原有区间参数
+  // 重置所有区间参数
   minScore.value = null;
   maxScore.value = null;
   minRank.value = null;
@@ -756,7 +701,7 @@ const handleRangeFilterChange = (data: any) => {
   minClassRank.value = null;
   maxClassRank.value = null;
 
-  // 根据筛选类型设置对应参数
+  // 根据筛选类型设置参数
   if (data.type === 'score') {
     minScore.value = data.min_score;
     maxScore.value = data.max_score;
@@ -767,17 +712,18 @@ const handleRangeFilterChange = (data: any) => {
     minClassRank.value = data.min_class_rank;
     maxClassRank.value = data.max_class_rank;
   }
-
 };
+
+
 onMounted(async () => {
   teacherId.value = user.getUserInfo().role;
   if (!teacherId.value) {
-    message.error('未获取到教师信息');
+    message.error('未获取到教师信息，请重新登录');
     return;
   }
 
   try {
-    // 获取班级信息
+    // 加载班级信息
     const classRes = await getClassesApi({ header: teacherId.value });
     if (classRes.code === 200 && classRes.data.length > 0) {
       classInfo.value = {
@@ -788,31 +734,33 @@ onMounted(async () => {
         school_id: classRes.data[0].school_id
       };
 
-      // 获取班级考试列表
+      // 加载班级考试列表
       const examRes = await getClassExam({ class_id: classInfo.value.class_id });
       if (examRes.code === 200 && examRes.data.length > 0) {
         classExamList.value = examRes.data;
-
         // 默认选择第一个考试
-        if (classExamList.value.length > 0) {
-          selectedExamId.value = classExamList.value[0];
-          await handleExamChange(selectedExamId.value);
-        }
+        selectedExamId.value = classExamList.value[0];
+        await handleExamChange(selectedExamId.value);
       } else {
         message.error(examRes.msg || '获取考试列表失败');
+        loadingPassLine.value = false;
       }
-      
-      // 获取年级考试列表
+
+      // 加载年级考试列表
       await fetchGradeExams(classInfo.value.class_id);
     } else {
       message.error(classRes.msg || '未查询到班级信息');
+      loadingPassLine.value = false;
     }
   } catch (err) {
-    message.error('初始化失败');
+    message.error('初始化失败，请重试');
+    console.error('初始化错误:', err);
+    loadingPassLine.value = false;
   }
+
+  // 加载班级学生列表
   await fetchClassStudents();
 });
-
 </script>
 
 <style scoped lang="less">
@@ -861,7 +809,6 @@ onMounted(async () => {
         color: #333;
       }
     }
-    
     .filter-actions {
       display: flex;
       justify-content: flex-end;
@@ -905,59 +852,32 @@ onMounted(async () => {
     
     .avg-score-card {
       border-top: 4px solid #1890ff;
-      
-      .card-value {
-        color: #1890ff;
-      }
+      .card-value { color: #1890ff; }
     }
     
     .max-score-card {
       border-top: 4px solid #52c41a;
-      
-      .card-value {
-        color: #52c41a;
-      }
+      .card-value { color: #52c41a; }
     }
     
     .min-score-card {
       border-top: 4px solid #fa8c16;
-      
-      .card-value {
-        color: #fa8c16;
-      }
-    }
-    :deep(.filter-container) {
-      margin-bottom: 20px;
+      .card-value { color: #fa8c16; }
     }
     
-    :deep(.filter-section) {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
     .pass-line-card {
       border-top: 4px solid #722ed1;
-      
-      .card-value {
-        color: #722ed1;
-      }
+      .card-value { color: #722ed1; }
     }
     
     .pass-rate-card {
       border-top: 4px solid #eb2f96;
-      
-      .card-value {
-        color: #eb2f96;
-      }
+      .card-value { color: #eb2f96; }
     }
     
     .student-count-card {
       border-top: 4px solid #13c2c2;
-      
-      .card-value {
-        color: #13c2c2;
-      }
+      .card-value { color: #13c2c2; }
     }
   }
   
@@ -980,9 +900,7 @@ onMounted(async () => {
     }
   }
   
-  .table-container {
-    padding: 10px 0;
-  }
+  .table-container { padding: 10px 0; }
   
   .loading-spin {
     display: flex;
@@ -990,77 +908,43 @@ onMounted(async () => {
     margin: 50px 0;
   }
   
-  .excellent-score {
-    color: #52c41a;
+  .normal-score { 
+    color: #333; /* 纯黑色 */
+    font-weight: 500;
+  }
+  .above-pass-line-near { 
+    color: #52c41a; 
     font-weight: bold;
   }
-  
-  .good-score {
-    color: #1890ff;
-    font-weight: 600;
-  }
-  
-  .normal-score {
-    color: #333;
-  }
-  .near-pass-line {
-    background-color: #fffbe6;
+  .below-pass-line-near { 
     color: #fa8c16;
     font-weight: bold;
-    padding: 2px 4px;
-    border-radius: 4px;
   }
-
-  .below-pass-line {
-    color: #f5222d;
-    font-weight: bold;
-  }
-  .top-rank {
+  .below-pass-line-far { 
     color: #f5222d;
     font-weight: bold;
   }
   
-  .good-rank {
-    color: #fa8c16;
-    font-weight: 600;
-  }
+  /* 排名样式 */
+  .top-rank { color: #f5222d; font-weight: bold; }
+  .good-rank { color: #fa8c16; font-weight: 600; }
   
-  .pass {
-    color: #52c41a;
-    font-weight: bold;
-  }
-  
-  .fail {
-    color: #f5222d;
-    font-weight: bold;
-  }
-}
-
-@media (max-width: 768px) {
-  .class-grade-container {
+  /* 响应式调整 */
+  @media (max-width: 768px) {
     padding: 10px;
     
     .filter-section {
       .filter-item {
         margin-bottom: 10px;
-        
-        .filter-label {
-          width: 60px;
-        }
+        .filter-label { width: 60px; }
       }
     }
     
     .stats-section {
       .summary-card {
         padding: 12px;
-        
-        .card-title {
-          font-size: 12px;
-        }
-        
-        .card-value {
-          font-size: 20px;
-        }
+        .card-title { font-size: 12px; }
+        .card-value { font-size: 20px; }
       }
     }
   }
