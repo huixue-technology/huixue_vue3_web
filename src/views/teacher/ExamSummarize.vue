@@ -52,7 +52,7 @@ const loading = ref(false);
 const selectedExamId = ref(props.exam_id);
 const classId = ref(props.class_id);
 
-watch(() => props.exam_id, () => {
+watch([() => props.exam_id, () => props.class_id], () => {
   selectedExamId.value = props.exam_id;
   classId.value = props.class_id;
   fetchClassAnalysis();
@@ -84,7 +84,7 @@ const fetchClassAnalysis = async () => {
   loading.value = true;
   console.log("selectedExamId:", selectedExamId.value, "classId:", classId.value)
   if (!selectedExamId.value || !classId.value) {
-    message.error('班级和所选考试id为空');
+    console.log(1)
     loading.value = false;
     return
   }
@@ -104,10 +104,10 @@ const fetchClassAnalysis = async () => {
         sum_score_section: res.data.sum_score_section || [],
       };
     } else {
-      message.error('获取班级分析数据失败');
+      console.log(1)
     }
   } catch (err) {
-    message.error('请求班级分析接口出错');
+    console.log(1)
     console.error(err);
   } finally {
     loading.value = false;
