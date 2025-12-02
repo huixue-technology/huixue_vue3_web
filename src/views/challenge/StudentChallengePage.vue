@@ -489,12 +489,12 @@ const getScoreValue = (data: any, subject: string) => {
 
 // 获取班级段次值
 const getClassRankValue = (data: any, subject: string) => {
-  return subject === 'sum' ? (data.sumb || 0) : (data[`${subject}B`] || 0);
+  return subject === 'sum' ? (data.sumb || 0) : (data[`${subject}b`] || 0);
 };
 
 // 获取年级段次值
 const getGradeRankValue = (data: any, subject: string) => {
-  return subject === 'sum' ? (data.sumd || 0) : (data[`${subject}D`] || 0);
+  return subject === 'sum' ? (data.sumd || 0) : (data[`${subject}d`] || 0);
 };
 
 // 分数差值样式（正数优于对手，绿色；负数红色）
