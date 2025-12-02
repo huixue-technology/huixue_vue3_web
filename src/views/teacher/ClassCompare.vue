@@ -373,6 +373,7 @@ const subjectAverageData = computed(() => {
 
 // 格式化科目最高分数据
 const subjectTopData = computed(() => {
+	console.log(comparisonData.value)
   if (!comparisonData.value) return [];
   
   return Object.entries(subjectMap).map(([en, cn]) => ({
@@ -380,6 +381,7 @@ const subjectTopData = computed(() => {
     class1Top: comparisonData.value!.subject_top_score.current[en as keyof SubjectScores] || 0,
     class2Top: comparisonData.value!.subject_top_score.compare[en as keyof SubjectScores] || 0
   })).filter(item => item.class1Top > 0 || item.class2Top > 0); // 过滤无效科目
+
 });
 
 // 科目平均分表格列定义
