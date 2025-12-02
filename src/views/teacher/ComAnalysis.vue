@@ -18,38 +18,36 @@
     </div>
     <a-spin :spinning="loading">
       <ImportantStudents 
-        :class-analysis-data="topBottomStudents" 
+        :class-analysis-data="topBottomStudents[0]" 
         :subject-map="subjectMap" 
       />
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <!-- 分数线过线率 -->
-          <PassLineRate 
-            :pass-line-rate-data="passLineRateData" 
-          />
-        </a-col>
         <!-- 考试指标折线图 -->
-        <a-col :span="12">
+        <a-col>
           <ExamMetricsChart 
             :student-grades-data="classAnalysisData" 
             :metric-label-map="metricLabelMap" 
+            :class-info="currentClassInfo"
           />
         </a-col>
-      </a-row>
+          <!-- 分数线过线率 -->
+          <PassLineRate 
+            :pass-line-rate-data="passLineRateData" 
+            :class-info="currentClassInfo"
+          />
       
       
       
       <!-- 优秀与待关注学生 + 学生分类概览 -->
       <StudentCategory 
-        :top-bottom-students="topBottomStudents" 
         :student-grades-data="studentGradesData" 
+        :classInfo="currentClassInfo"
       />
     </a-spin>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch, computed } from 'vue';
 import { 
   postClassAlwaysTopBottomStudents,
   postClassCompute,
@@ -114,6 +112,11 @@ const metricLabelMap: Record<string, string> = {
   classStd: '班级标准差',
   classCV: '班级变异系数'
 };
+
+// 计算当前班级信息
+const currentClassInfo = computed((): ClassInfo | undefined => {
+  return classList.value.find(item => item.id === selectedClass.value);
+});
 
 onMounted(async()=>{
   console.log("初始化加载...")

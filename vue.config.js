@@ -14,11 +14,7 @@ module.exports = defineConfig({
     proxy: {
       '/api': {
         target: 'http://101.200.240.100:5000',
-<<<<<<< HEAD
         //target: 'http://127.0.0.1:5000',
-=======
-        // target: 'http://127.0.0.1:5000',
->>>>>>> 69b738637a4e3e984d6127f34716fb2df27af2dd
         changeOrigin: true,
         pathRewrite: {
           '^': '' // 去掉前缀 `/api`

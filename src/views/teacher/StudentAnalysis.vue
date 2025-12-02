@@ -429,8 +429,8 @@ const scoreData = computed<ScoreDetail[]>(() => {
     if (subject === 'sum_') return; // 总分已处理
     
     const score = scoreDetail[subject] || 0;
-    const classRank = scoreDetail[`${subject}B`] || 0;
-    const gradeRank = scoreDetail[`${subject}D`] || 0;
+    const classRank = scoreDetail[`${subject}b`] || 0;
+    const gradeRank = scoreDetail[`${subject}d`] || 0;
     
     // 只添加有成绩的科目
     if (score > 0 || classRank > 0 || gradeRank > 0) {
@@ -647,6 +647,7 @@ onMounted(async () => {
     classId.value = classRes.data[0].id;
     await fetchExamList()
     await fetchStudentList();
+    await handleExamChange(selectedExamId.value);
   } catch (err) {
     message.error('初始化失败');
     console.error(err);
@@ -694,6 +695,7 @@ const fetchStudentList = async () => {
 const fetchExamList = async () => {
   try {
     loading.value = true;
+    // @ts-ignore
     const res = await getClassExam({ class_id: classId.value });
     if (res.code === 200) {
       // 获取考试ID列表
