@@ -207,14 +207,20 @@
           >
           <template #bodyCell="{ column, record }">
             <template v-if="column.dataIndex === 'totalScore'">
-              <!-- 分数线加载中显示"加载中"，避免初始0的干扰 -->
-              <span :class="loadingPassLine ? 'normal-score' : getScoreClass(record.totalScore, record.classRank)">
+              <!-- 总分颜色逻辑 -->
+              <span :class="loadingPassLine ? 'normal-score' : getTotalScoreClass(record.totalScore)">
                 {{ loadingPassLine ? '加载中' : record.totalScore }}
               </span>
             </template>
             <template v-if="column.dataIndex === 'classRank'">
               <span :class="getRankClass(record.classRank, record.totalScore)">
                 {{ record.classRank }}
+              </span>
+            </template>
+            <!-- 单科成绩颜色逻辑 -->
+            <template v-if="isSubjectScore(column.dataIndex)">
+              <span :class="getSubjectScoreClass(column.dataIndex, record[column.dataIndex])">
+                {{ record[column.dataIndex] }}
               </span>
             </template>
           </template>
@@ -262,6 +268,15 @@ interface PassLineItem {
   school_id: string;
   sum_: number;
   line_name: string;
+  yuwen?: number;
+  shuxue?: number;
+  yingyu?: number;
+  wuli?: number;
+  lishi?: number;
+  huaxue?: number;
+  shengwu?: number;
+  zhengzhi?: number;
+  dili?: number;
   [key: string]: any;
 }
 
@@ -292,7 +307,10 @@ const currentStudentId = ref('');
 const loadingPassLine = ref(true); // 标记分数线是否加载完成
 const classSearchKeyword = ref(''); // 班级搜索关键词
 
-// 筛选状态 - 仅保留排序方向，移除排序字段（由后端固定）
+// 新增：存储各科一本线
+const subjectPassLines = ref<Record<string, number>>({});
+
+// 筛选状态
 const selectedSubject = ref<string>(''); // 科目筛选
 const sortOrder = ref<string>('desc'); // 排序方向（仅需此参数）
 const minScore = ref<number | null>(null); // 最低分数
@@ -357,11 +375,7 @@ const maxClassRank = ref<number | null>(null);
 const minRank = ref<number | null>(null);
 const maxRank = ref<number | null>(null);
 
-/**
- * 按中文科目顺序排序字段
- * @param fields 字段列表
- * @returns 排序后的字段列表
- */
+
 const sortFieldsByChinese = (fields: string[]) => {
   const scoreFields = fields.filter(field => !/[bd]$/.test(field));
   const rankFields = fields.filter(field => /[bd]$/.test(field));
@@ -374,9 +388,6 @@ const sortFieldsByChinese = (fields: string[]) => {
   return sortedFields;
 };
 
-/**
- * 表格列配置（计算属性）- 完全禁用前端排序
- */
 const columns = computed(() => {
   const baseColumns = [
     { title: '学号', dataIndex: 'studentId', key: 'studentId', width: 100 },
@@ -417,30 +428,49 @@ const columns = computed(() => {
   return [...baseColumns, ...sumColumns, ...subjectColumns];
 });
 
-const getScoreClass = (score: number, classRank: number = 999) => {
-  if (classRank <= 10) {
-    return 'normal-score';
-  }
+// 判断是否为单科成绩字段
+const isSubjectScore = (dataIndex: string) => {
+  const subjectFields = ['yuwen', 'shuxue', 'yingyu', 'wuli', 'lishi', 'huaxue', 'shengwu', 'zhengzhi', 'dili'];
+  return subjectFields.includes(dataIndex);
+};
+
+// 总分颜色判断
+const getTotalScoreClass = (score: number) => {
   if (loadingPassLine.value) return 'normal-score';
   if (passLine.value <= 0) return 'normal-score';
+  
   const diff = score - passLine.value;
   if (diff >= 10) return 'normal-score'; // 超线10分以上→黑色
   if (diff >= 0 && diff < 10) return 'above-pass-line-near'; // 超线0-10分→绿色
-  if (diff >= -10 && diff < 0) return 'above-pass-line-near'; // 离线0-10分→橙色
+  if (diff >= -10 && diff < 0) return 'below-pass-line-near'; // 离线0-10分→橙色
   return 'below-pass-line-far'; // 离线10分以上→红色
+};
+
+// 单科成绩颜色判断
+const getSubjectScoreClass = (subject: string, score: number) => {
+  if (loadingPassLine.value) return 'normal-score';
+  
+  const subjectLine = subjectPassLines.value[subject];
+  if (!subjectLine || subjectLine <= 0) return 'normal-score';
+  
+  const diff = score - subjectLine;
+  if (diff >= -10 && diff <= 10) return 'above-pass-line-near'; // 上下10分→绿色
+  if (diff < -5) return 'below-pass-line-far'; // 低于5分以上→红色
+  
+  return 'normal-score'; // 其他情况→黑色
 };
 
 const getRankClass = (rank: number, score: number) => {
   // 加入分数线判断，覆盖原有纯排名规则
   if (loadingPassLine.value || passLine.value <= 0) {
-    // 分数线未加载时，沿用原有排名颜色
-    return rank <= 3 ? 'top-rank' : rank <= 10 ? 'good-rank' : '';
+    // 分数线未加载时，不根据排名设置颜色
+    return '';
   }
   const diff = score - passLine.value;
   // 按分数线规则控制排名列颜色
   if (diff >= 10) return ''; // 超线10分以上 → 无特殊颜色
   if (diff >= 0) return 'above-pass-line-near'; // 超线0-10分 → 绿色
-  if (diff >= -10 && diff < 0) return 'above-pass-line-near';
+  if (diff >= -10 && diff < 0) return 'below-pass-line-near';
   return 'below-pass-line-far'; // 线下 → 橙色
 };
 
@@ -491,7 +521,7 @@ const calculateStats = () => {
   }
 };
 
-// 获取对应考试的一本线
+// 获取对应考试的总分和各科一本线
 const fetchPassLine = async (examId: number) => {
   loadingPassLine.value = true; // 开始加载，标记为true
   try {
@@ -502,13 +532,28 @@ const fetchPassLine = async (examId: number) => {
       const targetLine = res.data.find((line: any) => 
         isScience ? line.line_name.includes('物') : line.line_name.includes('史')
       );
-      passLine.value = targetLine ? targetLine.sum_ : 0;
+      
+      if (targetLine) {
+        // 设置总分一本线
+        passLine.value = targetLine.sum_ || 0;
+        
+        // 设置各科一本线
+        const subjectKeys = ['yuwen', 'shuxue', 'yingyu', 'wuli', 'lishi', 'huaxue', 'shengwu', 'zhengzhi', 'dili'];
+        subjectKeys.forEach(key => {
+          subjectPassLines.value[key] = targetLine[key] || 0;
+        });
+      } else {
+        passLine.value = 0;
+        subjectPassLines.value = {};
+      }
     } else {
       passLine.value = 0;
+      subjectPassLines.value = {};
     }
   } catch (err) {
-    console.error('获取一本线失败:', err);
+    console.error('获取分数线失败:', err);
     passLine.value = 0;
+    subjectPassLines.value = {};
   } finally {
     loadingPassLine.value = false; // 加载完成，标记为false
     calculateStats(); // 重新计算一本率
@@ -518,25 +563,34 @@ const fetchPassLine = async (examId: number) => {
 const extractAllFields = (rawItem: any) => {
   const excludeFields = ['student_id', 'student_name','name', 'sum_', 'sumb', 'sumd', 'class_id', 'exam_id', 'id', 'school_id', 'show'];
   const allFields = Object.keys(rawItem);
+  const subjectSelection = classInfo.value?.subject_selection || '';
   
-  // 根据班级选科排除未选科目
-  if (!classInfo.value?.subject_selection.includes('物') && !classInfo.value?.subject_selection.includes('理')) {
-    excludeFields.push('wuli');
-  }
-  if (!classInfo.value?.subject_selection.includes('史')) {
-    excludeFields.push('lishi');
-  }
-  if (!classInfo.value?.subject_selection.includes('地')) {
-    excludeFields.push('dili');
-  }
-  if (!classInfo.value?.subject_selection.includes('政')) {
-    excludeFields.push('zhengzhi');
-  }
-  if (!classInfo.value?.subject_selection.includes('化')) {
-    excludeFields.push('huaxue');
-  }
-  if (!classInfo.value?.subject_selection.includes('生')) {
-    excludeFields.push('shengwu');
+  // 判断是否存在文理科区分（包含物理/理或历史视为有区分）
+  const hasScienceOrArts = 
+    subjectSelection.includes('物') || 
+    subjectSelection.includes('理') || 
+    subjectSelection.includes('史');
+  
+  // 只有存在文理科区分时才过滤未选科目
+  if (hasScienceOrArts) {
+    if (!subjectSelection.includes('物') && !subjectSelection.includes('理')) {
+      excludeFields.push('wuli');
+    }
+    if (!subjectSelection.includes('史')) {
+      excludeFields.push('lishi');
+    }
+    if (!subjectSelection.includes('地')) {
+      excludeFields.push('dili');
+    }
+    if (!subjectSelection.includes('政')) {
+      excludeFields.push('zhengzhi');
+    }
+    if (!subjectSelection.includes('化')) {
+      excludeFields.push('huaxue');
+    }
+    if (!subjectSelection.includes('生')) {
+      excludeFields.push('shengwu');
+    }
   }
   
   return allFields.filter(field => !excludeFields.includes(field));
@@ -637,6 +691,7 @@ const resetAllFiltersExceptClass = () => {
   passLineOffset.value = null;
   selectedPassLineId.value = null;
   passLineList.value = [];
+  subjectPassLines.value = {}; // 重置各科分数线
   
   // 学生筛选
   selectedStudentId.value = '';
@@ -712,9 +767,7 @@ const handleStudentSearch = (value: string) => {
   );
 };
 
-/**
- * 筛选参数处理 - 确保正确传递排序方向参数
- */
+
 const add_filter = (params: any) => {
   if (selectedSubject.value) params.subject = selectedSubject.value;
   // 严格按照接口要求传递排序方向参数
@@ -751,9 +804,7 @@ const applyFilters = async () => {
     isFiltering.value = false;
   }
 };
-/**
- * 处理考试变更 - 确保排序参数正确传递
- */
+
 const handleExamChange = async (examId: number) => {
   if (!examId || !selectedClassId.value) return;
   
@@ -833,9 +884,7 @@ const handleExamChange = async (examId: number) => {
   }
 };
 
-/**
- * 重置筛选 - 确保排序方向正确重置
- */
+
 const resetFilters = () => {
   console.log('重置筛选条件');
   selectedExamId.value = classExamList.value.length > 0 ? classExamList.value[0] : 0;
@@ -851,6 +900,7 @@ const resetFilters = () => {
   passLineOffset.value = null;
   selectedPassLineId.value = null;
   passLineList.value = [];
+  subjectPassLines.value = {}; // 重置各科分数线
   // 学生筛选
   selectedStudentId.value = '';
   searchKeyword.value = '';
@@ -1143,21 +1193,17 @@ onMounted(async () => {
     font-weight: 500;
   }
   .above-pass-line-near { 
-    color: #52c41a; 
+    color: #52c41a; /* 绿色 */
     font-weight: bold;
   }
   .below-pass-line-near { 
-    color: #fa8c16;
+    color: #fa8c16; /* 橙色 */
     font-weight: bold;
   }
   .below-pass-line-far { 
-    color: #f5222d;
+    color: #f5222d; /* 红色 */
     font-weight: bold;
   }
-  
-  /* 排名样式 */
-  .top-rank { color: #f5222d; font-weight: bold; }
-  .good-rank { color: #fa8c16; font-weight: 600; }
   
   /* 响应式调整 */
   @media (max-width: 768px) {
