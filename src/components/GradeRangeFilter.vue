@@ -77,7 +77,6 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import { Button, Dropdown, Menu, InputNumber, Icon } from 'ant-design-vue';
 
 // 定义组件props
 const props = defineProps<{
@@ -150,7 +149,7 @@ const currentTypeText = computed(() => {
 // 动态计算当前选中的区间文本
 const currentRangeText = computed(() => {
   if (!rangeStart.value || !rangeEnd.value) {
-    return '选择区间';
+    return '填写区间';
   }
   
   return `${rangeStart.value}-${rangeEnd.value}`;

@@ -30,10 +30,15 @@
       :visible="offsetVisible" 
       @visibleChange="handleOffsetVisibleChange"
       placement="bottomLeft"
+      :disabled="!props.selectedPassLineId"  
     >
       <a-button 
         class="filter-btn" 
-        :class="{ 'active': offsetVisible }"
+        :class="{ 
+          'active': offsetVisible, 
+          'disabled': !props.selectedPassLineId  
+        }"
+        :disabled="!props.selectedPassLineId"  
       >
         {{ currentOffsetText }}
         <a-icon type="caret-down" :rotate="offsetVisible ? 180 : 0" />
@@ -234,7 +239,18 @@ const handleNumberSelect = (num: number) => {
 .input-row {
   margin-bottom: 12px;
 }
+.filter-btn.disabled {
+  background: #f5f5f5; 
+  color: #ccc; 
+  cursor: not-allowed; 
+  border-color: #e5e6eb; 
+}
 
+.filter-btn.disabled:hover {
+  background: #f5f5f5;
+  color: #ccc;
+  border-color: #e5e6eb;
+}
 .custom-input {
   width: 100%;
 }

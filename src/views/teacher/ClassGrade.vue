@@ -51,6 +51,27 @@
             </a-select>
           </div>
         </a-col>
+		<a-col :span="24" :md="6">
+          <div class="filter-item">
+            <span class="filter-label">科目筛选：</span>
+            <a-select 
+              v-model:value="selectedSubject" 
+              placeholder="选择科目" 
+              style="width: 100%"
+              allow-clear
+              :disabled="!classInfo?.subject_selection"
+            >
+              <a-select-option value="">全部科目</a-select-option>
+              <a-select-option 
+                v-for="(subjectName, subjectKey) in filteredSubjectList" 
+                :key="subjectKey" 
+                :value="subjectKey"
+              >
+                {{ subjectName }}
+              </a-select-option>
+            </a-select>
+          </div>
+        </a-col>
         <a-col :span="24" :md="6">
               <div class="filter-item">
                 <span class="filter-label">学生查询：</span>
@@ -64,7 +85,6 @@
 				  @change="handleStudentChange"
                   :disabled="isFiltering"
                 >
-                  <!-- 全部学生选项 -->
                   <a-select-option key="all" value="">
                     全部学生
                   </a-select-option>
@@ -78,6 +98,7 @@
                 </a-select>
               </div>
             </a-col>
+			
         
       </a-row>
       
@@ -87,20 +108,19 @@
 		        :passLineOffset="passLineOffset || 0"
 		        :selectedPassLineId="selectedPassLineId"
 		        :passLineList="passLineList"
-		        @update:passLineOffset="val => passLineOffset = val"
-		        @update:selectedPassLineId="val => selectedPassLineId = val"
+		        @update:passLineOffset="val => handlePassLineOffsetChange(val)"
+		        @update:selectedPassLineId="val => handlePassLineIdChange(val)"
 		        :disabled="isFiltering"
 		      />
 		  </a-col>
         <a-col :span="24" :md="6">
-          <!-- 成绩区间筛选组件 -->
           <GradeRangeFilter 
             :selectedType="selectedRangeType"
             :selectedRange="selectedRange"
             :maxValue="{
               score: 100,
               gradeRank: gradeTotalCount || 500,
-              classRank: rawScoreList.length  // 使用原始数据长度作为班级总人数
+              classRank: rawScoreList.length  
             }"
             :classId="selectedClassId"
             :selectedExamId="selectedExamId"
@@ -306,6 +326,57 @@ const subjects = ref<string[]>([]);
 const currentStudentId = ref('');
 const loadingPassLine = ref(true); // 标记分数线是否加载完成
 const classSearchKeyword = ref(''); // 班级搜索关键词
+// 科目映射配置
+const subject_list = {
+  yuwen: '语文',
+  shuxue: '数学',
+  yingyu: '英语',
+  wuli: '物理',
+  lishi: '历史',
+  huaxue: '化学',
+  shengwu: '生物',
+  zhengzhi: '政治',
+  dili: '地理',
+};
+const filteredSubjectList = computed(() => {
+  // 定义所有可能的科目
+  const allSubjects = { ...subject_list };
+  console.log(classInfo.value)
+  // 没有分科信息时，返回所有科目
+  if (!classInfo.value?.subject_selection || classInfo.value.subject_selection.trim() === '未选科') {
+    return allSubjects;
+  }
+  
+  const subjectSelection = classInfo.value.subject_selection;
+  const filtered: Record<string, string> = {};
+  
+  // 语文、数学、英语为必选科目
+  filtered.yuwen = subject_list.yuwen;
+  filtered.shuxue = subject_list.shuxue;
+  filtered.yingyu = subject_list.yingyu;
+  
+  // 根据班级科目选择添加其他科目
+  if (subjectSelection.includes('物')) {
+    filtered.wuli = subject_list.wuli;
+  }
+  if (subjectSelection.includes('史')) {
+    filtered.lishi = subject_list.lishi;
+  }
+  if (subjectSelection.includes('化')) {
+    filtered.huaxue = subject_list.huaxue;
+  }
+  if (subjectSelection.includes('生')) {
+    filtered.shengwu = subject_list.shengwu;
+  }
+  if (subjectSelection.includes('政')) {
+    filtered.zhengzhi = subject_list.zhengzhi;
+  }
+  if (subjectSelection.includes('地')) {
+    filtered.dili = subject_list.dili;
+  }
+  
+  return filtered;
+});
 
 // 新增：存储各科一本线
 const subjectPassLines = ref<Record<string, number>>({});
@@ -430,7 +501,7 @@ const columns = computed(() => {
 
 // 判断是否为单科成绩字段
 const isSubjectScore = (dataIndex: string) => {
-  const subjectFields = ['yuwen', 'shuxue', 'yingyu', 'wuli', 'lishi', 'huaxue', 'shengwu', 'zhengzhi', 'dili'];
+  const subjectFields = Object.keys(filteredSubjectList.value);
   return subjectFields.includes(dataIndex);
 };
 
@@ -538,7 +609,7 @@ const fetchPassLine = async (examId: number) => {
         passLine.value = targetLine.sum_ || 0;
         
         // 设置各科一本线
-        const subjectKeys = ['yuwen', 'shuxue', 'yingyu', 'wuli', 'lishi', 'huaxue', 'shengwu', 'zhengzhi', 'dili'];
+        const subjectKeys = Object.keys(filteredSubjectList.value);
         subjectKeys.forEach(key => {
           subjectPassLines.value[key] = targetLine[key] || 0;
         });
@@ -721,7 +792,9 @@ const handleClassChange = async (classId: number) => {
   
   // 重置所有筛选条件（除班级外）
   resetAllFiltersExceptClass();
-  
+    // 清空班级搜索关键词并重置筛选列表
+    classSearchKeyword.value = '';
+    filteredClassList.value = [...allClassList.value];
   // 更新班级信息
   const selectedClass = allClassList.value.find(cls => cls.id === classId);
   if (selectedClass) {
@@ -767,6 +840,23 @@ const handleStudentSearch = (value: string) => {
   );
 };
 
+// 当分数线偏移变化时，重置学生筛选
+const handlePassLineOffsetChange = (value: number | null) => {
+  passLineOffset.value = value;
+  // 重置学生筛选为全体学生
+  selectedStudentId.value = '';
+  searchKeyword.value = '';
+  filteredStudents.value = [...studentList.value];
+};
+
+// 当分数线ID变化时，重置学生筛选
+const handlePassLineIdChange = (value: number | null) => {
+  selectedPassLineId.value = value;
+  // 重置学生筛选为全体学生
+  selectedStudentId.value = '';
+  searchKeyword.value = '';
+  filteredStudents.value = [...studentList.value];
+};
 
 const add_filter = (params: any) => {
   if (selectedSubject.value) params.subject = selectedSubject.value;
@@ -842,7 +932,6 @@ const handleExamChange = async (examId: number) => {
       }
     }
     
-    // 应用筛选条件获取展示数据（包含排序方向）
     add_filter(params);
     const res = await getClassGrade(params);
     console.log('成绩数据响应:', res, '使用的排序参数:', { direction: sortOrder.value });
@@ -853,8 +942,6 @@ const handleExamChange = async (examId: number) => {
         const allFields = extractAllFields(filteredData[0]);
         const validFields = filterInvalidSubjects(allFields, filteredData);
         subjects.value = validFields;
-        
-        // 直接使用后端返回的顺序，不做任何前端排序处理
         scoreList.value = filteredData.map((item: any) => {
           const scoreItem: ScoreItem = {
             studentId: "*" + String(item.student_id || item.studentId || '').slice(-5, -1),
@@ -871,7 +958,7 @@ const handleExamChange = async (examId: number) => {
         
         await fetchPassLine(examId);
         await fetchPassLineList(examId);
-        calculateStats(); // 基于原始数据计算统计值
+        calculateStats(); 
         return;
       }
     }
@@ -880,7 +967,7 @@ const handleExamChange = async (examId: number) => {
     scoreList.value = [];
   } catch (err) {
     console.error('获取成绩失败:', err);
-    throw err; // 抛出错误让调用者处理
+    throw err; 
   }
 };
 
@@ -889,7 +976,7 @@ const resetFilters = () => {
   console.log('重置筛选条件');
   selectedExamId.value = classExamList.value.length > 0 ? classExamList.value[0] : 0;
   selectedSubject.value = '';
-  sortOrder.value = 'desc'; // 重置为默认降序
+  sortOrder.value = 'desc'; 
   minScore.value = null;
   maxScore.value = null;
   minRank.value = null;
@@ -930,15 +1017,40 @@ const handleRangeFilterChange = (data: any) => {
     minClassRank.value = data.min_class_rank;
     maxClassRank.value = data.max_class_rank;
   }
+  
+  // 重置学生筛选为全体学生
+  selectedStudentId.value = '';
+  searchKeyword.value = '';
+  filteredStudents.value = [...studentList.value];
 };
+
 // 添加学生选择变更处理函数
 const handleStudentChange = (studentId: string) => {
   selectedStudentId.value = studentId;
+  
+  // 如果选择了单个学生，清空分数线筛选和成绩区间筛选
+  if (studentId) {
+    // 清空分数线筛选
+    passLineOffset.value = null;
+    selectedPassLineId.value = null;
+    
+    // 清空成绩区间筛选
+    selectedRangeType.value = null;
+    selectedRange.value = null;
+    minScore.value = null;
+    maxScore.value = null;
+    minRank.value = null;
+    maxRank.value = null;
+    minClassRank.value = null;
+    maxClassRank.value = null;
+  }
+  
   // 清空搜索关键词
   searchKeyword.value = '';
   // 重置筛选后的学生列表为所有学生
   filteredStudents.value = [...studentList.value];
 };
+
 // 获取所有班级列表（不传入header参数）
 const fetchAllClasses = async () => {
   try {
