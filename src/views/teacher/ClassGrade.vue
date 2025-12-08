@@ -212,10 +212,13 @@
         </a-col>
       </a-row>
     </div>
-
+<div class="table-notes" style="margin-bottom: 10px; color: #666; font-size: 12px; text-align: right;">
+		    注：一本线上下5分区间成绩标为橙色,低于一本线五分的成绩标为红色，超出一本线5分及以上成绩标为黑色
+		  </div>
     <!-- 成绩表格区域 -->
     <div class="table-section">
       <a-card title="班级成绩详情" class="score-card">
+		  
         <div class="table-container">
           <a-table
             :columns="columns"
@@ -511,9 +514,9 @@ const getTotalScoreClass = (score: number) => {
   if (passLine.value <= 0) return 'normal-score';
   
   const diff = score - passLine.value;
-  if (diff >= 10) return 'normal-score'; // 超线10分以上→黑色
-  if (diff >= 0 && diff < 10) return 'above-pass-line-near'; // 超线0-10分→绿色
-  if (diff >= -10 && diff < 0) return 'below-pass-line-near'; // 离线0-10分→橙色
+  if (diff >= 5) return 'normal-score'; // 超线10分以上→黑色
+  if (diff >= 0 && diff < 5) return 'below-pass-line-near'; // 超线0-10分→绿色
+  if (diff >= -5 && diff < 0) return 'below-pass-line-near'; // 离线0-10分→橙色
   return 'below-pass-line-far'; // 离线10分以上→红色
 };
 
@@ -525,7 +528,7 @@ const getSubjectScoreClass = (subject: string, score: number) => {
   if (!subjectLine || subjectLine <= 0) return 'normal-score';
   
   const diff = score - subjectLine;
-  if (diff >= -10 && diff <= 10) return 'above-pass-line-near'; // 上下10分→绿色
+  if (diff >= -5 && diff <= 5) return 'below-pass-line-near'; // 上下5分→绿色
   if (diff < -5) return 'below-pass-line-far'; // 低于5分以上→红色
   
   return 'normal-score'; // 其他情况→黑色
@@ -539,9 +542,9 @@ const getRankClass = (rank: number, score: number) => {
   }
   const diff = score - passLine.value;
   // 按分数线规则控制排名列颜色
-  if (diff >= 10) return ''; // 超线10分以上 → 无特殊颜色
-  if (diff >= 0) return 'above-pass-line-near'; // 超线0-10分 → 绿色
-  if (diff >= -10 && diff < 0) return 'below-pass-line-near';
+  if (diff >= 5) return ''; // 超线10分以上 → 无特殊颜色
+  if (diff >= 0) return 'below-pass-line-near'; // 超线0-10分 → 绿色
+  if (diff >= -5 && diff < 0) return 'below-pass-line-near';
   return 'below-pass-line-far'; // 线下 → 橙色
 };
 
