@@ -514,10 +514,10 @@ const getTotalScoreClass = (score: number) => {
   if (passLine.value <= 0) return 'normal-score';
   
   const diff = score - passLine.value;
-  if (diff >= 5) return 'normal-score'; // 超线10分以上→黑色
-  if (diff >= 0 && diff < 5) return 'below-pass-line-near'; // 超线0-10分→绿色
-  if (diff >= -5 && diff < 0) return 'below-pass-line-near'; // 离线0-10分→橙色
-  return 'below-pass-line-far'; // 离线10分以上→红色
+  if (diff >= 5) return 'normal-score'; // 超线5分以上→黑色
+  if (diff >= 0 && diff < 5) return 'below-pass-line-near'; // 超线0-5分→橙色
+  if (diff >= -5 && diff < 0) return 'below-pass-line-near'; // 离线0-5分→橙色
+  return 'below-pass-line-far'; // 离线5分以上→红色
 };
 
 // 单科成绩颜色判断
@@ -528,7 +528,7 @@ const getSubjectScoreClass = (subject: string, score: number) => {
   if (!subjectLine || subjectLine <= 0) return 'normal-score';
   
   const diff = score - subjectLine;
-  if (diff >= -5 && diff <= 5) return 'below-pass-line-near'; // 上下5分→绿色
+  if (diff >= -5 && diff <= 5) return 'below-pass-line-near'; // 上下5分→橙色
   if (diff < -5) return 'below-pass-line-far'; // 低于5分以上→红色
   
   return 'normal-score'; // 其他情况→黑色
@@ -542,10 +542,10 @@ const getRankClass = (rank: number, score: number) => {
   }
   const diff = score - passLine.value;
   // 按分数线规则控制排名列颜色
-  if (diff >= 5) return ''; // 超线10分以上 → 无特殊颜色
-  if (diff >= 0) return 'below-pass-line-near'; // 超线0-10分 → 绿色
+  if (diff >= 5) return ''; // 超线5分以上 → 无特殊颜色
+  if (diff >= 0) return 'below-pass-line-near'; // 超线0-5分 → 橙色
   if (diff >= -5 && diff < 0) return 'below-pass-line-near';
-  return 'below-pass-line-far'; // 线下 → 橙色
+  return 'below-pass-line-far'; // 线下 → 红色
 };
 
 const calculateStats = () => {
@@ -601,11 +601,29 @@ const fetchPassLine = async (examId: number) => {
   try {
     const res = await getPassLine({ exam_id: examId });
     if (res.data && res.data.length > 0) {
-      // 根据科目判断文理科（含物理=理科，含历史=文科）
-      const isScience = subjects.value.includes('wuli');
-      const targetLine = res.data.find((line: any) => 
-        isScience ? line.line_name.includes('物') : line.line_name.includes('史')
-      );
+      let targetLine = null;
+      const subjectSel = classInfo.value?.subject_selection || '';
+      const trimmedSel = subjectSel.trim(); // 去除首尾空格，兼容空字符串场景
+      
+      // 精准匹配选科对应的分数线
+      if (trimmedSel === '' || trimmedSel === '未选科') {
+        // 空选科/未选科 → 匹配含"未选科"的分数线
+        targetLine = res.data.find((line: any) => 
+          line.line_name && line.line_name.includes('未选科')
+        );
+      } else if (subjectSel.includes('物')) {
+        // 物理类 → 匹配含"物/理"的分数线
+        targetLine = res.data.find((line: any) => 
+          line.line_name && (line.line_name.includes('物') || line.line_name.includes('理'))
+        );
+      } else if (subjectSel.includes('史')) {
+        targetLine = res.data.find((line: any) => 
+          line.line_name && line.line_name.includes('史')
+        );
+      } else {
+        // 无明确选科时取第一条
+        targetLine = res.data[0];
+      }
       
       if (targetLine) {
         // 设置总分一本线
@@ -709,7 +727,32 @@ const fetchGradeExams = async (classId: number) => {
 const fetchPassLineList = async (examId: number) => {
   try {
     const res = await getPassLine({ exam_id: examId });
-    passLineList.value = res.data || [];
+    let passLines = res.data || [];
+    
+    // 根据班级选科筛选分数线
+    if (classInfo.value?.subject_selection) {
+      const subjectSel = classInfo.value.subject_selection;
+      const trimmedSel = subjectSel.trim(); 
+	  console.log('班级选科:', trimmedSel);
+
+      if (trimmedSel === '' || trimmedSel === '未选科') {
+        passLines = passLines.filter((line: any) => 
+          line.line_name && line.line_name.includes('未选科')
+        );
+      } else if (subjectSel.includes('物')) {
+        // 筛选物理类分数线（line_name包含"物"）
+        passLines = passLines.filter((line: any) => 
+          line.line_name && line.line_name.includes('物')
+        );
+      } else if (subjectSel.includes('史')) {
+        // 筛选历史类分数线（line_name包含"史"）
+        passLines = passLines.filter((line: any) => 
+          line.line_name && line.line_name.includes('史')
+        );
+      }
+    }
+    
+    passLineList.value = passLines;
   } catch (err) {
     console.error('获取分数线列表失败:', err);
     passLineList.value = [];
@@ -795,9 +838,14 @@ const handleClassChange = async (classId: number) => {
   
   // 重置所有筛选条件（除班级外）
   resetAllFiltersExceptClass();
-    // 清空班级搜索关键词并重置筛选列表
-    classSearchKeyword.value = '';
-    filteredClassList.value = [...allClassList.value];
+  // 清空班级搜索关键词并重置筛选列表
+  classSearchKeyword.value = '';
+  filteredClassList.value = [...allClassList.value];
+  
+  // 新增：清空旧的分数线列表
+  passLineList.value = [];
+  subjectPassLines.value = {};
+  
   // 更新班级信息
   const selectedClass = allClassList.value.find(cls => cls.id === classId);
   if (selectedClass) {
