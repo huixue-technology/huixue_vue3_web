@@ -35,11 +35,11 @@
       
       
       
-      <!-- 优秀与待关注学生 + 学生分类概览 -->
+      <!-- 优秀与待关注学生 + 学生分类概览
       <StudentCategory 
         :student-grades-data="studentGradesData" 
         :classInfo="currentClassInfo"
-      />
+      /> -->
     </a-spin>
   </div>
 </template>

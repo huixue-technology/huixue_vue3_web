@@ -6,8 +6,28 @@
         <div class="section-title">学生各科目过线率统计</div>
       </a-row>
       <a-card class="rate-card">
+        <!-- 搜索框 -->
+        <div class="search-container">
+          <a-space>
+            <a-auto-complete
+              v-model:value="searchName"
+              :options="studentNameOptions"
+              placeholder="请输入或选择学生姓名"
+              style="width: 250px"
+              @search="handleSearch"
+              @select="handleSelect"
+              allowClear
+            >
+              <template #option="{ value, label }">
+                <div>{{ label }} ({{ value }})</div>
+              </template>
+            </a-auto-complete>
+            <a-button @click="clearSearch">清除筛选</a-button>
+          </a-space>
+        </div>
+        
         <a-table
-          :data-source="studentRateList"
+          :data-source="filteredStudentRateList"
           bordered
           :columns="studentRateColumns"
           :pagination="{ pageSize: 10, showTotal: (total) => `共 ${total} 名学生` }"
@@ -20,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { postClassAlwaysTopBottomStudents } from '@/servers/api/average';
 import { message } from 'ant-design-vue';
 
@@ -51,6 +71,50 @@ const studentRateColumns = ref<any[]>([
   { title: '学生姓名', dataIndex: 'name', width: 120, fixed: 'left' },
   { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left' },
 ]);
+
+// 搜索相关
+const searchName = ref<string>('');
+
+// 学生姓名选项（用于自动完成）
+const studentNameOptions = computed(() => {
+  return studentRateList.value.map(student => ({
+    value: student.uid,
+    label: student.name
+  }));
+});
+
+// 过滤后的学生列表
+const filteredStudentRateList = computed(() => {
+  if (!searchName.value) {
+    return studentRateList.value;
+  }
+  
+  return studentRateList.value.filter(student => {
+    // 支持按姓名或学号搜索
+    const nameMatch = student.name.toLowerCase().includes(searchName.value.toLowerCase());
+    const uidMatch = String(student.uid).includes(searchName.value);
+    return nameMatch || uidMatch;
+  });
+});
+
+// 处理搜索
+const handleSearch = (value: string) => {
+  searchName.value = value;
+};
+
+// 处理选择
+const handleSelect = (value: string) => {
+  // 当选择时，使用学号查找对应的学生姓名
+  const student = studentRateList.value.find(s => s.uid === value);
+  if (student) {
+    searchName.value = student.name;
+  }
+};
+
+// 清除搜索
+const clearSearch = () => {
+  searchName.value = '';
+};
 
 
 
@@ -169,6 +233,22 @@ const fetchSubjectRateData = async () => {
 
   :deep(.ant-card-body) {
     padding: 16px;
+  }
+}
+
+.search-container {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  
+  :deep(.ant-select-selector),
+  :deep(.ant-input) {
+    border-radius: 4px;
+  }
+  
+  :deep(.ant-btn) {
+    border-radius: 4px;
   }
 }
 
