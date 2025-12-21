@@ -8,7 +8,7 @@
     <!-- 筛选区域 -->
     <div class="filter-section">
       <a-row :gutter="16">
-        <a-col :span="8">
+        <a-col :xs="24" :sm="12" :md="8">
           <div class="filter-item">
             <span class="filter-label">选择学生：</span>
             <a-select
@@ -27,7 +27,7 @@
             </a-select>
           </div>
         </a-col>
-        <a-col :span="8">
+        <a-col :xs="24" :sm="12" :md="6">
           <div class="filter-item">
             <span class="filter-label">选择考试：</span>
             <a-select
@@ -40,9 +40,31 @@
             />
           </div>
         </a-col>
-        <a-col :span="8">
+        <a-col :xs="24" :sm="12" :md="6">
+          <div class="filter-item">
+            <span class="filter-label">对比考试：</span>
+            <a-select
+              v-model:value="selectedComparedExamId"
+              placeholder="请选择对比考试"
+              style="width: 100%"
+              @change="handleComparedExamChange"
+              :options="comparedExamOptions"
+              :disabled="!selectedStudentId || !selectedExamId"
+              allowClear
+            />
+          </div>
+        </a-col>
+        <a-col :xs="24" :sm="12" :md="4">
           <div class="filter-actions">
-            <a-button type="primary" @click="resetFilters">重置筛选</a-button>
+            <a-space>
+              <a-button 
+                v-if="selectedComparedExamId" 
+                @click="clearCompare"
+              >
+                取消对比
+              </a-button>
+              <a-button type="primary" @click="resetFilters">重置筛选</a-button>
+            </a-space>
           </div>
         </a-col>
       </a-row>
@@ -173,6 +195,80 @@
         </a-col>
       </a-row>
 
+      <!-- 考试对比结果 -->
+      <a-row :gutter="16" style="margin-top: 20px;" v-if="compareData && selectedComparedExamId">
+        <a-col :span="24">
+          <a-card title="考试对比分析" class="compare-card">
+            <div class="compare-header">
+              <div class="compare-exam-info">
+                <span class="exam-label">当前考试：</span>
+                <span class="exam-name">{{ compareData.exam_name?.current || examMap[selectedExamId] }}</span>
+              </div>
+              <div class="compare-exam-info">
+                <span class="exam-label">对比考试：</span>
+                <span class="exam-name">{{ compareData.exam_name?.compare || examMap[selectedComparedExamId] }}</span>
+              </div>
+            </div>
+            <a-table
+              :columns="compareColumns"
+              :data-source="compareTableData"
+              :pagination="false"
+              bordered
+              size="middle"
+              :scroll="{ y: 300 }"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.dataIndex === 'currentScore'">
+                  <span :class="getScoreClass(record.currentScore, record.subject)">
+                    {{ record.currentScore }}
+                  </span>
+                </template>
+                <template v-if="column.dataIndex === 'compareScore'">
+                  <span :class="getScoreClass(record.compareScore, record.subject)">
+                    {{ record.compareScore }}
+                  </span>
+                </template>
+                <template v-if="column.dataIndex === 'scoreDiff'">
+                  <span :class="getDifferenceClass(record.scoreDiff)">
+                    {{ record.scoreDiff > 0 ? '+' : '' }}{{ formatScore(record.scoreDiff) }}
+                  </span>
+                </template>
+                <template v-if="column.dataIndex === 'currentClassRank'">
+                  <span :class="getRankClass(record.currentClassRank)">
+                    {{ record.currentClassRank }}
+                  </span>
+                </template>
+                <template v-if="column.dataIndex === 'compareClassRank'">
+                  <span :class="getRankClass(record.compareClassRank)">
+                    {{ record.compareClassRank }}
+                  </span>
+                </template>
+                <template v-if="column.dataIndex === 'classRankDiff'">
+                  <span :class="getRankDifferenceClass(record.classRankDiff)">
+                    {{ record.classRankDiff > 0 ? '+' : '' }}{{ record.classRankDiff }}
+                  </span>
+                </template>
+                <template v-if="column.dataIndex === 'currentGradeRank'">
+                  <span :class="getRankClass(record.currentGradeRank)">
+                    {{ record.currentGradeRank }}
+                  </span>
+                </template>
+                <template v-if="column.dataIndex === 'compareGradeRank'">
+                  <span :class="getRankClass(record.compareGradeRank)">
+                    {{ record.compareGradeRank }}
+                  </span>
+                </template>
+                <template v-if="column.dataIndex === 'gradeRankDiff'">
+                  <span :class="getRankDifferenceClass(record.gradeRankDiff)">
+                    {{ record.gradeRankDiff > 0 ? '+' : '' }}{{ record.gradeRankDiff }}
+                  </span>
+                </template>
+              </template>
+            </a-table>
+          </a-card>
+        </a-col>
+      </a-row>
+
       <!-- 图表展示 -->
       <div class="charts-section">
         <a-row :gutter="16" style="margin-top: 20px;">
@@ -201,6 +297,7 @@
 
     <!-- 加载状态 -->
     <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
+
   </div>
 </template>
 
@@ -213,10 +310,11 @@ import { getClassesApi } from '@/servers/api/classes';
 import { getStudentApi } from '@/servers/api/student';
 import { getClassExam } from '@/servers/api/grade';
 import { getGradeApi } from '@/servers/api/grade';
-import { getPassLine } from '@/servers/api/analysis';
+import { getPassLine, getStudentSelfCompareApi } from '@/servers/api/analysis';
 import { getExamDetailApi } from '@/servers/api/exam';
 import type { ColumnType } from 'ant-design-vue/es/table';
 import * as echarts from 'echarts';
+import StudentAnalysisPage from '../student/StudentAnalysisPage.vue';
 
 // 类型定义
 interface Student {
@@ -259,10 +357,12 @@ const examList = ref<Exam[]>([]);
 const examMap = ref<Record<number, string>>({}); // 用于存储考试ID到考试名称的映射
 const scoreDetails = ref<any>({});
 const passLineDetails = ref<any>({});
+const compareData = ref<any>(null); // 存储对比数据
 
 // 选择状态
 const selectedStudentId = ref<string>('');
 const selectedExamId = ref<number>(0);
+const selectedComparedExamId = ref<number | undefined>(undefined);
 
 // 科目映射
 const subjectMap: Record<string, string> = {
@@ -292,6 +392,16 @@ const examOptions = computed(() => {
     label: examMap.value[exam.id] || exam.name,
     value: exam.id
   }));
+});
+
+// 对比考试选项（排除当前选中的考试）
+const comparedExamOptions = computed(() => {
+  return examList.value
+    .filter(exam => exam.id !== selectedExamId.value)
+    .map(exam => ({
+      label: examMap.value[exam.id] || exam.name,
+      value: exam.id
+    }));
 });
 
 // 当前学生信息
@@ -406,6 +516,81 @@ const passLineColumns: ColumnType[] = [
   }
 ];
 
+// 考试对比表格列
+const compareColumns: ColumnType[] = [
+  {
+    title: '科目',
+    dataIndex: 'subjectName',
+    key: 'subjectName',
+    align: 'center',
+    width: 100,
+    fixed: 'left'
+  },
+  {
+    title: '当前成绩',
+    dataIndex: 'currentScore',
+    key: 'currentScore',
+    align: 'center',
+    width: 90
+  },
+  {
+    title: '对比成绩',
+    dataIndex: 'compareScore',
+    key: 'compareScore',
+    align: 'center',
+    width: 90
+  },
+  {
+    title: '成绩差',
+    dataIndex: 'scoreDiff',
+    key: 'scoreDiff',
+    align: 'center',
+    width: 90
+  },
+  {
+    title: '当前班排',
+    dataIndex: 'currentClassRank',
+    key: 'currentClassRank',
+    align: 'center',
+    width: 90
+  },
+  {
+    title: '对比班排',
+    dataIndex: 'compareClassRank',
+    key: 'compareClassRank',
+    align: 'center',
+    width: 90
+  },
+  {
+    title: '班排差',
+    dataIndex: 'classRankDiff',
+    key: 'classRankDiff',
+    align: 'center',
+    width: 80
+  },
+  {
+    title: '当前年排',
+    dataIndex: 'currentGradeRank',
+    key: 'currentGradeRank',
+    align: 'center',
+    width: 90
+  },
+  {
+    title: '对比年排',
+    dataIndex: 'compareGradeRank',
+    key: 'compareGradeRank',
+    align: 'center',
+    width: 90
+  },
+  {
+    title: '年排差',
+    dataIndex: 'gradeRankDiff',
+    key: 'gradeRankDiff',
+    align: 'center',
+    width: 80
+  }
+];
+
 // 成绩数据
 const scoreData = computed<ScoreDetail[]>(() => {
   if (!selectedStudentId.value || !selectedExamId.value) return [];
@@ -483,6 +668,58 @@ const passLineData = computed<PassLineDetail[]>(() => {
         studentScore: score,
         passLine,
         difference: score - passLine
+      });
+    }
+  });
+  
+  return data;
+});
+
+// 对比表格数据
+const compareTableData = computed(() => {
+  if (!compareData.value) return [];
+  
+  const data: any[] = [];
+  const compareDataValue = compareData.value;
+  
+  // 添加总分
+  if (compareDataValue.sum_) {
+    data.push({
+      subject: 'sum_',
+      subjectName: '总分',
+      currentScore: compareDataValue.sum_.current || 0,
+      compareScore: compareDataValue.sum_.compare || 0,
+      scoreDiff: Number(compareDataValue.sum_.difference || 0),
+      currentClassRank: compareDataValue.sumb?.current || 0,
+      compareClassRank: compareDataValue.sumb?.compare || 0,
+      classRankDiff: compareDataValue.sumb?.difference || 0,
+      currentGradeRank: compareDataValue.sumd?.current || 0,
+      compareGradeRank: compareDataValue.sumd?.compare || 0,
+      gradeRankDiff: compareDataValue.sumd?.difference || 0
+    });
+  }
+  
+  // 添加各科成绩
+  Object.keys(subjectMap).forEach(subject => {
+    if (subject === 'sum_') return; // 总分已处理
+    
+    const subjectData = compareDataValue[subject];
+    if (subjectData) {
+      const classRankKey = `${subject}b`;
+      const gradeRankKey = `${subject}d`;
+      
+      data.push({
+        subject,
+        subjectName: subjectMap[subject],
+        currentScore: subjectData.current || 0,
+        compareScore: subjectData.compare || 0,
+        scoreDiff: Number(subjectData.difference || 0),
+        currentClassRank: compareDataValue[classRankKey]?.current || 0,
+        compareClassRank: compareDataValue[classRankKey]?.compare || 0,
+        classRankDiff: compareDataValue[classRankKey]?.difference || 0,
+        currentGradeRank: compareDataValue[gradeRankKey]?.current || 0,
+        compareGradeRank: compareDataValue[gradeRankKey]?.compare || 0,
+        gradeRankDiff: compareDataValue[gradeRankKey]?.difference || 0
       });
     }
   });
@@ -617,6 +854,16 @@ const getRankClass = (rank: number) => {
 // 获取差值类名
 const getDifferenceClass = (difference: number) => {
   return difference >= 0 ? 'positive-difference' : 'negative-difference';
+};
+
+// 获取排名差值类名（排名越小越好，所以正数表示下降，负数表示上升）
+const getRankDifferenceClass = (difference: number) => {
+  return difference > 0 ? 'rank-down' : difference < 0 ? 'rank-up' : 'rank-same';
+};
+
+// 格式化分数，保留一位小数
+const formatScore = (score: number) => {
+  return Number.isInteger(score) ? score : score.toFixed(1);
 };
 
 // 显示所有学生
@@ -793,16 +1040,28 @@ const handleStudentChange = async (studentId: string) => {
   // 清空之前的数据
   scoreDetails.value = {};
   passLineDetails.value = {};
+  compareData.value = null;
  
-  // 获取该学生的考试成绩
+  // 获取该学生的考试成绩和分数线
   if (selectedExamId.value) {
-    await fetchStudentGrades(studentId, selectedExamId.value);
+    await Promise.all([
+      fetchStudentGrades(studentId, selectedExamId.value),
+      fetchPassLine(selectedExamId.value)
+    ]);
+    
+    // 如果有选中对比考试，也获取对比数据
+    if (selectedComparedExamId.value) {
+      await fetchCompareData(studentId, selectedExamId.value, selectedComparedExamId.value);
+    }
   }
 };
 
 // 处理考试选择
 const handleExamChange = async (examId: number) => {
   selectedExamId.value = examId;
+  // 清空对比数据
+  compareData.value = null;
+  selectedComparedExamId.value = undefined;
   
   // 获取成绩详情和分数线
   if (selectedStudentId.value) {
@@ -817,11 +1076,56 @@ const handleExamChange = async (examId: number) => {
 const resetFilters = () => {
   selectedStudentId.value = '';
   selectedExamId.value = examList.value.length > 0 ? examList.value[0].id : 0;
+  selectedComparedExamId.value = undefined;
   scoreDetails.value = {};
   passLineDetails.value = {};
+  compareData.value = null;
   searchKeyword.value = '';
   // 重置过滤后的学生列表为所有学生
   filteredStudentList.value = [...studentList.value];
+};
+
+// 获取考试对比数据
+const fetchCompareData = async (studentId: string, examId: number, comparedExamId: number) => {
+  try {
+    loading.value = true;
+    const res = await getStudentSelfCompareApi({
+      student_id: parseInt(studentId),
+      exam_id: examId,
+      compared_exam_id: comparedExamId
+    });
+    
+    if (res.code === 200 && res.data) {
+      compareData.value = res.data;
+    } else {
+      message.warning('未获取到对比数据');
+      compareData.value = null;
+    }
+  } catch (err) {
+    message.error('请求对比数据接口出错');
+    console.error(err);
+    compareData.value = null;
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 处理对比考试选择
+const handleComparedExamChange = async (comparedExamId: number | undefined) => {
+  if (!comparedExamId) {
+    compareData.value = null;
+    return;
+  }
+  
+  if (selectedStudentId.value && selectedExamId.value) {
+    await fetchCompareData(selectedStudentId.value, selectedExamId.value, comparedExamId);
+  }
+};
+
+// 取消对比
+const clearCompare = () => {
+  selectedComparedExamId.value = undefined;
+  compareData.value = null;
 };
 </script>
 
@@ -864,11 +1168,13 @@ const resetFilters = () => {
     .filter-item {
       display: flex;
       align-items: center;
+      margin-bottom: 8px;
       
       .filter-label {
-        width: 80px;
+        min-width: 80px;
         font-weight: 600;
         color: #333;
+        white-space: nowrap;
       }
     }
     
@@ -877,6 +1183,10 @@ const resetFilters = () => {
       justify-content: flex-end;
       align-items: center;
       height: 100%;
+      
+      @media (max-width: 768px) {
+        margin-top: 8px;
+      }
     }
   }
   
@@ -946,6 +1256,7 @@ const resetFilters = () => {
         .card-value {
           font-size: 24px;
           font-weight: 700;
+          margin-left: 40%;
           margin-bottom: 8px;
           flex: 1;
           display: flex;
@@ -1079,6 +1390,49 @@ const resetFilters = () => {
   .negative-difference {
     color: #f5222d;
     font-weight: 600;
+  }
+  
+  .rank-up {
+    color: #52c41a;
+    font-weight: 600;
+  }
+  
+  .rank-down {
+    color: #f5222d;
+    font-weight: 600;
+  }
+  
+  .rank-same {
+    color: #666;
+  }
+  
+  .compare-card {
+    .compare-header {
+      display: flex;
+      justify-content: space-around;
+      padding: 16px;
+      background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      
+      .compare-exam-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        
+        .exam-label {
+          font-size: 14px;
+          color: #666;
+          margin-bottom: 8px;
+        }
+        
+        .exam-name {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1890ff;
+        }
+      }
+    }
   }
 }
 

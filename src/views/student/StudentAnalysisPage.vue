@@ -1,5 +1,6 @@
 <template>
   <div class="student-analysis-page">
+    
     <a-space class="selector">
       <div class="select-item">
         <span>学期选择：</span>

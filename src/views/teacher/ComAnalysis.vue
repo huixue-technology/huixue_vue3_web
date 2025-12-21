@@ -17,10 +17,8 @@
       </a-space>
     </div>
     <a-spin :spinning="loading">
-      <ImportantStudents 
-        :class-analysis-data="topBottomStudents[0]" 
-        :subject-map="subjectMap" 
-      />
+      <!-- 学生过线率统计 -->
+      <ClassAnalysis :class-id="selectedClass" />
         <!-- 考试指标折线图 -->
         <a-col>
           <ExamMetricsChart 
@@ -49,7 +47,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, computed } from 'vue';
 import { 
-  postClassAlwaysTopBottomStudents,
   postClassCompute,
   postClassAnalysis,
   postClassPassLineRate,
@@ -59,7 +56,7 @@ import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
 import { getClassesApi } from '@/servers/api/classes';
 // 导入子组件
-import ImportantStudents from './components/ImportantStudents.vue';
+import ClassAnalysis from './ClassAnalysis.vue';
 import ExamMetricsChart from './components/ExamMetricsChart.vue';
 import PassLineRate from './components/PassLineRate.vue';
 import StudentCategory from './components/StudentCategory.vue';
@@ -88,7 +85,6 @@ const classList = ref<ClassInfo[]>([]);
 const teacherInfo = ref<TeacherInfo>();
 const classAnalysisData = ref<any>({});
 const passLineRateData = ref<any>({});
-const topBottomStudents = ref<any[]>([]);
 const studentGradesData = ref<any[]>([]);
 
 const subjectMap: Record<string, string> = {
@@ -150,10 +146,6 @@ const batchComputeData = async () => {
   // 根据考试分数线判断优等生、边缘生、差生
   console.log("根据考试分数线判断优等生、边缘生、差生...")
   await getClassComprehensiveStudentGradesfunc();
-
-  // 获取班级经常排名靠前和靠后的学生
-  console.log("获取班级经常排名靠前和靠后的学生...")
-  await getTopBottomStudentsfunc();
   loading.value = false;
 };
 
@@ -186,16 +178,6 @@ const getClassPassLineRatefunc = async () => {
     return;
   }
   passLineRateData.value = res.data || {};
-};
-
-const getTopBottomStudentsfunc = async () => {
-  // 班级经常排名靠前和靠后的学生
-  const res = await postClassAlwaysTopBottomStudents({ class_ids: [selectedClass.value] });
-  if (res.code !== 200) {
-    console.error('获取班级经常排名靠前和靠后的学生失败', res);
-    return;
-  }
-  topBottomStudents.value = res.data || [];
 };
 
 const getClassComprehensiveStudentGradesfunc = async () => {

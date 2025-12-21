@@ -2,21 +2,6 @@
 /* eslint-disable */
 import request from "umi-request";
 
-/** 获取班级经常排名靠前或靠后的学生 POST /api/average/class_always_top_bottom_students */
-export async function postClassAlwaysTopBottomStudents(
-  body: API.ClassAnalysis,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/average/class_always_top_bottom_students", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    data: body,
-    ...(options || {}),
-  });
-}
-
 /** 获取班级成绩综合分析 POST /api/average/class_analysis */
 export async function postClassAnalysis(
   body: API.ClassAnalysis,
@@ -62,12 +47,42 @@ export async function postClassCompute(
   });
 }
 
+/** 计算班级成绩综合分析 POST /api/average/class_compute_test */
+export async function postClassComputeTest(
+  body: API.Compute,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/average/class_compute_test", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
 /** 获取班级四条分数线过线率 POST /api/average/class_pass_line_rate */
 export async function postClassPassLineRate(
   body: API.ClassAnalysis,
   options?: { [key: string]: any }
 ) {
   return request<any>("/api/average/class_pass_line_rate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+/** 获取班级一本线过线率排名 POST /api/average/class_students_one_line_rate */
+export async function postClassAlwaysTopBottomStudents(
+  body: API.ClassAnalysis,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/average/class_students_one_line_rate", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -1,91 +1,34 @@
 <template>
   <div class="class-analysis-container">
-
-    <!-- 分析数据展示 -->
-    <div v-if="!loading" class="analysis-content">
-      <div class="analysis-card">
-        <a-card title="优秀学生及成绩详情" class="student-card">
-          <a-table
-            :data-source="formattedExcellentStudents"
-            bordered
-            :columns="excellentStudentColumns"
-            pagination="false"
-            :expandable="{
-              expandedRowKeys: excellentExpandedRowKeys,
-              onExpand: (expanded: boolean, record: any) => handleExcellentExpand(expanded, record)
-            }"
-          >
-            <!-- 优秀学生展开行内容：科目详情 -->
-            <template #expandedRowRender="{ record }">
-              <div class="expanded-detail">
-                <a-table
-                  :data-source="getSubjectDetails(record)"
-                  bordered
-                  :columns="subjectDetailColumns"
-                  pagination="false"
-                  :show-header="true"
-                />
-              </div>
-            </template>
-          </a-table>
-        </a-card>
-      </div>
-
-      <!-- 待关注学生 -->
-      <div class="analysis-card full-width">
-        <a-card title="待关注学生及成绩详情" class="student-card">
-          <a-table
-            :data-source="formattedDangerStudents"
-            bordered
-            :columns="dangerStudentColumns"
-            pagination="false"
-            :expandable="{
-              expandedRowKeys: dangerExpandedRowKeys,
-              onExpand: (expanded: boolean, record: any) => handleDangerExpand(expanded, record)
-            }"
-          >
-            <!-- 待关注学生展开行内容：科目详情 -->
-            <template #expandedRowRender="{ record }">
-              <div class="expanded-detail">
-                <a-table
-                  :data-source="getSubjectDetails(record)"
-                  bordered
-                  :columns="subjectDetailColumns"
-                  pagination="false"
-                  :show-header="true"
-                />
-              </div>
-            </template>
-          </a-table>
-        </a-card>
-      </div>
+    <!-- 学生过线率列表 -->
+    <div class="section">
+      <a-row>
+        <div class="section-title">学生各科目过线率统计</div>
+      </a-row>
+      <a-card class="rate-card">
+        <a-table
+          :data-source="studentRateList"
+          bordered
+          :columns="studentRateColumns"
+          :pagination="{ pageSize: 10, showTotal: (total) => `共 ${total} 名学生` }"
+          :scroll="{ x: 'max-content' }"
+          :loading="loading"
+        />
+      </a-card>
     </div>
-
-    <!-- 加载状态 -->
-    <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
   </div>
 </template>
 
 <script setup lang="ts">
-import {ref, onMounted, computed, watch} from 'vue';
-import { getClassAnalysis } from '@/servers/api/analysis';
-import { getClassesApi } from '@/servers/api/classes';
+import { ref, watch, onMounted } from 'vue';
+import { postClassAlwaysTopBottomStudents } from '@/servers/api/average';
 import { message } from 'ant-design-vue';
-import { useUserStore } from '@/store';
-import { defineProps } from 'vue';
 
 const props = defineProps<{
-  selectedExamId: number;
+  classId: number;
 }>();
-// 状态定义
-const userStore = useUserStore();
-const classId = ref<number>(0);
-const teacherId = ref<number>(0);
+
 const loading = ref(false);
-console.log('selectedExamId', props.selectedExamId)
-// 展开行状态管理（分别管理优秀学生和待关注学生的展开状态）
-const excellentExpandedRowKeys = ref<string[]>([]);
-const dangerExpandedRowKeys = ref<string[]>([]);
 
 // 科目名称映射表
 const subjectMap = {
@@ -100,166 +43,99 @@ const subjectMap = {
   'dili': '地理'
 };
 
-// 班级分析数据
-const classAnalysisData = ref({
-  danger_student: [] as any[],
-  excellent_student: [] as any[],
-  main_score_section: [] as any[],
-  select_score_section: [] as any[],
-  sum_score_section: [] as any[],
+// 学生过线率列表数据
+const studentRateList = ref<any[]>([]);
+
+// 学生过线率表格列定义
+const studentRateColumns = ref<any[]>([
+  { title: '学生姓名', dataIndex: 'name', width: 120, fixed: 'left' },
+  { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left' },
+]);
+
+
+
+
+// 初始化
+onMounted(() => {
+  fetchSubjectRateData();
 });
 
-// 格式化优秀学生数据
-const formattedExcellentStudents = computed(() => {
-  return classAnalysisData.value.excellent_student.map(student => ({
-    ...student,
-    student_name: student.student_name || '未知',
-    sum_: student.sum_ ?? 0,
-    sumb: student.sumb ?? 0,
-    sumd: student.sumd ?? 0,
-    key: student.student_id || student.id 
-  }));
-});
-
-const formattedDangerStudents = computed(() => {
-  return classAnalysisData.value.danger_student.map(student => ({
-    ...student,
-    student_name: student.student_name || student.name || '未知',
-    sum_: student.sum_ ?? student.totalScore ?? 0,
-    sumb: student.sumb ?? 0,
-    sumd: student.sumd ?? 0,
-    key: student.student_id || student.id 
-  }));
-});
-
-const getSubjectDetails = (student: any) => {
-  if (!student) return [];
-  
-  const details: any[] = [];
-  
-  // 遍历所有科目
-  Object.entries(subjectMap).forEach(([enSubject, cnSubject]) => {
-    const score = student[enSubject] ?? 0;
-    const classRank = student[`${enSubject}B`] ?? 0;
-    const gradeRank = student[`${enSubject}D`] ?? 0;
-    
-    // 只添加有成绩的科目（排除0分但排名为1的情况，可能是未选考科目）
-    if (!(score === 0 && classRank === 1)) {
-      details.push({
-        key: `${student.student_id}-${enSubject}`,
-        subject: cnSubject,
-        score,
-        classRank,
-        gradeRank
-      });
-    }
-  });
-  
-  return details;
-};
-
-
-
-
-
-// 表格列定义
-const excellentStudentColumns = [
-  { title: '姓名', dataIndex: 'student_name' },
-  { title: '总分', dataIndex: 'sum_' },
-  { title: '班级排名', dataIndex: 'sumb' },
-  { title: '年级排名', dataIndex: 'sumd' }
-];
-
-const dangerStudentColumns = [
-  { title: '姓名', dataIndex: 'student_name' },
-  { title: '总分', dataIndex: 'sum_' },
-  { title: '班级排名', dataIndex: 'sumb' },
-  { title: '年级排名', dataIndex: 'sumd' }
-];
-
-
-// 学生科目详情表格列
-const subjectDetailColumns = [
-  { title: '科目', dataIndex: 'subject', width: 100 },
-  { title: '成绩', dataIndex: 'score', width: 100 },
-  { title: '班级排名', dataIndex: 'classRank', width: 120 },
-  { title: '年级排名', dataIndex: 'gradeRank', width: 120 }
-];
-
-// 处理优秀学生展开/折叠事件
-const handleExcellentExpand = (expanded: boolean, record: any) => {
-  if (expanded) {
-    excellentExpandedRowKeys.value = [record.key];
-  } else {
-    excellentExpandedRowKeys.value = [];
-  }
-};
-
-// 处理待关注学生展开/折叠事件
-const handleDangerExpand = (expanded: boolean, record: any) => {
-  if (expanded) {
-    dangerExpandedRowKeys.value = [record.key];
-  } else {
-    dangerExpandedRowKeys.value = [];
-  }
-};
-
-
-// 初始化流程
-onMounted(async () => {
-  try {
-    const userInfo = userStore.getUserInfo();
-    const header = userInfo?.teacher?.uid;
-    if (!header) {
-      message.error('未获取到教师信息');
-      return;
-    }
-
-    loading.value = true;
-    const classRes = await getClassesApi({ header: header });
-    if (classRes.code !== 200 || !classRes.data.length) {
-      message.error('未查询到教师关联的班级信息');
-      return;
-    }
-
-    teacherId.value = classRes.data[0].header;
-    classId.value = classRes.data[0].id;
-  } catch (err) {
-    message.error('初始化失败');
-    console.error(err);
-  } finally {
-    loading.value = false;
+// 监听 classId 变化
+watch(() => props.classId, () => {
+  if (props.classId) {
+    fetchSubjectRateData();
   }
 });
 
-watch(() => props.selectedExamId, (newValue) => {
-  fetchClassAnalysis();
-})
-
-// 获取班级分析数据
-const fetchClassAnalysis = async () => {
-  if (!props.selectedExamId || !classId.value) return;
+// 获取学生过线率数据
+const fetchSubjectRateData = async () => {
+  if (!props.classId) return;
 
   try {
     loading.value = true;
-    const res = await getClassAnalysis({
-      class_id: classId.value,
-      exam_id: props.selectedExamId,
+    const res = await postClassAlwaysTopBottomStudents({
+      class_ids: [props.classId],
     });
-    if (res.code === 200) {
-      classAnalysisData.value = {
-        danger_student: res.data.danger_student || [],
-        excellent_student: res.data.excellent_student || [],
-        main_score_section: res.data.main_score_section || [],
-        select_score_section: res.data.select_score_section || [],
-        sum_score_section: res.data.sum_score_section || [],
-      };
+    
+    if (res.code === 200 && res.data && res.data.length > 0) {
+      const classData = res.data[0];
+      const studentOneLineRate = classData.student_one_line_rate || {};
+      
+      // 构建学生数据映射表
+      const studentMap = new Map<string, any>();
+      
+      // 收集所有科目并构建动态列
+      const subjectColumns: any[] = [];
+      
+      Object.entries(studentOneLineRate).forEach(([subject, students]: [string, any]) => {
+        if (Array.isArray(students)) {
+          // 添加科目列
+          const subjectName = subjectMap[subject] || subject;
+          subjectColumns.push({
+            title: subjectName,
+            dataIndex: subject,
+            width: 100,
+            align: 'center',
+            customRender: ({ text }: any) => {
+              if (text === null || text === undefined) return '-';
+              return `${(text * 100).toFixed(2)}%`;
+            }
+          });
+          
+          // 将每个学生的该科目过线率添加到学生数据中
+          students.forEach((student: any) => {
+            if (!studentMap.has(student.uid)) {
+              studentMap.set(student.uid, {
+                uid: student.uid,
+                name: student.name,
+                key: student.uid
+              });
+            }
+            const studentData = studentMap.get(student.uid);
+            if (studentData) {
+              studentData[subject] = student.rate;
+            }
+          });
+        }
+      });
+      
+      // 更新表格列（基础列 + 科目列）
+      studentRateColumns.value = [
+        { title: '学生姓名', dataIndex: 'name', width: 120, fixed: 'left', align: 'center' },
+        { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left', align: 'center' },
+        ...subjectColumns
+      ];
+      
+      // 转换为数组
+      studentRateList.value = Array.from(studentMap.values());
     } else {
-      message.error('获取班级分析数据失败');
+      message.error('获取科目过线率数据失败');
+      studentRateList.value = [];
     }
   } catch (err) {
-    message.error('请求班级分析接口出错');
+    message.error('请求科目过线率接口出错');
     console.error(err);
+    studentRateList.value = [];
   } finally {
     loading.value = false;
   }
@@ -267,81 +143,36 @@ const fetchClassAnalysis = async () => {
 
 </script>
 
-<style scoped>
+<style scoped lang="less">
 .class-analysis-container {
-  padding: 20px;
-
-  box-sizing: border-box;
-  overflow-y: auto;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
-  font-size: 16px; /* 设置基础字体大小 */
-}
-
-.header {
-  background: linear-gradient(120deg, #4b6cb7, #1890ff);
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
-  color: white;
-  
-  h2 {
-    margin: 0 0 10px 0;
-    font-size: 24px;
-    font-weight: 600;
-  }
-  
-  p {
-    margin: 0;
-    font-size: 16px;
-    opacity: 0.9;
-  }
 }
 
-
-.analysis-content {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
+.section {
+  margin-bottom: 20px;
 }
 
-.analysis-card {
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  width: 100%;
-  transition: all 0.3s ease;
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  padding-left: 8px;
+  border-left: 4px solid #1890ff;
 }
 
-.analysis-card:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-
-
-.student-card, .chart-card {
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+.rate-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  background: #ffffff;
 
-  :deep(.ant-card-head) {
-    background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
-    border-bottom: 1px solid #e8e8e8;
-    padding: 0 16px;
-
+  :deep(.ant-card-body) {
+    padding: 16px;
   }
 }
 
-.loading-spin {
-  display: flex;
-  justify-content: center;
-  margin: 50px 0;
-}
 
-.expanded-detail {
-  margin: 16px 0 0 48px;
-}
 
 
 /* 表格样式优化 */
@@ -376,57 +207,4 @@ const fetchClassAnalysis = async () => {
   border-right: 1px solid #f0f0f0;
 }
 
-/* 优秀学生和待关注学生标题颜色 */
-.student-card:first-child :deep(.ant-card-head) {
-  background: linear-gradient(120deg, #e6f7ff, #d1e9ff);
-}
-
-.student-card:nth-child(2) :deep(.ant-card-head) {
-  background: linear-gradient(120deg, #fff7e6, #ffe7ba);
-}
-
-/* 分段统计卡片标题颜色 */
-.segment-card:nth-child(1) :deep(.ant-card-head) {
-  background: linear-gradient(120deg, #e6f7ff, #d1e9ff);
-}
-
-.segment-card:nth-child(2) :deep(.ant-card-head) {
-  background: linear-gradient(120deg, #f6ffed, #d9f7be);
-}
-
-.segment-card:nth-child(3) :deep(.ant-card-head) {
-  background: linear-gradient(120deg, #f9f0ff, #efdbff);
-}
-
-/* 响应式设计 */
-@media (max-width: 1200px) {
-  .segment-analysis-container {
-    flex-direction: column;
-  }
-
-  .segment-card {
-    min-width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
-  .class-analysis-container {
-    padding: 12px;
-    font-size: 14px; /* 小屏幕下适当减小字体 */
-  }
-  
-  .analysis-card {
-    padding: 16px;
-  }
-  
-  :deep(.ant-card-head-title) {
-    font-size: 16px;
-  }
-  
-  :deep(.ant-table-thead > tr > th),
-  :deep(.ant-table-tbody > tr > td) {
-    font-size: 14px; /* 小屏幕下调整表格字体 */
-    padding: 8px 4px;
-  }
-}
-</style>
+/* 响应式设计 */</style>

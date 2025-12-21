@@ -141,6 +141,21 @@ export async function postSimulateGrade(
   });
 }
 
+/** 学生自我对比分析 GET /api/analysis/student_self_compare */
+export async function getStudentSelfCompareApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getStudentSelfCompareApiParams,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/analysis/student_self_compare", {
+    method: "GET",
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
 /** 学生成绩进退步分析 GET /api/analysis/up_down_detail */
 export async function getUpDownDetailAnalysis(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

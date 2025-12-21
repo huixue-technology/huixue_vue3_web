@@ -117,7 +117,7 @@ declare namespace API {
     /** 考试ID */
     exam_id: number;
     /** 需要对比的班级ID */
-    compare_class_id: string;
+    compare_class_id: number;
   };
 
   type getClassesApiParams = {
@@ -128,7 +128,7 @@ declare namespace API {
     /** 班级名称（可选） */
     name?: string;
     /** 班主任（可选） */
-    header?: number;
+    header?: string;
     /** 学校ID（可选） */
     school_id?: string;
   };
@@ -146,7 +146,7 @@ declare namespace API {
     /** 班级id */
     class_id: string;
     /** 选中考试id */
-    selected_exam_id: string;
+    selected_exam_id: number;
     /** 科目筛选(如: sum_, yuwen, shuxue等) */
     subject?: string;
     /** 排序方向(asc:升序, desc:降序) */
@@ -299,6 +299,15 @@ declare namespace API {
     selected_exam_id: number;
     /** 学生id */
     student_id: string;
+  };
+
+  type getStudentSelfCompareApiParams = {
+    /** 学生ID */
+    student_id?: number;
+    /** 考试ID */
+    exam_id?: number;
+    /** 对比的考试ID */
+    compared_exam_id?: number;
   };
 
   type getTeacherApiParams = {
@@ -601,7 +610,7 @@ declare namespace API {
 
   type StudentAverage = {
     /** 学生ID */
-    student_id: number[];
+    student_id: string[];
   };
 
   type Teacher = {
