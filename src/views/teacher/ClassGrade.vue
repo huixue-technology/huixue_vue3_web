@@ -543,9 +543,9 @@ const getRankClass = (rank: number, score: number) => {
   const diff = score - passLine.value;
   // 按分数线规则控制排名列颜色
   if (diff >= 5) return ''; // 超线5分以上 → 无特殊颜色
-  if (diff >= 0) return 'below-pass-line-near'; // 超线0-5分 → 橙色
-  if (diff >= -5 && diff < 0) return 'below-pass-line-near';
-  return 'below-pass-line-far'; // 线下 → 红色
+  if (diff >= 0) return ''; // 超线0-5分 → 橙色
+  if (diff >= -5 && diff < 0) return 'r';
+  return ''; // 线下 → 红色
 };
 
 const calculateStats = () => {
