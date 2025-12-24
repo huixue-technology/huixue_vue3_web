@@ -125,7 +125,7 @@
                 <span class="score">{{ formatScore(comparisonData.subject_average_score.compare.sum_) }}</span>
               </div>
               <div class="difference" :class="getDifferenceClass(totalScoreDiff)">
-                差值: {{ formatScore(totalScoreDiff) }}
+                差值: {{ formatScore(Math.abs(totalScoreDiff)) }}
               </div>
             </div>
           </a-col>
@@ -141,7 +141,7 @@
                 <span class="rate">{{ formatRate(comparisonData.pass_rate.compare) }}</span>
               </div>
               <div class="difference" :class="getDifferenceClass(passRateDiff)">
-                差值: {{ formatRateDiff(passRateDiff) }}
+                差值: {{ formatRateDiff(Math.abs(passRateDiff)) }}
               </div>
             </div>
           </a-col>
@@ -157,7 +157,7 @@
                 <span class="count">{{ comparisonData.pass_count.compare }}</span>
               </div>
               <div class="difference" :class="getDifferenceClass(passCountDiff)">
-                差值: {{ passCountDiff }}
+                差值: {{ Math.abs(passCountDiff) }}
               </div>
             </div>
           </a-col>
@@ -176,7 +176,7 @@
             >
               <template #bodyCell="{ column, record }">
                 <template v-if="column.dataIndex === 'diff'">
-                  <span :class="getDifferenceClass(record.diff)">{{ formatScore(record.diff) }}</span>
+                  <span :class="getDifferenceClass(record.diff)">{{ formatScore(Math.abs(record.diff)) }}</span>
                 </template>
               </template>
             </a-table>
@@ -197,7 +197,13 @@
               bordered
               :columns="subjectTopColumns"
               :pagination="false"
-            />
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.dataIndex === 'diff'">
+                  <span :class="getDifferenceClass(record.diff)">{{ formatScore(Math.abs(record.diff)) }}</span>
+                </template>
+              </template>
+            </a-table>
           </div>
 
           <div v-if="displayMode === 'chart'" class="chart-container">
@@ -373,15 +379,19 @@ const subjectAverageData = computed(() => {
 
 // 格式化科目最高分数据
 const subjectTopData = computed(() => {
-	console.log(comparisonData.value)
+  console.log(comparisonData.value)
   if (!comparisonData.value) return [];
   
-  return Object.entries(subjectMap).map(([en, cn]) => ({
-    subject: cn,
-    class1Top: comparisonData.value!.subject_top_score.current[en as keyof SubjectScores] || 0,
-    class2Top: comparisonData.value!.subject_top_score.compare[en as keyof SubjectScores] || 0
-  })).filter(item => item.class1Top > 0 || item.class2Top > 0); // 过滤无效科目
-
+  return Object.entries(subjectMap).map(([en, cn]) => {
+    const class1Top = comparisonData.value!.subject_top_score.current[en as keyof SubjectScores] || 0;
+    const class2Top = comparisonData.value!.subject_top_score.compare[en as keyof SubjectScores] || 0;
+    return {
+      subject: cn,
+      class1Top,
+      class2Top,
+      diff: class1Top - class2Top
+    };
+  }).filter(item => item.class1Top > 0 || item.class2Top > 0); // 过滤无效科目
 });
 
 // 科目平均分表格列定义
@@ -399,13 +409,29 @@ const subjectColumns = computed(() => [
     key: 'class2Score',
     customRender: ({ value }: { value: any }) => formatScore(Number(value))
   },
-  { title: '差值(班1-班2)', dataIndex: 'diff', key: 'diff' }
+  { title: '差值(班级1-班级2)', dataIndex: 'diff', key: 'diff' }
 ]);
 
+// 科目最高分表格列定义
 const subjectTopColumns = computed(() => [
   { title: '科目', dataIndex: 'subject', key: 'subject' },
-  { title: `${getClassName(selectedClass1.value)}最高分`, dataIndex: 'class1Top', key: 'class1Top', render: (val: number) => formatScore(val) },
-  { title: `${getClassName(selectedClass2.value)}最高分`, dataIndex: 'class2Top', key: 'class2Top', render: (val: number) => formatScore(val) }
+  { 
+    title: `${getClassName(selectedClass1.value)}最高分`, 
+    dataIndex: 'class1Top', 
+    key: 'class1Top', 
+    render: (val: number) => formatScore(val) 
+  },
+  { 
+    title: `${getClassName(selectedClass2.value)}最高分`, 
+    dataIndex: 'class2Top', 
+    key: 'class2Top', 
+    render: (val: number) => formatScore(val) 
+  },
+  { 
+    title: '差值(我的班级-挑战班级)', 
+    dataIndex: 'diff', 
+    key: 'diff' 
+  }
 ]);
 
 const topStudentColumns = [
@@ -497,9 +523,9 @@ const getClassName = (classId: number | undefined) => {
 };
 
 const getDifferenceClass = (diff: number) => {
-  if (diff > 0) return 'positive';
-  if (diff < 0) return 'negative';
-  return 'zero';
+  if (diff > 0) return 'positive'; // 我的班级更高 → 绿色
+  if (diff < 0) return 'negative'; // 我的班级更低 → 红色
+  return 'zero';                   // 相等 → 灰色
 };
 
 // 格式化分数（保留2位小数）
@@ -897,11 +923,11 @@ onMounted(init);
   }
 
   .positive {
-    color: #f5222d; // 红色表示班1优于班2
+    color: #52c41a; // 绿色表示我的班级更高
   }
 
   .negative {
-    color: #52c41a; // 绿色表示班2优于班1
+    color: #f5222d; // 红色表示我的班级更低
   }
 
   .zero {

@@ -133,7 +133,6 @@
         <span class="label">显示方式：</span>
         <a-radio-group v-model:value="displayMode">
           <a-radio value="table">表格</a-radio>
-          <a-radio value="chart">图表</a-radio>
         </a-radio-group>
       </div>
     </div>
@@ -143,11 +142,12 @@
 
     <!-- 对比结果区域 -->
     <div v-if="!loading && hasSearched" class="comparison-results">
-      <!-- 总体情况卡片 -->
+      <!-- 总体情况卡片（总分+班级排名+年级排名） -->
       <div class="summary-cards">
         <a-row :gutter="16">
+          <!-- 总分卡片 -->
           <a-col :span="24" :md="8">
-            <div class="summary-card total-score-card">
+            <div class="summary-card col-1-card">
               <h3>总分</h3>
               <div class="summary-item">
                 <span class="student-name">{{ getStudentName(selectedStudent1) }}</span>
@@ -157,146 +157,103 @@
                 <span class="student-name">{{ getStudentName(selectedStudent2) }}</span>
                 <span class="score">{{ formatScore(comparisonData.total_score?.compare || 0) }}</span>
               </div>
-              <div class="difference" :class="getDifferenceClass(totalScoreDiff)">
-                差值: {{ formatScore(totalScoreDiff) }}
+              <div class="difference" :class="getScoreDiffClass(totalScoreDiff)">
+                差值: {{ formatScore(Math.abs(totalScoreDiff)) }}
               </div>
             </div>
           </a-col>
+          <!-- 班级排名卡片 -->
           <a-col :span="24" :md="8">
-            <div class="summary-card class-rank-card">
+            <div class="summary-card col-2-card">
               <h3>班级排名</h3>
               <div class="summary-item">
                 <span class="student-name">{{ getStudentName(selectedStudent1) }}</span>
-                <span class="rank">
-                  {{ comparisonData.class_rank?.current || 0 }} 
-                  <template v-if="comparisonData.class_total">
-                    / {{ comparisonData.class_total > 0 ? `全班${comparisonData.class_total}人` : '全班人数未知' }}
-                  </template>
-                </span>
+                <span class="rank">{{ comparisonData.class_rank?.current || 0 }}</span>
               </div>
               <div class="summary-item">
                 <span class="student-name">{{ getStudentName(selectedStudent2) }}</span>
-                <span class="rank">
-                  {{ comparisonData.class_rank?.compare || 0 }} 
-                  <template v-if="comparisonData.class_total">
-                    / {{ comparisonData.class_total > 0 ? `全班${comparisonData.class_total}人` : '全班人数未知' }}
-                  </template>
-                </span>
+                <span class="rank">{{ comparisonData.class_rank?.compare || 0 }}</span>
               </div>
-              <div class="difference" :class="getRankDifferenceClass(rankDiff)">
-                差值: {{ rankDiff }}
+              <div class="difference" :class="getRankDiffClass(rankDiff)">
+                差值: {{ Math.abs(rankDiff) }}
               </div>
             </div>
           </a-col>
+          <!-- 年级排名卡片 -->
           <a-col :span="24" :md="8">
-            <div class="summary-card grade-rank-card">
+            <div class="summary-card col-3-card">
               <h3>年级排名</h3>
               <div class="summary-item">
                 <span class="student-name">{{ getStudentName(selectedStudent1) }}</span>
-                <span class="rank">
-                  {{ comparisonData.grade_rank?.current || 0 }} 
-                  <template v-if="comparisonData.grade_total">
-                    / {{ comparisonData.grade_total > 0 ? `全校${comparisonData.grade_total}人` : '全校人数未知' }}
-                  </template>
-                </span>
+                <span class="rank">{{ comparisonData.grade_rank?.current || 0 }}</span>
               </div>
               <div class="summary-item">
                 <span class="student-name">{{ getStudentName(selectedStudent2) }}</span>
-                <span class="rank">
-                  {{ comparisonData.grade_rank?.compare || 0 }} 
-                  <template v-if="comparisonData.grade_total">
-                    / {{ comparisonData.grade_total > 0 ? `全校${comparisonData.grade_total}人` : '全校人数未知' }}
-                  </template>
-                </span>
+                <span class="rank">{{ comparisonData.grade_rank?.compare || 0 }}</span>
               </div>
-              <div class="difference" :class="getRankDifferenceClass(gradeRankDiff)">
-                差值: {{ gradeRankDiff }}
+              <div class="difference" :class="getRankDiffClass(gradeRankDiff)">
+                差值: {{ Math.abs(gradeRankDiff) }}
               </div>
             </div>
           </a-col>
         </a-row>
       </div>
 
-      <!-- 科目分数对比 -->
-      <div class="analysis-card">
-        <a-card title="科目分数对比" class="chart-card">
-          <div v-if="displayMode === 'table'" class="table-container">
-            <a-table
-              :data-source="subjectScoreData"
-              bordered
-              :columns="subjectColumns"
-              :pagination="false"
-            >
-              <template #bodyCell="{ column, record }">
-                <template v-if="column.dataIndex === 'diff'">
-                  <span :class="getDifferenceClass(record.diff)">{{ formatScore(record.diff) }}</span>
-                </template>
-              </template>
-            </a-table>
-          </div>
-
-          <div v-if="displayMode === 'chart'" class="chart-container">
-            <v-chart :option="subjectChartOption" autoresize style="height: 400px" />
-          </div>
-        </a-card>
-      </div>
-
-      <!-- 科目排名对比 -->
-      <div class="analysis-card">
-        <a-card title="科目排名对比" class="chart-card">
-          <div v-if="displayMode === 'table'" class="table-container">
-            <a-table
-              :data-source="subjectRankData"
-              bordered
-              :columns="subjectRankColumns"
-              :pagination="false"
-            >
-              <template #bodyCell="{ column, record }">
-                <template v-if="column.dataIndex === 'classRankDiff' || column.dataIndex === 'gradeRankDiff'">
-                  <span :class="getRankDifferenceClass(Number(record[column.dataIndex]))">
-                    {{ record[column.dataIndex] }}
-                  </span>
-                </template>
-              </template>
-            </a-table>
-          </div>
-
-          <div v-if="displayMode === 'chart'" class="chart-container">
-            <v-chart :option="subjectRankChartOption" autoresize style="height: 400px" />
-          </div>
-        </a-card>
-      </div>
-
-      <!-- 成绩详情对比 -->
-      <div class="analysis-card">
-        <a-card title="成绩详情对比" class="student-card">
-          <div class="detail-container">
-            <a-row :gutter="16">
-              <a-col :span="24" :md="12">
-                <div class="student-detail">
-                  <h4>{{ getStudentName(selectedStudent1) }} 成绩详情</h4>
-                  <a-table
-                    :data-source="getStudentDetailData(selectedStudent1)"
-                    bordered
-                    :columns="detailColumns"
-                    :pagination="false"
-                  />
-                </div>
-              </a-col>
-              <a-col :span="24" :md="12">
-                <div class="student-detail">
-                  <h4>{{ getStudentName(selectedStudent2) }} 成绩详情</h4>
-                  <a-table
-                    :data-source="getStudentDetailData(selectedStudent2)"
-                    bordered
-                    :columns="detailColumns"
-                    :pagination="false"
-                  />
-                </div>
-              </a-col>
-            </a-row>
-          </div>
-        </a-card>
+      <!-- 单科模块-->
+      <div class="subject-modules" v-for="subject in subjectList" :key="subject.enKey">
+        <a-row :gutter="16" style="margin-top: 16px;">
+          <!-- 科目分数卡片-->
+          <a-col :span="24" :md="8">
+            <div class="summary-card col-1-card">
+              <h3>{{ subject.name }}</h3>
+              <div class="summary-item">
+                <span class="student-name">{{ getStudentName(selectedStudent1) }}</span>
+                <span class="score">{{ formatScore(subject.s1Score) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="student-name">{{ getStudentName(selectedStudent2) }}</span>
+                <span class="score">{{ formatScore(subject.s2Score) }}</span>
+              </div>
+              <div class="difference" :class="getScoreDiffClass(subject.scoreDiff)">
+                分数差值: {{ formatScore(Math.abs(subject.scoreDiff)) }}
+              </div>
+            </div>
+          </a-col>
+          <!-- 科目班级排名卡片 -->
+          <a-col :span="24" :md="8">
+            <div class="summary-card col-2-card">
+              <h3>{{ subject.name }}班级排名</h3>
+              <div class="summary-item">
+                <span class="student-name">{{ getStudentName(selectedStudent1) }}</span>
+                <span class="rank">{{ subject.s1ClassRank }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="student-name">{{ getStudentName(selectedStudent2) }}</span>
+                <span class="rank">{{ subject.s2ClassRank }}</span>
+              </div>
+              <div class="difference" :class="getRankDiffClass(subject.classRankDiff)">
+                班排差值: {{ typeof subject.classRankDiff === 'number' ? Math.abs(subject.classRankDiff) : subject.classRankDiff }}
+              </div>
+            </div>
+          </a-col>
+          <!-- 科目年级排名卡片 -->
+          <a-col :span="24" :md="8">
+            <div class="summary-card col-3-card">
+              <h3>{{ subject.name }}年级排名</h3>
+              <div class="summary-item">
+                <span class="student-name">{{ getStudentName(selectedStudent1) }}</span>
+                <span class="rank">{{ subject.s1GradeRank }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="student-name">{{ getStudentName(selectedStudent2) }}</span>
+                <span class="rank">{{ subject.s2GradeRank }}</span>
+              </div>
+              <div class="difference" :class="getRankDiffClass(subject.gradeRankDiff)">
+                年排差值: {{ typeof subject.gradeRankDiff === 'number' ? Math.abs(subject.gradeRankDiff) : subject.gradeRankDiff }}
+              </div>
+            </div>
+          </a-col>
+        </a-row>
       </div>
     </div>
 
@@ -310,7 +267,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
-import VChart from 'vue-echarts';
 import { getClassesApi } from '@/servers/api/classes';
 import { getClassExam } from '@/servers/api/grade';
 import { getCompareWithStudent } from '@/servers/api/analysis';
@@ -332,25 +288,13 @@ interface ExamInfo {
 }
 
 interface StudentInfo {
-  id: string;       // 学号（uid），类型为 string
+  id: string;
   name: string;
   class_id: number;
-  uid: string;      // 与 id 一致，避免命名混淆
+  uid: string;
 }
 
 interface SubjectScores {
-  yuwen: number;
-  shuxue: number;
-  yingyu: number;
-  wuli: number;
-  huaxue: number;
-  lishi: number;
-  zhengzhi: number;
-  shengwu: number;
-  dili: number;
-}
-
-interface SubjectRanks {
   yuwen: number;
   shuxue: number;
   yingyu: number;
@@ -416,20 +360,25 @@ interface ComparisonResult {
     current: number;
     compare: number;
   };
-  class_total?: number; // 班级总人数
-  grade_total?: number; // 年级总人数
   subject_score?: {
     current: SubjectScores;
     compare: SubjectScores;
   };
-  subject_class_rank?: {
-    current: SubjectRanks;
-    compare: SubjectRanks;
-  };
-  detail?: {
-    current: Array<{ key: string; value: string }>;
-    compare: Array<{ key: string; value: string }>;
-  };
+}
+
+// 科目信息类型（含分数、排名）
+interface SubjectInfo {
+  name: string;
+  enKey: string;
+  s1Score: number;
+  s2Score: number;
+  scoreDiff: number;
+  s1ClassRank: string | number;
+  s2ClassRank: string | number;
+  classRankDiff: number | string;
+  s1GradeRank: string | number;
+  s2GradeRank: string | number;
+  gradeRankDiff: number | string;
 }
 
 // 状态管理
@@ -438,17 +387,17 @@ const loading = ref(false);
 const hasSearched = ref(false);
 const classList = ref<ClassInfo[]>([]);
 const examList = ref<ExamInfo[]>([]);
-const studentList = ref<StudentInfo[]>([]); // 原始学生列表（含string类型的id）
-const filteredStudentList1 = ref<StudentInfo[]>([]); // 学生1筛选后的列表
-const filteredStudentList2 = ref<StudentInfo[]>([]); // 学生2筛选后的列表
+const studentList = ref<StudentInfo[]>([]); 
+const filteredStudentList1 = ref<StudentInfo[]>([]); 
+const filteredStudentList2 = ref<StudentInfo[]>([]); 
 const selectedClassId = ref<number>();
-const selectedStudent1 = ref<string>(); // 存储学生1的string类型id（学号）
-const selectedStudent2 = ref<string>(); // 存储学生2的string类型id（学号）
+const selectedStudent1 = ref<string>(); 
+const selectedStudent2 = ref<string>(); 
 const selectedExamId = ref<number>(0);
 const displayMode = ref<'table' | 'chart'>('table');
 const comparisonData = ref<ComparisonResult>({ valid: false });
-const searchKeyword1 = ref(''); // 学生1搜索关键词
-const searchKeyword2 = ref(''); // 学生2搜索关键词
+const searchKeyword1 = ref(''); 
+const searchKeyword2 = ref(''); 
 
 // 科目名称映射
 const subjectMap = {
@@ -463,231 +412,109 @@ const subjectMap = {
   'dili': '地理'
 };
 
-// 计算差值
+// 计算总分/总排名差值
 const totalScoreDiff = computed(() => {
   const total = comparisonData.value.total_score;
   return (total?.current || 0) - (total?.compare || 0);
 });
-
 const rankDiff = computed(() => {
   const rank = comparisonData.value.class_rank;
   return (rank?.current || 0) - (rank?.compare || 0);
 });
-
 const gradeRankDiff = computed(() => {
   const rank = comparisonData.value.grade_rank;
   return (rank?.current || 0) - (rank?.compare || 0);
 });
 
-// 格式化科目分数数据
-const subjectScoreData = computed(() => {
+// 格式化单科数据（拆分为“分数+班级排名+年级排名”）
+const subjectList = computed<SubjectInfo[]>(() => {
   const subjectScore = comparisonData.value.subject_score;
-  if (!subjectScore) return [];
-  
-  return Object.entries(subjectMap).map(([en, cn]) => ({
-    subject: cn,
-    student1Score: subjectScore.current[en as keyof SubjectScores] || 0,
-    student2Score: subjectScore.compare[en as keyof SubjectScores] || 0,
-    diff: (subjectScore.current[en as keyof SubjectScores] || 0) - 
-          (subjectScore.compare[en as keyof SubjectScores] || 0)
-  })).filter(item => item.student1Score > 0 || item.student2Score > 0);
-});
+  if (!subjectScore || !comparisonData.value.current_student || !comparisonData.value.compare_student) {
+    return [];
+  }
+  const current = comparisonData.value.current_student;
+  const compare = comparisonData.value.compare_student;
 
-// 格式化科目排名数据
-const subjectRankData = computed(() => {
-  const currentStudent = comparisonData.value.current_student || {};
-  const compareStudent = comparisonData.value.compare_student || {};
-  
-  return Object.entries(subjectMap).map(([en, cn]) => {
-    // 定义分数、班级排名、年级排名的字段名
-    const scoreKey = en as keyof typeof currentStudent;
-    const classRankKey = `${en}B` as keyof typeof currentStudent;
-    const gradeRankKey = `${en}D` as keyof typeof currentStudent;
-    
-    // 获取当前科目分数（判断是否有效）
-    const student1Score = currentStudent[scoreKey] || 0;
-    const student2Score = compareStudent[scoreKey] || 0;
-    
-    // 仅当任一学生分数不为0时，才计算排名（避免无效数据）
-    const student1ClassRank = (student1Score !== 0 && currentStudent[classRankKey]) || '-';
-    const student1GradeRank = (student1Score !== 0 && currentStudent[gradeRankKey]) || '-';
-    const student2ClassRank = (student2Score !== 0 && compareStudent[classRankKey]) || '-';
-    const student2GradeRank = (student2Score !== 0 && compareStudent[gradeRankKey]) || '-';
+  return Object.entries(subjectMap).map(([enKey, name]) => {
+    // 分数数据
+    const s1Score = subjectScore.current[enKey as keyof SubjectScores] || 0;
+    const s2Score = subjectScore.compare[enKey as keyof SubjectScores] || 0;
+    const scoreDiff = s1Score - s2Score;
 
-    // 计算排名差值（添加类型断言，确保是有效数字后再转换）
-    const classRankDiff = student1ClassRank !== '-' && student2ClassRank !== '-'
-      ? (Number(student1ClassRank) as number) - (Number(student2ClassRank) as number)
+    // 班级排名数据
+    const s1ClassRankKey = `${enKey}b` as keyof StudentResult;
+    const s2ClassRankKey = `${enKey}b` as keyof StudentResult;
+    const s1ClassRank = current[s1ClassRankKey] || '-';
+    const s2ClassRank = compare[s2ClassRankKey] || '-';
+    const classRankDiff = (typeof s1ClassRank === 'number' && typeof s2ClassRank === 'number') 
+      ? s1ClassRank - s2ClassRank 
       : '-';
-    const gradeRankDiff = student1GradeRank !== '-' && student2GradeRank !== '-'
-      ? (Number(student1GradeRank) as number) - (Number(student2GradeRank) as number)
+
+    // 年级排名数据
+    const s1GradeRankKey = `${enKey}d` as keyof StudentResult;
+    const s2GradeRankKey = `${enKey}d` as keyof StudentResult;
+    const s1GradeRank = current[s1GradeRankKey] || '-';
+    const s2GradeRank = compare[s2GradeRankKey] || '-';
+    const gradeRankDiff = (typeof s1GradeRank === 'number' && typeof s2GradeRank === 'number') 
+      ? s1GradeRank - s2GradeRank 
       : '-';
 
     return {
-      subject: cn,
-      student1Score, // 存储分数用于过滤
-      student2Score, // 存储分数用于过滤
-      student1ClassRank,
-      student1GradeRank,
-      student2ClassRank,
-      student2GradeRank,
+      name,
+      enKey,
+      s1Score,
+      s2Score,
+      scoreDiff,
+      s1ClassRank,
+      s2ClassRank,
       classRankDiff,
-      gradeRankDiff,
+      s1GradeRank,
+      s2GradeRank,
+      gradeRankDiff
     };
-  }).filter(item => 
-    // 过滤条件：任一学生分数不为0，且至少有一个排名有效
-    (item.student1Score !== 0 || item.student2Score !== 0) &&
-    (item.student1ClassRank !== '-' || item.student2ClassRank !== '-' || 
-     item.student1GradeRank !== '-' || item.student2GradeRank !== '-')
-  );
-});
-
-// 表格列定义
-const subjectColumns = computed(() => [
-  { title: '科目', dataIndex: 'subject', key: 'subject' },
-  { 
-    title: `${getStudentName(selectedStudent1.value)}分数`, 
-    dataIndex: 'student1Score', 
-    key: 'student1Score',
-    customRender: ({ value }: { value: any }) => formatScore(Number(value))
-  },
-  { 
-    title: `${getStudentName(selectedStudent2.value)}分数`, 
-    dataIndex: 'student2Score', 
-    key: 'student2Score',
-    customRender: ({ value }: { value: any }) => formatScore(Number(value))
-  },
-  { title: '差值', dataIndex: 'diff', key: 'diff' }
-]);
-
-const subjectRankColumns = computed(() => [
-  { title: '科目', dataIndex: 'subject', key: 'subject' },
-  // 学生1的班级和年级排名
-  { title: `${getStudentName(selectedStudent1.value)}班级排名`, dataIndex: 'student1ClassRank', key: 'student1ClassRank' },
-  { title: `${getStudentName(selectedStudent1.value)}年级排名`, dataIndex: 'student1GradeRank', key: 'student1GradeRank' },
-  // 学生2的班级和年级排名
-  { title: `${getStudentName(selectedStudent2.value)}班级排名`, dataIndex: 'student2ClassRank', key: 'student2ClassRank' },
-  { title: `${getStudentName(selectedStudent2.value)}年级排名`, dataIndex: 'student2GradeRank', key: 'student2GradeRank' },
-  // 排名差值
-  { title: '班级排名差值', dataIndex: 'classRankDiff', key: 'classRankDiff' },
-  { title: '年级排名差值', dataIndex: 'gradeRankDiff', key: 'gradeRankDiff' },
-]);
-
-const detailColumns = [
-  { title: '项目', dataIndex: 'key', key: 'key' },
-  { title: '数值', dataIndex: 'value', key: 'value' }
-];
-
-// 图表配置
-const subjectChartOption = computed(() => {
-  const validSubjects = subjectScoreData.value;
-  const subjects = validSubjects.map(item => item.subject);
-  const student1Scores = validSubjects.map(item => item.student1Score);
-  const student2Scores = validSubjects.map(item => item.student2Score);
-  
-  return {
-    tooltip: { 
-      trigger: 'axis', 
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any) => {
-        return `${params[0].name}: ${formatScore(params[0].value)}<br/>${params[1].name}: ${formatScore(params[1].value)}`;
-      }
-    },
-    legend: { data: [getStudentName(selectedStudent1.value), getStudentName(selectedStudent2.value)] },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: { type: 'category', data: subjects },
-    yAxis: { type: 'value', name: '分数' },
-    series: [
-      {
-        name: getStudentName(selectedStudent1.value),
-        type: 'bar',
-        data: student1Scores,
-        itemStyle: { color: '#5470C6' }
-      },
-      {
-        name: getStudentName(selectedStudent2.value),
-        type: 'bar',
-        data: student2Scores,
-        itemStyle: { color: '#91CC75' }
-      }
-    ]
-  };
-});
-
-// 图表配置
-const subjectRankChartOption = computed(() => {
-  // 筛选出：分数不为0 + 班级排名都有效的科目
-  const validSubjects = subjectRankData.value.filter(item => 
-    (item.student1Score !== 0 || item.student2Score !== 0) &&
-    item.student1ClassRank !== '-' && item.student2ClassRank !== '-'
-  );
-  
-  const subjects = validSubjects.map(item => item.subject);
-  const student1Ranks = validSubjects.map(item => Number(item.student1ClassRank) as number);
-  const student2Ranks = validSubjects.map(item => Number(item.student2ClassRank) as number);
-  return {
-    tooltip: { 
-      trigger: 'axis', 
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any) => {
-        return `${params[0].name}: ${params[0].value}名<br/>${params[1].name}: ${params[1].value}名`;
-      }
-    },
-    legend: { data: [getStudentName(selectedStudent1.value), getStudentName(selectedStudent2.value)] },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: { type: 'category', data: subjects },
-    yAxis: { 
-      type: 'value', 
-      name: '班级排名',
-      axisLabel: { formatter: '{value} 名' }
-    },
-    series: [
-      { name: getStudentName(selectedStudent1.value), type: 'bar', data: student1Ranks, itemStyle: { color: '#5470C6' } },
-      { name: getStudentName(selectedStudent2.value), type: 'bar', data: student2Ranks, itemStyle: { color: '#91CC75' } }
-    ]
-  };
+  }).filter(item => item.s1Score > 0 || item.s2Score > 0);
 });
 
 // 工具函数 
 const getStudentName = (studentId: string | undefined) => {
   if (!studentId) return '';
-  const student = studentList.value.find(s => s.id === studentId); // 通过string类型的id匹配
+  const student = studentList.value.find(s => s.id === studentId);
   return student ? student.name : '未知学生';
 };
 
-const getDifferenceClass = (diff: number) => {
-  if (diff > 0) return 'negative';
-  if (diff < 0) return 'positive';
+// 分数差值样式（正数：学生1更高/绿色；负数：学生2更高/红色；零：默认）
+const getScoreDiffClass = (diff: number) => {
+  if (diff > 0) return 'positive'; // 学生1更高→ 绿色
+  if (diff < 0) return 'negative'; // 学生1更低→ 红色
   return 'zero';
 };
 
-const getRankDifferenceClass = (diff: number) => {
-  if (diff > 0) return 'negative';
-  if (diff < 0) return 'positive';
+// 排名差值样式（排名越小越优：负数→学生1更优/绿色；正数→学生2更优/红色；零→默认）
+const getRankDiffClass = (diff: number | string) => {
+  if (typeof diff === 'string') return 'zero';
+  if (diff > 0) return 'negative'; // 学生1排名更差 → 红色
+  if (diff < 0) return 'positive'; // 学生1排名更优 → 绿色
   return 'zero';
 };
 
-// 格式化分数（保留2位小数）
+// 格式化分数
 const formatScore = (score: number) => {
   return score.toFixed(2);
 };
 
-// 处理考试变化
+// 接口请求
 const handleExamChange = (examId: number) => {
   selectedExamId.value = examId;
 };
-// 同时获取学生列表和考试列表
+
 const fetchStudentListAndExams = async () => {
   if (!selectedClassId.value) return;
-  
   try {
     loading.value = true;
-    // 并行请求学生列表和考试列表
     const [studentRes, examRes] = await Promise.all([
       getStudentApi({ class_id: selectedClassId.value }),
       getClassExam({ class_id: selectedClassId.value })
     ]);
-    
-    // 处理学生列表
     if (studentRes.code === 200 && studentRes.data) {
       studentList.value = studentRes.data.map((item: any) => ({
         id: item.uid,        
@@ -699,105 +526,76 @@ const fetchStudentListAndExams = async () => {
       filteredStudentList2.value = [...studentList.value];
       selectedStudent1.value = undefined;
       selectedStudent2.value = undefined;
-      searchKeyword1.value = '';
-      searchKeyword2.value = '';
     } else {
       message.warning(studentRes.msg || '获取学生列表失败');
-      studentList.value = [];
-      filteredStudentList1.value = [];
-      filteredStudentList2.value = [];
     }
-    
-    // 处理考试列表
     if (examRes.code === 200 && examRes.data.length > 0) {
-    examList.value = examRes.data.map((examId: number) => ({
-    id: examId,
-    name: `考试${examId}`
-  }));
-    if (examList.value.length > 0) {
+      examList.value = examRes.data.map((examId: number) => ({
+        id: examId,
+        name: `考试${examId}`
+      }));
       selectedExamId.value = examList.value[0].id;
+    } else {
+      message.warning(examRes.msg || '获取考试列表失败');
     }
-  } else {
-  message.warning(examRes.msg || '获取考试列表失败');
-  examList.value = [];
-  selectedExamId.value = 0;
-}
   } catch (err) {
     message.error('获取学生或考试列表失败');
-    console.error(err);
   } finally {
     loading.value = false;
   }
 };
 
-// 处理学生1搜索
 const handleStudent1Search = (value: string) => {
   searchKeyword1.value = value;
-  if (!value) {
-    filteredStudentList1.value = [...studentList.value];
-    return;
-  }
-  
-  const filtered = studentList.value.filter(student => 
-    student.name.toLowerCase().includes(value.toLowerCase()) ||
-    student.uid.toString().includes(value.toLowerCase())
-  );
-  filteredStudentList1.value = filtered;
+  filteredStudentList1.value = !value 
+    ? [...studentList.value]
+    : studentList.value.filter(student => 
+        student.name.toLowerCase().includes(value.toLowerCase()) ||
+        student.uid.includes(value)
+      );
 };
 
-// 处理学生2搜索
 const handleStudent2Search = (value: string) => {
   searchKeyword2.value = value;
-  if (!value) {
-    filteredStudentList2.value = [...studentList.value];
-    return;
-  }
-  
-  const filtered = studentList.value.filter(student => 
-    student.name.toLowerCase().includes(value.toLowerCase()) ||
-    student.uid.toString().includes(value.toLowerCase())
-  );
-  filteredStudentList2.value = filtered;
+  filteredStudentList2.value = !value 
+    ? [...studentList.value]
+    : studentList.value.filter(student => 
+        student.name.toLowerCase().includes(value.toLowerCase()) ||
+        student.uid.includes(value)
+      );
 };
 
-// 处理学生1选择变化
 const handleStudent1Change = (studentId: string) => {
   selectedStudent1.value = studentId;
 };
 
-// 处理学生2选择变化
 const handleStudent2Change = (studentId: string) => {
   selectedStudent2.value = studentId;
 };
 
-// 获取对比数据
 const fetchComparisonData = async () => {
   if (selectedStudent1.value === selectedStudent2.value) {
     message.warning('请选择不同的学生进行对比');
     return;
   }
-  
   if (!selectedStudent1.value || !selectedStudent2.value || !selectedExamId.value) {
     message.warning('请选择完整的对比条件');
     return;
   }
-  
   try {
     loading.value = true;
     hasSearched.value = true;
-    
     const res = await getCompareWithStudent({
       student_id: selectedStudent1.value,  
       compare_student_id: selectedStudent2.value,  
-      selected_exam_id: selectedExamId.value.toString() as unknown as string
+      selected_exam_id: selectedExamId.value.toString()
     });
-    
     if (res.code === 200 && res.data) {
       const { current_student, compare_student } = res.data;
       comparisonData.value = {
         valid: true,
-        current_student: res.data.current_student,
-        compare_student: res.data.compare_student,
+        current_student,
+        compare_student,
         total_score: {
           current: current_student.sum_ || 0,
           compare: compare_student.sum_ || 0
@@ -810,8 +608,6 @@ const fetchComparisonData = async () => {
           current: current_student.sumd || 0,
           compare: compare_student.sumd || 0
         },
-        class_total: 0,
-        grade_total: 0,
         subject_score: {
           current: {
             yuwen: current_student.yuwen || 0,
@@ -835,42 +631,6 @@ const fetchComparisonData = async () => {
             zhengzhi: compare_student.zhengzhi || 0,
             dili: compare_student.dili || 0,
           }
-        },
-        subject_class_rank: {
-          current: {
-            yuwen: current_student.yuwenb || 0,
-            shuxue: current_student.shuxueb || 0,
-            yingyu: current_student.yingyub || 0,
-            wuli: current_student.wulib || 0,
-            huaxue: current_student.huaxueb || 0,
-            shengwu: current_student.shengwub || 0,
-            lishi: current_student.lishib || 0,
-            zhengzhi: current_student.zhengzhib || 0,
-            dili: current_student.dilib || 0,
-          },
-          compare: {
-            yuwen: compare_student.yuwenb || 0,
-            shuxue: compare_student.shuxueb || 0,
-            yingyu: compare_student.yingyub || 0,
-            wuli: compare_student.wulib || 0,
-            huaxue: compare_student.huaxueb || 0,
-            shengwu: compare_student.shengwub || 0,
-            lishi: compare_student.lishib || 0,
-            zhengzhi: compare_student.zhengzhib || 0,
-            dili: compare_student.dilib || 0,
-          }
-        },
-        detail: {
-          current: [
-            { key: '总分', value: (current_student.sum_ || 0).toFixed(2) },
-            { key: '班级排名', value: `${current_student.sumb || 0} / -` },
-            { key: '年级排名', value: `${current_student.sumd || 0} / -` },
-          ],
-          compare: [
-            { key: '总分', value: (compare_student.sum_ || 0).toFixed(2) },
-            { key: '班级排名', value: `${compare_student.sumb || 0} / -` },
-            { key: '年级排名', value: `${compare_student.sumd || 0} / -` },
-          ]
         }
       };
     } else {
@@ -879,32 +639,26 @@ const fetchComparisonData = async () => {
     }
   } catch (err) {
     message.error('获取对比数据失败');
-    console.error(err);
     comparisonData.value = { valid: false };
   } finally {
     loading.value = false;
   }
 };
 
-// 重置筛选
 const resetFilters = () => {
   if (examList.value.length > 0) {
     selectedExamId.value = examList.value[0].id;
   }
   if (classList.value.length > 0) {
     selectedClassId.value = classList.value[0].id;
-    // 重置班级时重新加载学生列表
     fetchStudentListAndExams();
   }
   selectedStudent1.value = undefined;
   selectedStudent2.value = undefined;
-  searchKeyword1.value = '';
-  searchKeyword2.value = '';
   comparisonData.value = { valid: false };
   hasSearched.value = false;
 };
 
-// 计算"开始对比"按钮的禁用状态
 const isCompareBtnDisabled = computed(() => {
   return (
     loading.value || 
@@ -916,63 +670,25 @@ const isCompareBtnDisabled = computed(() => {
   );
 });
 
-// 获取学生详情数据
-const getStudentDetailData = (studentId: string | undefined) => {
-  if (!studentId || !comparisonData.value.valid) return [];
-  
-  const isCurrentStudent = studentId === selectedStudent1.value;
-  const rawDetail = comparisonData.value.detail?.[isCurrentStudent ? 'current' : 'compare'] || [];
-  
-  // 过滤重复的项
-  const filteredDetail = rawDetail.filter(item => 
-    !['总分', '班级排名', '年级排名'].includes(item.key)
-  );
-  
-  // 格式化班级排名和年级排名的文本
-  const classRank = `${isCurrentStudent 
-    ? comparisonData.value.class_rank?.current || 0 
-    : comparisonData.value.class_rank?.compare || 0}`;
-  const gradeRank = `${isCurrentStudent 
-    ? comparisonData.value.grade_rank?.current || 0 
-    : comparisonData.value.grade_rank?.compare || 0}`;
-  
-  // 组装最终数据
-  return [
-    { key: '总分', value: formatScore(isCurrentStudent 
-      ? comparisonData.value.total_score?.current || 0 
-      : comparisonData.value.total_score?.compare || 0) },
-    { key: '班级排名', value: classRank },
-    { key: '年级排名', value: gradeRank },
-    ...filteredDetail
-  ];
-};
-
-// 初始化数据
 const init = async () => {
   try {
     const userInfo = userStore.getUserInfo();
     const teacherId = userInfo?.teacher?.uid;
-    
     if (!teacherId) {
       message.error('未获取到教师信息');
       return;
     }
-    
     loading.value = true;
-    
-    // 1. 获取班级列表
     const classRes = await getClassesApi({ header: teacherId });
     if (classRes.code === 200 && classRes.data.length > 0) {
       classList.value = classRes.data;
       selectedClassId.value = classList.value[0].id;
-      // 2. 加载考试和学生列表
       await fetchStudentListAndExams();
     } else {
       message.warning(classRes.msg || '未找到您管理的班级');
     }
   } catch (err) {
     message.error('初始化失败');
-    console.error(err);
   } finally {
     loading.value = false;
   }
@@ -982,6 +698,7 @@ onMounted(init);
 </script>
 
 <style scoped lang="less">
+/* 根容器样式 */
 .student-compare-container {
   padding: 20px;
   position: relative;
@@ -991,6 +708,7 @@ onMounted(init);
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
 
+  /* 头部样式 */
   .header {
     background: linear-gradient(120deg, #4b6cb7, #1890ff);
     padding: 20px;
@@ -1012,6 +730,7 @@ onMounted(init);
     }
   }
 
+  /* 筛选区域样式 */
   .filter-section {
     background: #ffffff;
     padding: 20px;
@@ -1098,21 +817,18 @@ onMounted(init);
         margin-right: 12px;
         font-size: 14px;
       }
-      
-      :deep(.ant-radio-wrapper) {
-        margin-right: 20px;
-      }
     }
   }
 
+  /* 加载状态 */
   .loading-spin {
     display: block;
     margin: 50px auto;
   }
 
-  .summary-cards {
-    margin-bottom: 24px;
-
+  /* 卡片通用样式 */
+  .summary-cards,
+  .subject-modules {
     .summary-card {
       background: #ffffff;
       border-radius: 12px;
@@ -1164,62 +880,19 @@ onMounted(init);
       }
     }
     
-    .total-score-card {
+    /* 列级统一颜色 */
+    .col-1-card {
       border-top: 4px solid #1890ff;
     }
-    
-    .class-rank-card {
+    .col-2-card {
       border-top: 4px solid #52c41a;
     }
-    
-    .grade-rank-card {
+    .col-3-card {
       border-top: 4px solid #fa8c16;
     }
   }
 
-  .analysis-card {
-    margin-bottom: 24px;
-    
-    .chart-card, .student-card {
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      overflow: hidden;
-      
-      :deep(.ant-card-head) {
-        background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
-        border-bottom: 1px solid #e8e8e8;
-        padding: 0 16px;
-        
-        .ant-card-head-title {
-          font-weight: 600;
-          color: #333;
-        }
-      }
-    }
-  }
-
-  .table-container {
-    overflow-x: auto;
-    padding: 10px 0;
-  }
-
-  .chart-container {
-    width: 100%;
-    height: 400px;
-  }
-
-  .top-students-container {
-    .class-top-students {
-      h4 {
-        margin-bottom: 16px;
-        color: #1f1f1f;
-        font-size: 18px;
-        font-weight: 500;
-        text-align: center;
-      }
-    }
-  }
-
+  /* 无数据状态 */
   .no-data {
     background: white;
     border-radius: 12px;
@@ -1229,20 +902,23 @@ onMounted(init);
     margin-bottom: 20px;
   }
 
+  /* 差值颜色 */
   .positive {
-    color: #f5222d; // 红色表示学生1优于学生2
+    color: #52c41a; // 更好（绿色）
   }
 
   .negative {
-    color: #52c41a; // 绿色表示学生2优于学生1
+    color: #f5222d; // 更差（红色）
   }
 
   .zero {
     color: #535353;
   }
-  
-  // 响应式设计
-  @media (max-width: 768px) {
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .student-compare-container {
     padding: 12px;
     
     .filter-section {
@@ -1269,7 +945,8 @@ onMounted(init);
       }
     }
     
-    .summary-cards {
+    .summary-cards,
+    .subject-modules {
       .summary-card {
         padding: 16px;
         
@@ -1285,14 +962,6 @@ onMounted(init);
         
         .difference {
           font-size: 14px;
-        }
-      }
-    }
-    
-    .top-students-container {
-      .class-top-students {
-        h4 {
-          font-size: 16px;
         }
       }
     }
