@@ -213,7 +213,7 @@
       </a-row>
     </div>
 <div class="table-notes" style="margin-bottom: 10px; color: #666; font-size: 12px; text-align: right;">
-		    注：一本线上下5分区间成绩标为橙色,低于一本线五分的成绩标为红色，超出一本线5分及以上成绩标为黑色
+		    注：一本线上下5分区间成绩标为橙色,低于一本线五分及以下的成绩标为红色，超出一本线5分以上成绩标为黑色
 		  </div>
     <!-- 成绩表格区域 -->
     <div class="table-section">
