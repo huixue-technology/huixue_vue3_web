@@ -8,7 +8,7 @@
       <a-card class="rate-card">
         <!-- 搜索框 -->
         <div class="search-container">
-          <a-space>
+          <a-space wrap :size="12">
             <a-auto-complete
               v-model:value="searchName"
               :options="studentNameOptions"
@@ -22,6 +22,31 @@
                 <div>{{ label }} ({{ value }})</div>
               </template>
             </a-auto-complete>
+            
+            <a-select
+              v-model:value="selectedSubject"
+              placeholder="请选择科目"
+              style="width: 150px"
+              allowClear
+            >
+              <a-select-option v-for="subject in availableSubjects" :key="subject.value" :value="subject.value">
+                {{ subject.label }}
+              </a-select-option>
+            </a-select>
+            
+            <a-select
+              v-model:value="rateRange"
+              placeholder="过线率范围"
+              style="width: 150px"
+              allowClear
+            >
+              <a-select-option value="0-20">0% - 20%</a-select-option>
+              <a-select-option value="20-40">20% - 40%</a-select-option>
+              <a-select-option value="40-60">40% - 60%</a-select-option>
+              <a-select-option value="60-80">60% - 80%</a-select-option>
+              <a-select-option value="80-100">80% - 100%</a-select-option>
+            </a-select>
+            
             <a-button @click="clearSearch">清除筛选</a-button>
           </a-space>
         </div>
@@ -74,6 +99,8 @@ const studentRateColumns = ref<any[]>([
 
 // 搜索相关
 const searchName = ref<string>('');
+const selectedSubject = ref<string | undefined>(undefined);
+const rateRange = ref<string | undefined>(undefined);
 
 // 学生姓名选项（用于自动完成）
 const studentNameOptions = computed(() => {
@@ -83,18 +110,52 @@ const studentNameOptions = computed(() => {
   }));
 });
 
+// 可用的科目列表
+const availableSubjects = ref<{ value: string; label: string }[]>([]);
+
 // 过滤后的学生列表
 const filteredStudentRateList = computed(() => {
-  if (!searchName.value) {
-    return studentRateList.value;
+  let result = studentRateList.value;
+  
+  // 按姓名或学号筛选
+  if (searchName.value) {
+    result = result.filter(student => {
+      const nameMatch = student.name.toLowerCase().includes(searchName.value.toLowerCase());
+      const uidMatch = String(student.uid).includes(searchName.value);
+      return nameMatch || uidMatch;
+    });
   }
   
-  return studentRateList.value.filter(student => {
-    // 支持按姓名或学号搜索
-    const nameMatch = student.name.toLowerCase().includes(searchName.value.toLowerCase());
-    const uidMatch = String(student.uid).includes(searchName.value);
-    return nameMatch || uidMatch;
-  });
+  // 按科目和过线率范围筛选（只有当科目和过线率范围都选择时才生效）
+  if (selectedSubject.value && rateRange.value) {
+    const [min, max] = rateRange.value.split('-').map(Number);
+    result = result.filter(student => {
+      const rate = student[selectedSubject.value!];
+      if (rate === null || rate === undefined) return false;
+      const ratePercent = rate * 100;
+      return ratePercent >= min && ratePercent <= max;
+    });
+  } else if (selectedSubject.value && !rateRange.value) {
+    // 只选择了科目，显示有该科目成绩的学生
+    result = result.filter(student => {
+      const rate = student[selectedSubject.value!];
+      return rate !== null && rate !== undefined;
+    });
+  } else if (!selectedSubject.value && rateRange.value) {
+    // 只选择了过线率范围，筛选任意科目过线率在范围内的学生
+    const [min, max] = rateRange.value.split('-').map(Number);
+    result = result.filter(student => {
+      // 检查学生是否有任何科目的过线率在指定范围内
+      return availableSubjects.value.some(subject => {
+        const rate = student[subject.value];
+        if (rate === null || rate === undefined) return false;
+        const ratePercent = rate * 100;
+        return ratePercent >= min && ratePercent <= max;
+      });
+    });
+  }
+  
+  return result;
 });
 
 // 处理搜索
@@ -114,6 +175,8 @@ const handleSelect = (value: string) => {
 // 清除搜索
 const clearSearch = () => {
   searchName.value = '';
+  selectedSubject.value = undefined;
+  rateRange.value = undefined;
 };
 
 
@@ -162,7 +225,7 @@ const fetchSubjectRateData = async () => {
             align: 'center',
             customRender: ({ text }: any) => {
               if (text === null || text === undefined) return '-';
-              return `${(text * 100).toFixed(2)}%`;
+              return `${(text * 100)}%`;
             }
           });
           
@@ -189,6 +252,12 @@ const fetchSubjectRateData = async () => {
         { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left', align: 'center' },
         ...subjectColumns
       ];
+      
+      // 更新可用科目列表
+      availableSubjects.value = subjectColumns.map(col => ({
+        value: col.dataIndex,
+        label: col.title
+      }));
       
       // 转换为数组
       studentRateList.value = Array.from(studentMap.values());

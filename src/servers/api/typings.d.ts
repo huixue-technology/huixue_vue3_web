@@ -125,6 +125,8 @@ declare namespace API {
     page?: number;
     /** 每页记录数 */
     size?: number;
+    /** 班级id */
+    id?: number;
     /** 班级名称（可选） */
     name?: string;
     /** 班主任（可选） */

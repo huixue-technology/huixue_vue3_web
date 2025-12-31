@@ -89,7 +89,7 @@
         <a-col :span="24" :md="16">
           <div class="summary-cards">
             <a-row :gutter="16">
-              <a-col :span="12" :lg="6">
+              <a-col :span="12" :lg="8">
                 <div class="summary-card total-score-card">
                   <div class="card-title">总分</div>
                   <div class="card-value">{{ totalScore }}</div>
@@ -99,16 +99,8 @@
                   </div>
                 </div>
               </a-col>
-              <a-col :span="12" :lg="6">
-                <div class="summary-card average-score-card">
-                  <div class="card-title">平均分</div>
-                  <div class="card-value">{{ averageScore }}</div>
-                  <div class="card-footer">
-                    <span>最高分: {{ maxScore }}</span>
-                  </div>
-                </div>
-              </a-col>
-              <a-col :span="12" :lg="6">
+
+              <a-col :span="12" :lg="8">
                 <div class="summary-card rank-card">
                   <div class="card-title">班级排名</div>
                   <div class="card-value" :class="getRankClass(totalClassRank)">
@@ -119,7 +111,7 @@
                   </div>
                 </div>
               </a-col>
-              <a-col :span="12" :lg="6">
+              <a-col :span="12" :lg="8">
                 <div class="summary-card pass-rate-card">
                   <div class="card-title">及格率</div>
                   <div class="card-value">{{ passRate }}%</div>
@@ -432,13 +424,6 @@ const totalGradeRank = computed(() => {
   return detail ? detail.sumd || 0 : 0;
 });
 
-// 平均分相关计算
-const averageScore = computed(() => {
-  const data = scoreData.value.filter(item => item.subject !== 'sum_');
-  if (data.length === 0) return 0;
-  const sum = data.reduce((acc, item) => acc + item.score, 0);
-  return (sum / data.length).toFixed(1);
-});
 
 const maxScore = computed(() => {
   const data = scoreData.value.filter(item => item.subject !== 'sum_');

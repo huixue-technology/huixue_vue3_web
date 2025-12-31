@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import type { ColumnType } from 'ant-design-vue/es/table';
 import { postCompareRankMultiExam } from '@/servers/api/analysis';
 import { getGradeApi } from '@/servers/api/grade';
@@ -47,6 +47,17 @@ const props = defineProps<{
 const emit = defineEmits(['update:compareScoreData']);
 
 const compareExamId = ref<string>('');
+
+onMounted(()=> {
+  if(props.examList.length > 1) {
+    console.log(compareExamId)
+    console.log(props.examList[1].name)
+    compareExamId.value = props.examList[1].id
+    handleChange(compareExamId.value)
+  }
+  
+  // compareExamId.value = props.examList[-1].name
+})
 const tableData = ref<{
         subject : any | string,
         rankChangeClass:any,

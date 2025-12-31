@@ -43,5 +43,10 @@ export default [
         path: '/grade-simulation',
         name: 'gradeSimulation',
         component: () => import('@/views/gradeanalysis/GradeSimulationPage.vue')
+    },
+    {
+        path: '/simulate',
+        name: 'gradeSimulate',
+        component: () => import('@/views/simulate/gradeSimulate.vue')
     }
 ]

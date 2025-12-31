@@ -120,12 +120,12 @@ const items =  computed<MenuProps['items']>(()=>{
           label: '名次详情',
           title: '名次详情',
         },
-        // {
-        //   key: 'mistakes',
-        //   icon: () => h(FrownOutlined),
-        //   label: '错题合集',
-        //   title: '错题合集',
-        // }
+        {
+          key: 'simulate',
+          icon: () => h(FrownOutlined),
+          label: '成绩模拟',
+          title: '成绩模拟',
+        }
     );
   }
   menuItems.push({
