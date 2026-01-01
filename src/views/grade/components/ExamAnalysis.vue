@@ -68,7 +68,12 @@ const render = ({ text }: { text: number | null }) => {
     if (text === null || text === undefined) {
         return '无数据';
     }
-    return text > 0 ? `+${text}` : String(text);
+    if (text > 0) {
+        return `↑${text}`;
+    } else if (text < 0) {
+        return `↓${Math.abs(text)}`;
+    }
+    return String(text);
 }
 
 const customCell = (text:any) => {
