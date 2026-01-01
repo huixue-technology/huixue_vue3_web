@@ -492,13 +492,21 @@ const fetchClassList = async () => {
             label: item.name || `班级${item.id}`,
             value: item.id
           }));
-        
+
         console.log('过滤后的班级列表:', classOptions.value);
-        
+
         if (classOptions.value.length === 0) {
           message.warning('未找到同年级的班级');
         } else {
           message.success(`成功加载 ${classOptions.value.length} 个班级`);
+          // 默认选中老师所在的班级（班主任班），并尝试加载该班学生
+          selectedClassId.value = Number(teacherClassId);
+          currentClassId.value = String(teacherClassId);
+          try {
+            await fetchStudentList(Number(teacherClassId));
+          } catch (e) {
+            console.error('加载班级学生列表失败:', e);
+          }
         }
       }
     } else {

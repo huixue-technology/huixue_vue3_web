@@ -19,7 +19,7 @@
               allowClear
             >
               <template #option="{ value, label }">
-                <div>{{ label }} ({{ value }})</div>
+                  <div>{{ label }} ({{ maskStudentId(value) }})</div>
               </template>
             </a-auto-complete>
             
@@ -93,8 +93,8 @@ const studentRateList = ref<any[]>([]);
 
 // 学生过线率表格列定义
 const studentRateColumns = ref<any[]>([
-  { title: '学生姓名', dataIndex: 'name', width: 120, fixed: 'left' },
-  { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left' },
+  { title: '学生姓名', dataIndex: 'name', width: 120, fixed: 'left', align: 'center' },
+  { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left', align: 'center', customRender: ({ text }: any) => maskStudentId(text) },
 ]);
 
 // 搜索相关
@@ -179,6 +179,14 @@ const clearSearch = () => {
   rateRange.value = undefined;
 };
 
+// 学号脱敏处理，只显示后四位并在前面加两个星号
+const maskStudentId = (studentId: string) => {
+  if (!studentId) return '';
+  const idStr = String(studentId);
+  if (idStr.length <= 4) return idStr;
+  return '**' + idStr.slice(-4);
+};
+
 
 
 
@@ -249,7 +257,7 @@ const fetchSubjectRateData = async () => {
       // 更新表格列（基础列 + 科目列）
       studentRateColumns.value = [
         { title: '学生姓名', dataIndex: 'name', width: 120, fixed: 'left', align: 'center' },
-        { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left', align: 'center' },
+        { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left', align: 'center', customRender: ({ text }: any) => maskStudentId(text) },
         ...subjectColumns
       ];
       

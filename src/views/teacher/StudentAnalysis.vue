@@ -964,11 +964,21 @@ const fetchExamList = async () => {
       if (examDetails.length > 0) {
         // 默认选择最新的考试（最后一个）
         selectedExamId.value = examDetails[examDetails.length - 1].id;
-        
+        if (examDetails.length >= 2) {
+          selectedComparedExamId.value = examDetails[examDetails.length - 2].id;
+        }
+          
         // 如果已经有选中的学生，获取该学生的考试成绩
         if (selectedStudentId.value) {
-          await fetchStudentGrades(selectedStudentId.value, selectedExamId.value);
-          await fetchPassLine(selectedExamId.value);
+          await Promise.all([
+            fetchStudentGrades(selectedStudentId.value, selectedExamId.value),
+            fetchPassLine(selectedExamId.value)
+          ]);
+          
+          // 如果有默认对比考试，也加载对比数据
+          if (selectedComparedExamId.value) {
+            await fetchCompareData(selectedStudentId.value, selectedExamId.value, selectedComparedExamId.value);
+          }
         }
       }
     } else {
@@ -1044,17 +1054,25 @@ const handleStudentChange = async (studentId: string) => {
 
 // 处理考试选择
 const handleExamChange = async (examId: number) => {
+  const prevExamId = selectedExamId.value;
   selectedExamId.value = examId;
-  // 清空对比数据
-  compareData.value = null;
-  selectedComparedExamId.value = undefined;
-  
+  // 仅在考试实际变更时清空对比数据
+  if (prevExamId !== examId) {
+    compareData.value = null;
+    selectedComparedExamId.value = undefined;
+  }
+
   // 获取成绩详情和分数线
   if (selectedStudentId.value) {
     await Promise.all([
       fetchStudentGrades(selectedStudentId.value, examId),
       fetchPassLine(examId)
     ]);
+
+    // 如果已有对比考试但对比数据尚未加载，尝试加载对比数据
+    if (selectedComparedExamId.value && !compareData.value) {
+      await fetchCompareData(selectedStudentId.value, examId, selectedComparedExamId.value);
+    }
   }
 };
 
