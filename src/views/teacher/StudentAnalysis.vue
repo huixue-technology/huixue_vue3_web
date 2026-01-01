@@ -177,8 +177,8 @@
                   <span class="pass-line">{{ record.passLine }}</span>
                 </template>
                 <template v-if="column.dataIndex === 'difference'">
-                  <span :class="getDifferenceClass(record.difference)">
-                    {{ record.difference > 0 ? '+' : '' }}{{ record.difference }}
+                    <span :class="getDifferenceClass(record.difference)">
+                    {{ record.difference > 0 ? '⬆' : record.difference < 0 ? '⬇' : '' }}{{ Math.abs(record.difference) }}
                   </span>
                 </template>
               </template>
@@ -222,7 +222,7 @@
                 </template>
                 <template v-if="column.dataIndex === 'scoreDiff'">
                   <span :class="getDifferenceClass(record.scoreDiff)">
-                    {{ record.scoreDiff > 0 ? '+' : '' }}{{ formatScore(record.scoreDiff) }}
+                    {{ record.scoreDiff > 0 ? '⬆' : record.scoreDiff < 0 ? '⬇' : '' }}{{ formatScore(Math.abs(record.scoreDiff)) }}
                   </span>
                 </template>
                 <template v-if="column.dataIndex === 'currentClassRank'">
@@ -237,7 +237,7 @@
                 </template>
                 <template v-if="column.dataIndex === 'classRankDiff'">
                   <span :class="getRankDifferenceClass(record.classRankDiff)">
-                    {{ record.classRankDiff > 0 ? '+' : '' }}{{ record.classRankDiff }}
+                    {{ record.classRankDiff > 0 ? '⬇' : record.classRankDiff < 0 ? '⬆' : '' }}{{ Math.abs(record.classRankDiff) }}
                   </span>
                 </template>
                 <template v-if="column.dataIndex === 'currentGradeRank'">
@@ -252,7 +252,7 @@
                 </template>
                 <template v-if="column.dataIndex === 'gradeRankDiff'">
                   <span :class="getRankDifferenceClass(record.gradeRankDiff)">
-                    {{ record.gradeRankDiff > 0 ? '+' : '' }}{{ record.gradeRankDiff }}
+                    {{ record.gradeRankDiff > 0 ? '⬇' : record.gradeRankDiff < 0 ? '⬆' : '' }}{{ Math.abs(record.gradeRankDiff) }}
                   </span>
                 </template>
               </template>

@@ -148,18 +148,23 @@
               <template #bodyCell="{ column, record, index }">
                 <template v-if="column.dataIndex === 'score'">
                   <div class="editable-cell">
-                    <a-input-number
-                      v-if="record.subject !== '总分'"
-                      v-model:value="record.score"
-                      :min="0"
-                      :max="getMaxScore(record.subject)"
-                      :precision="1"
-                      @change="handleScoreChange"
-                      style="width: 100%"
-                    />
-                    <span v-else :class="getScoreClass(record.score, record.subject)">
-                      {{ record.score }}
-                    </span>
+                      <a-input-number
+                        v-if="record.subject !== '总分'"
+                        v-model:value="record.score"
+                        :min="0"
+                        :max="getMaxScore(record.subject)"
+                        :precision="1"
+                        @change="handleScoreChange"
+                        style="width: 100%"
+                      />
+                      <span v-else :class="getScoreClass(record.score, record.subject)">
+                        {{ record.score }}
+                        <span v-if="record.scoreDiff !== undefined && record.scoreDiff !== 0" :class="getScoreDiffClass(record.scoreDiff)" class="score-change-icon">
+                          <ArrowUpOutlined v-if="record.scoreDiff > 0" />
+                          <ArrowDownOutlined v-else />
+                          {{ Math.abs(record.scoreDiff) }}
+                        </span>
+                      </span>
                   </div>
                 </template>
                 <template v-if="column.dataIndex === 'classRank'">
@@ -194,7 +199,7 @@
           <a-card title="排名变化分析" class="analysis-card">
             <div class="analysis-content">
               <a-row :gutter="16">
-                <a-col :span="24" :md="12">
+                <a-col :span="24" :md="8">
                   <div class="rank-change-card class-rank">
                     <div class="rank-title">
                       <TeamOutlined style="font-size: 20px; margin-right: 8px;" />
@@ -214,7 +219,7 @@
                     </div>
                   </div>
                 </a-col>
-                <a-col :span="24" :md="12">
+                <a-col :span="24" :md="8">
                   <div class="rank-change-card grade-rank">
                     <div class="rank-title">
                       <GlobalOutlined style="font-size: 20px; margin-right: 8px;" />
@@ -230,6 +235,26 @@
                     <div class="rank-diff">
                       <span :class="getRankDiffClass(simulatedTotalRank.gradeRank - originalTotalRank.gradeRank)">
                         {{ getRankDiffText(simulatedTotalRank.gradeRank - originalTotalRank.gradeRank) }}
+                      </span>
+                    </div>
+                  </div>
+                </a-col>
+                <a-col :span="24" :md="8">
+                  <div class="rank-change-card total-score">
+                    <div class="rank-title">
+                      <TrophyOutlined style="font-size: 20px; margin-right: 8px;" />
+                      总分变化
+                    </div>
+                    <div class="rank-value">
+                      <span class="original">{{ originalTotalScore }}</span>
+                      <ArrowRightOutlined style="margin: 0 16px;" />
+                      <span class="simulated" :class="getScoreDiffClass(simulatedTotalScore - originalTotalScore)">
+                        {{ simulatedTotalScore }}
+                      </span>
+                    </div>
+                    <div class="rank-diff">
+                      <span :class="getScoreDiffClass(simulatedTotalScore - originalTotalScore)">
+                        {{ getScoreDiffText(simulatedTotalScore - originalTotalScore) }}
                       </span>
                     </div>
                   </div>
@@ -264,6 +289,7 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined
 } from '@ant-design/icons-vue';
+import { TrophyOutlined } from '@ant-design/icons-vue';
 import { postSimulateGrade } from '@/servers/api/analysis';
 import { getGradeApi } from '@/servers/api/grade';
 import { getStudentExamApi, getStudentApi } from '@/servers/api/student';
@@ -365,7 +391,7 @@ const scoreColumns: ColumnType[] = [
     width: 100
   },
   {
-    title: '全校排名',
+    title: '年级排名',
     dataIndex: 'gradeRank',
     key: 'gradeRank',
     align: 'center',
@@ -419,6 +445,16 @@ const simulatedTotalRank = computed(() => {
     classRank: totalRecord.classRank,
     gradeRank: totalRecord.gradeRank
   } : { classRank: 0, gradeRank: 0 };
+});
+
+const originalTotalScore = computed(() => {
+  const totalRecord = originalScores.value.find(r => r.subject === '总分');
+  return totalRecord ? totalRecord.score : 0;
+});
+
+const simulatedTotalScore = computed(() => {
+  const totalRecord = simulatedScores.value.find(r => r.subject === '总分');
+  return totalRecord ? totalRecord.score : 0;
 });
 
 // 初始化
@@ -553,10 +589,14 @@ const fetchStudentList = async (classId: number) => {
     });
     
     if (res.code === 200 && res.data) {
-      studentOptions.value = res.data.map((item: any) => ({
-        label: `${item.name} (${item.uid})`,
-        value: item.uid
-      }));
+      studentOptions.value = res.data.map((item: any) => {
+        const uidStr = String(item.uid || '');
+        const shortUid = uidStr.length > 4 ? "**"+uidStr.slice(-4) : uidStr;
+        return {
+          label: `${item.name} (${shortUid})`,
+          value: item.uid
+        };
+      });
     }
   } catch (err) {
     message.error('获取学生列表失败');
@@ -722,6 +762,9 @@ const handleScoreChange = () => {
   const totalRecord = simulatedScores.value.find(s => s.subject === '总分');
   if (totalRecord) {
     totalRecord.score = total;
+    // 计算总分差值（模拟 - 原始）
+    const origTotal = originalScores.value.find(s => s.subject === '总分')?.score || 0;
+    totalRecord.scoreDiff = totalRecord.score - origTotal;
   }
 };
 
@@ -778,6 +821,13 @@ const handleSimulate = async () => {
           }
         }
       });
+
+      // 计算并设置总分变化（分数差值）
+      const origTotal = originalScores.value.find(s => s.subject === '总分')?.score || 0;
+      const simTotalRec = simulatedScores.value.find(s => s.subject === '总分');
+      if (simTotalRec) {
+        simTotalRec.scoreDiff = simTotalRec.score - origTotal;
+      }
 
       hasSimulated.value = true;
       message.success('模拟成功');
@@ -856,6 +906,16 @@ const getRankDiffText = (diff: number) => {
   if (diff > 0) return `下降 ${diff} 名`;
   return `上升 ${Math.abs(diff)} 名`;
 };
+  
+  const getScoreDiffClass = (diff: number) => {
+    return diff > 0 ? 'score-up' : diff < 0 ? 'score-down' : 'score-same';
+  };
+  
+  const getScoreDiffText = (diff: number) => {
+    if (diff === 0) return '分数不变';
+    if (diff > 0) return `增加 ${diff} 分`;
+    return `减少 ${Math.abs(diff)} 分`;
+  };
 </script>
 
 <style scoped lang="less">
@@ -1106,6 +1166,28 @@ const getRankDiffText = (diff: number) => {
   }
   
   .rank-change-icon {
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  .score-up {
+    color: #52c41a;
+    font-weight: 600;
+  }
+
+  .score-down {
+    color: #f5222d;
+    font-weight: 600;
+  }
+
+  .score-same {
+    color: #999;
+  }
+
+  .score-change-icon {
     margin-left: 8px;
     display: inline-flex;
     align-items: center;

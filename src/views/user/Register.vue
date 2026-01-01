@@ -36,7 +36,7 @@
       </a-form-item>
 
       <a-form-item
-         label="用户姓名"
+         label="昵称"
          name="name"
          :rules="[{ required: true, message: '请输入真实姓名!' }]"
       >
