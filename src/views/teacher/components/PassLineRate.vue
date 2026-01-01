@@ -166,10 +166,10 @@ const top2RateData = computed(() => {
   return processedData.value?.top2_rate || {};
 });
 
-// 将数据转换为显示项数组，并根据选科信息过滤
+// 将数据转换为显示项数组,并根据选科信息过滤
 const passRateItems = computed(() => {
   return Object.keys(passRateData.value)
-    .filter(key => key !== 'sum_' && passRateData.value[key] !== undefined && shouldShowSubject(key))
+    .filter(key => passRateData.value[key] !== undefined && shouldShowSubject(key))
     .map(key => ({
       subject: key,
       subjectName: getSubjectName(key),
@@ -179,7 +179,7 @@ const passRateItems = computed(() => {
 
 const topRateItems = computed(() => {
   return Object.keys(topRateData.value)
-    .filter(key => key !== 'sum_' && topRateData.value[key] !== undefined && shouldShowSubject(key))
+    .filter(key => topRateData.value[key] !== undefined && shouldShowSubject(key))
     .map(key => ({
       subject: key,
       subjectName: getSubjectName(key),
@@ -189,7 +189,7 @@ const topRateItems = computed(() => {
 
 const top9RateItems = computed(() => {
   return Object.keys(top9RateData.value)
-    .filter(key => key !== 'sum_' && top9RateData.value[key] !== undefined && shouldShowSubject(key))
+    .filter(key => top9RateData.value[key] !== undefined && shouldShowSubject(key))
     .map(key => ({
       subject: key,
       subjectName: getSubjectName(key),
@@ -199,7 +199,7 @@ const top9RateItems = computed(() => {
 
 const top2RateItems = computed(() => {
   return Object.keys(top2RateData.value)
-    .filter(key => key !== 'sum_' && top2RateData.value[key] !== undefined && shouldShowSubject(key))
+    .filter(key => top2RateData.value[key] !== undefined && shouldShowSubject(key))
     .map(key => ({
       subject: key,
       subjectName: getSubjectName(key),

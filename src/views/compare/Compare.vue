@@ -11,16 +11,17 @@
     </a-card>
     
     <div class="charts-area">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="24" :sm="24" :md="12" :lg="8" :xl="6" v-for="(subject, index) in subjects" :key="subject">
-          <a-card class="chart-card" :bordered="false">
-            <template #title>
-              <div class="chart-title">{{ studentName }}{{ subject }}{{ mode == 'rank' ? '历次排名':'成绩' }}</div>
-            </template>
-            <v-chart :option="options[index]" autoresize class="chart-wrapper" />
-          </a-card>
-        </a-col>
-      </a-row>
+      <a-card 
+        v-for="(subject, index) in subjects" 
+        :key="subject" 
+        class="chart-card"
+        :bordered="false"
+      >
+        <template #title>
+          <div class="chart-title">{{ studentName }}{{ subject }}{{ mode == 'rank' ? '历次排名':'成绩' }}</div>
+        </template>
+        <v-chart :option="options[index]" autoresize class="chart-wrapper" />
+      </a-card>
     </div>
   </div>
 </template>
@@ -31,7 +32,7 @@ import axios from 'axios'
 import VChart from 'vue-echarts'
 import { getPassLine, getUpDownDetailAnalysis } from '@/servers/api/analysis'
 import { message } from 'ant-design-vue'
-import { Card, Row, Col } from 'ant-design-vue'
+import { Card } from 'ant-design-vue'
 
 // 1. 班级、学期、学生列表
 const studentList = ref<any[]>([])
@@ -402,9 +403,12 @@ const getSubjectOption = (subject: string) => {
 }
 .charts-area {
   margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 .chart-card {
-  height: 100%;
+  width: 100%;
   min-height: 400px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
@@ -438,8 +442,8 @@ const getSubjectOption = (subject: string) => {
   .compare-container {
     padding: 12px;
   }
-  .chart-card {
-    margin-bottom: 16px;
+  .charts-area {
+    gap: 12px;
   }
 }
 @media (max-width: 576px) {

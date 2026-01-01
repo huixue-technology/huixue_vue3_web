@@ -9,7 +9,41 @@
     <div class="search-section">
       <a-card title="查询成绩" class="search-card">
         <a-row :gutter="16">
-          <a-col :xs="24" :sm="12" :md="8">
+          <!-- 老师端：班级选择 -->
+          <a-col :xs="24" :sm="12" :md="6" v-if="isTeacher">
+            <div class="search-item">
+              <span class="search-label">班级：</span>
+              <a-select
+                v-model:value="selectedClassId"
+                placeholder="请选择班级"
+                style="width: 100%"
+                :options="classOptions"
+                show-search
+                :filter-option="filterOption"
+                @change="handleClassChange"
+                :loading="loadingClasses"
+              />
+            </div>
+          </a-col>
+          <!-- 老师端：学生选择 -->
+          <a-col :xs="24" :sm="12" :md="6" v-if="isTeacher">
+            <div class="search-item">
+              <span class="search-label">学生：</span>
+              <a-select
+                v-model:value="studentId"
+                placeholder="请选择学生"
+                style="width: 100%"
+                :options="studentOptions"
+                show-search
+                :filter-option="filterOption"
+                @change="handleStudentChange"
+                :loading="loadingStudents"
+                :disabled="!selectedClassId"
+              />
+            </div>
+          </a-col>
+          <!-- 学生端：学号输入 -->
+          <a-col :xs="24" :sm="12" :md="6" v-else>
             <div class="search-item">
               <span class="search-label">学号：</span>
               <a-input
@@ -17,10 +51,12 @@
                 placeholder="请输入学生学号"
                 style="width: 100%"
                 @pressEnter="handleSearch"
+                disabled
               />
             </div>
           </a-col>
-          <a-col :xs="24" :sm="12" :md="8">
+          <!-- 考试选择 -->
+          <a-col :xs="24" :sm="12" :md="6">
             <div class="search-item">
               <span class="search-label">考试：</span>
               <a-select
@@ -28,10 +64,12 @@
                 placeholder="请选择考试"
                 style="width: 100%"
                 :options="examOptions"
+                :disabled="!studentId"
               />
             </div>
           </a-col>
-          <a-col :xs="24" :sm="12" :md="8">
+          <!-- 操作按钮 -->
+          <a-col :xs="24" :sm="12" :md="6">
             <div class="search-actions">
               <a-space>
                 <a-button type="primary" @click="handleSearch" :loading="loading">
@@ -109,8 +147,9 @@
             >
               <template #bodyCell="{ column, record, index }">
                 <template v-if="column.dataIndex === 'score'">
-                  <div v-if="record.subject !== '总分'" class="editable-cell">
+                  <div class="editable-cell">
                     <a-input-number
+                      v-if="record.subject !== '总分'"
                       v-model:value="record.score"
                       :min="0"
                       :max="getMaxScore(record.subject)"
@@ -118,24 +157,28 @@
                       @change="handleScoreChange"
                       style="width: 100%"
                     />
+                    <span v-else :class="getScoreClass(record.score, record.subject)">
+                      {{ record.score }}
+                    </span>
                   </div>
-                  <span v-else :class="getScoreClass(record.score, record.subject)">
-                    {{ record.score }}
-                  </span>
                 </template>
                 <template v-if="column.dataIndex === 'classRank'">
                   <span :class="getRankClass(record.classRank)">
                     {{ record.classRank }}
-                    <span v-if="record.classRankDiff" :class="getRankDiffClass(record.classRankDiff)">
-                      ({{ record.classRankDiff > 0 ? '+' : '' }}{{ record.classRankDiff }})
+                    <span v-if="record.classRankDiff !== undefined && record.classRankDiff !== 0" :class="getRankDiffClass(record.classRankDiff)" class="rank-change-icon">
+                      <ArrowUpOutlined v-if="record.classRankDiff < 0" />
+                      <ArrowDownOutlined v-else />
+                      {{ Math.abs(record.classRankDiff) }}
                     </span>
                   </span>
                 </template>
                 <template v-if="column.dataIndex === 'gradeRank'">
                   <span :class="getRankClass(record.gradeRank)">
                     {{ record.gradeRank }}
-                    <span v-if="record.gradeRankDiff" :class="getRankDiffClass(record.gradeRankDiff)">
-                      ({{ record.gradeRankDiff > 0 ? '+' : '' }}{{ record.gradeRankDiff }})
+                    <span v-if="record.gradeRankDiff !== undefined && record.gradeRankDiff !== 0" :class="getRankDiffClass(record.gradeRankDiff)" class="rank-change-icon">
+                      <ArrowUpOutlined v-if="record.gradeRankDiff < 0" />
+                      <ArrowDownOutlined v-else />
+                      {{ Math.abs(record.gradeRankDiff) }}
                     </span>
                   </span>
                 </template>
@@ -217,11 +260,14 @@ import {
   InfoCircleOutlined,
   TeamOutlined,
   GlobalOutlined,
-  ArrowRightOutlined
+  ArrowRightOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined
 } from '@ant-design/icons-vue';
 import { postSimulateGrade } from '@/servers/api/analysis';
 import { getGradeApi } from '@/servers/api/grade';
-import { getStudentExamApi } from '@/servers/api/student';
+import { getStudentExamApi, getStudentApi } from '@/servers/api/student';
+import { getClassesApi } from '@/servers/api/classes';
 import { useUserStore } from '@/store/modules/user';
 import type { ColumnType } from 'ant-design-vue/es/table';
 
@@ -242,17 +288,36 @@ interface ExamOption {
   value: number;
 }
 
+interface ClassOption {
+  label: string;
+  value: number;
+}
+
+interface StudentOption {
+  label: string;
+  value: string;
+}
+
 // 状态管理
 const userStore = useUserStore();
 const loading = ref(false);
 const simulating = ref(false);
 const showResults = ref(false);
 const hasSimulated = ref(false);
+const currentClassId = ref('');
+const loadingClasses = ref(false);
+const loadingStudents = ref(false);
+
+// 角色判断
+const isTeacher = ref(false);
 
 // 表单数据
 const studentId = ref<string>('');
 const selectedExamId = ref<number>();
+const selectedClassId = ref<number>();
 const examOptions = ref<ExamOption[]>([]);
+const classOptions = ref<ClassOption[]>([]);
+const studentOptions = ref<StudentOption[]>([]);
 
 // 成绩数据
 const originalScores = ref<ScoreRecord[]>([]);
@@ -260,7 +325,6 @@ const simulatedScores = ref<ScoreRecord[]>([]);
 
 // 学生信息
 const studentInfo = ref<any>(null);
-const classId = ref<string>('');
 const schoolId = ref<string>('');
 
 // 科目映射
@@ -360,15 +424,139 @@ const simulatedTotalRank = computed(() => {
 // 初始化
 onMounted(async () => {
   const userInfo = userStore.getUserInfo();
-  if (userInfo?.student) {
+  console.log('用户信息:', userInfo);
+  
+  // 判断是否是老师
+  isTeacher.value = !!userInfo?.teacher;
+  
+  if (isTeacher.value && userInfo?.teacher) {
+    // 老师端：获取学校信息和班级列表
+    schoolId.value = userInfo.teacher.school_id || userInfo.teacher.school || '';
+    console.log('老师学校ID:', schoolId.value);
+    console.log('老师工号(role):', userInfo.role);
+    await fetchClassList();
+  } else if (userInfo?.student) {
+    // 学生端：自动填充学生信息
     studentId.value = userInfo.student.uid;
-    classId.value = userInfo.student.class_id;
     schoolId.value = userInfo.student.school;
     studentInfo.value = userInfo.student;
     // 获取该学生参加过的考试列表
     await fetchExamList();
   }
 });
+
+// 获取班级列表(老师端)
+const fetchClassList = async () => {
+  console.log('开始获取班级列表, schoolId:', schoolId.value);
+  
+  if (!schoolId.value) {
+    console.error('学校ID为空，无法获取班级列表');
+    message.error('学校ID为空，无法获取班级列表');
+    return;
+  }
+  
+  loadingClasses.value = true;
+  try {
+    const userInfo = userStore.getUserInfo();
+    console.log('开始查询老师班级, role:', userInfo.role);
+    
+    // 首先根据老师的工号(role)获取老师所在的班级
+    const teacherClassRes = await getClassesApi({ 
+      header: userInfo.role // 使用老师工号查询班级
+    });
+    
+    console.log('老师班级查询结果:', teacherClassRes);
+    
+    if (teacherClassRes.code === 200 && teacherClassRes.data && teacherClassRes.data.length > 0) {
+      const teacherClass = teacherClassRes.data[0];
+      const teacherClassId = teacherClass.id;
+      
+      // 获取班级ID的前两位作为年级标识
+      const gradePrefix = String(teacherClassId).slice(0, 2);
+      
+      console.log('老师班级ID:', teacherClassId, '年级前缀:', gradePrefix);
+      
+      // 根据年级前缀和学校ID获取同年级的所有班级
+      const allClassRes = await getClassesApi({ 
+        school_id: schoolId.value,
+        size: 1000 // 获取所有班级
+      });
+      
+      console.log('所有班级查询结果:', allClassRes);
+      
+      if (allClassRes.code === 200 && allClassRes.data) {
+        // 过滤出同年级的班级(班级ID前两位相同)
+        classOptions.value = allClassRes.data
+          .filter((item: any) => String(item.id).slice(0, 2) === gradePrefix)
+          .map((item: any) => ({
+            label: item.name || `班级${item.id}`,
+            value: item.id
+          }));
+        
+        console.log('过滤后的班级列表:', classOptions.value);
+        
+        if (classOptions.value.length === 0) {
+          message.warning('未找到同年级的班级');
+        } else {
+          message.success(`成功加载 ${classOptions.value.length} 个班级`);
+        }
+      }
+    } else {
+      console.warn('未找到老师所属班级，尝试获取所有班级');
+      message.warning('未找到老师所属班级信息，将显示该学校所有班级');
+      // 如果没有找到老师班级，则显示该学校所有班级
+      const res = await getClassesApi({ 
+        school_id: schoolId.value,
+        size: 1000
+      });
+      
+      console.log('所有班级查询结果(后备方案):', res);
+      
+      if (res.code === 200 && res.data) {
+        classOptions.value = res.data.map((item: any) => ({
+          label: item.name || `班级${item.id}`,
+          value: item.id
+        }));
+        console.log('班级列表(后备方案):', classOptions.value);
+        message.success(`成功加载 ${classOptions.value.length} 个班级`);
+      } else {
+        message.error('获取班级列表失败: ' + (res.msg || '未知错误'));
+      }
+    }
+  } catch (err) {
+    message.error('获取班级列表失败');
+    console.error('获取班级列表异常:', err);
+  } finally {
+    loadingClasses.value = false;
+  }
+};
+
+// 获取学生列表（老师端，根据班级）
+const fetchStudentList = async (classId: number) => {
+  if (!classId) {
+    return;
+  }
+  
+  loadingStudents.value = true;
+  try {
+    const res = await getStudentApi({ 
+      class_id: classId,
+      size: 1000 // 获取该班级所有学生
+    });
+    
+    if (res.code === 200 && res.data) {
+      studentOptions.value = res.data.map((item: any) => ({
+        label: `${item.name} (${item.uid})`,
+        value: item.uid
+      }));
+    }
+  } catch (err) {
+    message.error('获取学生列表失败');
+    console.error(err);
+  } finally {
+    loadingStudents.value = false;
+  }
+};
 
 // 获取学生参加过的考试列表
 const fetchExamList = async () => {
@@ -408,15 +596,43 @@ const fetchExamList = async () => {
   }
 };
 
+// 处理班级选择变化
+const handleClassChange = async (classId: number) => {
+  studentId.value = '';
+  selectedExamId.value = undefined;
+  examOptions.value = [];
+  studentOptions.value = [];
+  showResults.value = false;
+  hasSimulated.value = false;
+  
+  if (classId) {
+    await fetchStudentList(classId);
+  }
+};
+
+// 处理学生选择变化
+const handleStudentChange = async (uid: string) => {
+  selectedExamId.value = undefined;
+  examOptions.value = [];
+  showResults.value = false;
+  hasSimulated.value = false;
+  
+  if (uid) {
+    await fetchExamList();
+  }
+};
+
+// 下拉框搜索过滤
+const filterOption = (input: string, option: any) => {
+  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+
 // 查询成绩
 const handleSearch = async () => {
   if (!studentId.value) {
-    message.warning('请输入学生学号');
+    message.warning(isTeacher.value ? '请选择学生' : '请输入学生学号');
     return;
   }
-  
-  // 重新获取该学生的考试列表
-  await fetchExamList();
   
   if (!selectedExamId.value) {
     message.warning('请选择考试');
@@ -428,7 +644,6 @@ const handleSearch = async () => {
     const res = await getGradeApi({
       student_id: parseInt(studentId.value),
       exam_id: selectedExamId.value,
-      class_id: classId.value
     });
 
     if (res.code === 200 && res.data && res.data.length > 0) {
@@ -436,6 +651,7 @@ const handleSearch = async () => {
       parseGradeData(gradeData);
       showResults.value = true;
       hasSimulated.value = false;
+      currentClassId.value = res.data[0].class_id
       message.success('查询成功');
     } else {
       message.error('未查询到成绩数据');
@@ -513,8 +729,8 @@ const handleSimulate = async () => {
     // 构建请求数据
     const requestData: any = {
       exam_id: selectedExamId.value,
-      class_id: classId.value,
       school_id: schoolId.value,
+      class_id: currentClassId.value,
       yuwen: 0,
       shuxue: 0,
       yingyu: 0,
@@ -534,10 +750,12 @@ const handleSimulate = async () => {
       }
     });
 
+    console.log('模拟查询请求数据:', requestData);
     const res = await postSimulateGrade(requestData);
+    console.log('模拟查询返回数据:', res);
 
     if (res.code === 200 && res.data) {
-      // 更新模拟成绩的排名
+      // 更新模拟成绩的排名（包括总分）
       simulatedScores.value.forEach(record => {
         const subjectData = res.data[record.subjectKey];
         if (subjectData) {
@@ -576,12 +794,21 @@ const handleResetScores = () => {
 // 重置表单
 const handleReset = () => {
   const userInfo = userStore.getUserInfo();
-  if (userInfo?.student) {
+  
+  if (isTeacher.value) {
+    // 老师端重置
+    selectedClassId.value = undefined;
+    studentId.value = '';
+    studentOptions.value = [];
+  } else if (userInfo?.student) {
+    // 学生端重置为当前学生
     studentId.value = userInfo.student.uid;
   } else {
     studentId.value = '';
   }
-  selectedExamId.value = examOptions.value[0]?.value;
+  
+  selectedExamId.value = undefined;
+  examOptions.value = [];
   showResults.value = false;
   hasSimulated.value = false;
   originalScores.value = [];
@@ -626,8 +853,9 @@ const getRankDiffText = (diff: number) => {
 <style scoped lang="less">
 .grade-simulate-container {
   padding: 20px;
-  min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+  overflow-y: auto;
+  max-height: 100vh;
   
   .header {
     background: linear-gradient(120deg, #4b6cb7, #1890ff);
@@ -867,6 +1095,14 @@ const getRankDiffText = (diff: number) => {
   
   .rank-same {
     color: #999;
+  }
+  
+  .rank-change-icon {
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
   }
 }
 

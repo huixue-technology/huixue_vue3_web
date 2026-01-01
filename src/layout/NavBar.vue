@@ -76,6 +76,12 @@ const items =  computed<MenuProps['items']>(()=>{
           icon: () => h(ThunderboltOutlined),
           label: '学生对比',
         },
+        {
+          key: 'simulate',
+          icon: () => h(FrownOutlined),
+          label: '成绩模拟',
+          title: '成绩模拟',
+        }
         // {
         //   key: 'ai_assistant',
         //   icon: () => h(ToolOutlined),
