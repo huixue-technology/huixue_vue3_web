@@ -56,13 +56,7 @@ watch([() => props.exam_id, () => props.class_id], () => {
   selectedExamId.value = props.exam_id;
   classId.value = props.class_id;
   fetchClassAnalysis();
-});
-
-// 组件加载时自动获取数据
-onMounted(() => {
-  fetchClassAnalysis();
-});
-
+})
 // 科目名称映射表
 const subjectMap = {
   'yuwen': '语文',
