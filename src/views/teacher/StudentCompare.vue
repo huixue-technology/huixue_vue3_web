@@ -82,7 +82,7 @@
                   :key="student.id"
                   :value="student.id"
                 >
-                  {{ student.name }} ({{ student.uid }})
+                  {{ student.name }} ({{ maskStudentId(student.uid) }})
                 </a-select-option>
               </a-select>
             </div>
@@ -108,7 +108,7 @@
                   :key="student.id"
                   :value="student.id"
                 >
-                  {{ student.name }} ({{ student.uid }})
+                  {{ student.name }} ({{ maskStudentId(student.uid) }})
                 </a-select-option>
               </a-select>
             </div>
@@ -534,7 +534,8 @@ const fetchStudentListAndExams = async () => {
         id: examId,
         name: `考试${examId}`
       }));
-      selectedExamId.value = examList.value[0].id;
+      // 默认选择最新的考试（最后一个）
+      selectedExamId.value = examList.value[examList.value.length - 1].id;
     } else {
       message.warning(examRes.msg || '获取考试列表失败');
     }
@@ -647,7 +648,7 @@ const fetchComparisonData = async () => {
 
 const resetFilters = () => {
   if (examList.value.length > 0) {
-    selectedExamId.value = examList.value[0].id;
+    selectedExamId.value = examList.value[examList.value.length - 1].id;
   }
   if (classList.value.length > 0) {
     selectedClassId.value = classList.value[0].id;
@@ -695,6 +696,14 @@ const init = async () => {
 };
 
 onMounted(init);
+
+// 学号脱敏处理，只显示后四位
+const maskStudentId = (uid: string) => {
+  if (!uid) return '';
+  const idStr = String(uid);
+  if (idStr.length <= 4) return idStr;
+  return '**' + idStr.slice(-4);
+};
 </script>
 
 <style scoped lang="less">

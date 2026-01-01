@@ -260,7 +260,7 @@ import { getClassesApi } from '@/servers/api/classes';
 import { getClassExam } from '@/servers/api/grade';
 import { getClassCompare } from '@/servers/api/grade';
 import { useUserStore } from '@/store';
-import { Row, Col, Card, Button, Empty } from "ant-design-vue";
+import { Row, Col, Card, Button, Empty, Alert } from "ant-design-vue";
 
 // 类型定义 
 interface ClassInfo {
@@ -588,7 +588,7 @@ const fetchComparisonData = async () => {
 // 重置筛选
 const resetFilters = () => {
   if (examList.value.length > 0) {
-    selectedExamId.value = examList.value[0].id;
+    selectedExamId.value = examList.value[examList.value.length - 1].id;
   }
   if (classList.value.length > 0) {
     selectedClass2.value = classList.value[0].id;
@@ -658,7 +658,8 @@ const init = async () => {
           name:`考试${exam}`
         }));
         if (examList.value.length > 0) {
-          selectedExamId.value = examList.value[0].id;
+          // 默认选择最新的考试（最后一个）
+          selectedExamId.value = examList.value[examList.value.length - 1].id;
         }
       } else {
         message.warning(examRes.msg || '获取考试列表失败');

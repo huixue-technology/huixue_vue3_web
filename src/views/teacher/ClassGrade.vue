@@ -251,7 +251,8 @@
       </div>
       </a-card>
     </div>
-    <ExamSummarize  :exam_id="selectedExamId" :class_id="selectedClassId" />
+    <!-- 只在选择了班级和考试后才显示分段统计 -->
+    <ExamSummarize v-if="selectedExamId && selectedClassId" :exam_id="selectedExamId" :class_id="selectedClassId" />
     <a-spin v-if="loading || loadingPassLine" tip="加载中..." class="loading-spin" />
   </div>
 </template>
@@ -605,24 +606,27 @@ const fetchPassLine = async (examId: number) => {
       const subjectSel = classInfo.value?.subject_selection || '';
       const trimmedSel = subjectSel.trim(); // 去除首尾空格，兼容空字符串场景
       
-      // 精准匹配选科对应的分数线
+      // 精准匹配选科对应的一本线
       if (trimmedSel === '' || trimmedSel === '未选科') {
-        // 空选科/未选科 → 匹配含"未选科"的分数线
+        // 空选科/未选科 → 匹配含"未选科"且含"一本"的分数线
         targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('未选科')
+          line.line_name && line.line_name.includes('未选科') && line.line_name.includes('一本')
         );
       } else if (subjectSel.includes('物')) {
-        // 物理类 → 匹配含"物/理"的分数线
+        // 物理类 → 匹配含"物/理"且含"一本"的分数线
         targetLine = res.data.find((line: any) => 
-          line.line_name && (line.line_name.includes('物') || line.line_name.includes('理'))
+          line.line_name && (line.line_name.includes('物') || line.line_name.includes('理')) && line.line_name.includes('一本')
         );
       } else if (subjectSel.includes('史')) {
+        // 历史类 → 匹配含"史"且含"一本"的分数线
         targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('史')
+          line.line_name && line.line_name.includes('史') && line.line_name.includes('一本')
         );
       } else {
-        // 无明确选科时取第一条
-        targetLine = res.data[0];
+        // 无明确选科时查找包含"一本"的分数线
+        targetLine = res.data.find((line: any) => 
+          line.line_name && line.line_name.includes('一本')
+        ) || res.data[0];
       }
       
       if (targetLine) {
@@ -862,7 +866,8 @@ const handleClassChange = async (classId: number) => {
   try {
     const examRes = await getClassExam({ class_id: classId });
     if (examRes.code === 200 && examRes.data.length > 0) {
-      classExamList.value = examRes.data;
+      // 考试列表按ID降序排序，最新考试（ID最大）排在前面
+      classExamList.value = examRes.data.sort((a: number, b: number) => b - a);
       selectedExamId.value = classExamList.value[0];
     } else {
       message.warning(examRes.msg || '该班级暂无考试数据');
@@ -971,12 +976,14 @@ const handleExamChange = async (examId: number) => {
           const scoreItem: ScoreItem = {
             studentId: "*" + String(item.student_id || item.studentId || '').slice(-5, -1),
             studentName: item.student_name || item.studentName || '未知学生',
-            totalScore: item.sum_ !== undefined ? item.sum_ : (item.totalScore || 0),
-            classRank: item.sumb !== undefined ? item.sumb : (item.classRank || 0),
-            sumd: item.sumd !== undefined ? item.sumd : (item.sumd || 0),
+            totalScore: item.sum_ !== undefined && item.sum_ !== null ? Number(item.sum_) : 0,
+            classRank: item.sumb !== undefined && item.sumb !== null ? Number(item.sumb) : 0,
+            sumd: item.sumd !== undefined && item.sumd !== null ? Number(item.sumd) : 0,
           };
           validFields.forEach(field => {
-            scoreItem[field] = item[field] !== undefined ? item[field] : 0;
+            // 确保所有字段的空值都显示为0，并转换为数字类型
+            const value = item[field];
+            scoreItem[field] = (value !== undefined && value !== null && value !== '') ? Number(value) : 0;
           });
           return scoreItem;
         });
@@ -997,12 +1004,14 @@ const handleExamChange = async (examId: number) => {
           const scoreItem: ScoreItem = {
             studentId: "*" + String(item.student_id || item.studentId || '').slice(-5, -1),
             studentName: item.student_name || item.studentName || '未知学生',
-            totalScore: item.sum_ !== undefined ? item.sum_ : (item.totalScore || 0),
-            classRank: item.sumb !== undefined ? item.sumb : (item.classRank || 0),
-            sumd: item.sumd !== undefined ? item.sumd : (item.sumd || 0),
+            totalScore: item.sum_ !== undefined && item.sum_ !== null ? Number(item.sum_) : 0,
+            classRank: item.sumb !== undefined && item.sumb !== null ? Number(item.sumb) : 0,
+            sumd: item.sumd !== undefined && item.sumd !== null ? Number(item.sumd) : 0,
           };
           validFields.forEach(field => {
-            scoreItem[field] = item[field] !== undefined ? item[field] : 0;
+            // 确保所有字段的空值都显示为0，并转换为数字类型
+            const value = item[field];
+            scoreItem[field] = (value !== undefined && value !== null && value !== '') ? Number(value) : 0;
           });
           return scoreItem;
         });
@@ -1175,8 +1184,9 @@ onMounted(async () => {
     if (selectedClassId.value) {
       const examRes = await getClassExam({ class_id: selectedClassId.value });
       if (examRes.code === 200 && examRes.data.length > 0) {
-        classExamList.value = examRes.data;
-        // 默认选择第一个考试
+        // 考试列表按ID降序排序，最新考试（ID最大）排在前面
+        classExamList.value = examRes.data.sort((a: number, b: number) => b - a);
+        // 默认选择第一个考试（最新的考试）
         selectedExamId.value = classExamList.value[0];
         // 初始加载时自动加载数据
         setTimeout(() => {

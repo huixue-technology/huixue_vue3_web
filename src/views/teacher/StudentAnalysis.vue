@@ -81,7 +81,7 @@
             </div>
             <div class="student-details">
               <h3>{{ currentStudentInfo.student_name }}</h3>
-              <p>学号: {{ currentStudentInfo.student_id }}</p>
+              <p>学号: {{ maskStudentId(currentStudentInfo.student_id) }}</p>
               <p>考试: {{ examMap[selectedExamId] || currentExamInfo.name }}</p>
             </div>
           </div>
@@ -373,7 +373,7 @@ const subjectMap: Record<string, string> = {
 // 学生选项（用于下拉框）
 const filteredStudentOptions = computed(() => {
   return filteredStudentList.value.map(student => ({
-    label: `${student.student_name} (${student.student_id})`,
+    label: `${student.student_name} (${maskStudentId(student.student_id)})`,
     value: student.student_id
   }));
 });
@@ -962,7 +962,8 @@ const fetchExamList = async () => {
       
       examList.value = examDetails;
       if (examDetails.length > 0) {
-        selectedExamId.value = examDetails[0].id;
+        // 默认选择最新的考试（最后一个）
+        selectedExamId.value = examDetails[examDetails.length - 1].id;
         
         // 如果已经有选中的学生，获取该学生的考试成绩
         if (selectedStudentId.value) {
@@ -1060,7 +1061,7 @@ const handleExamChange = async (examId: number) => {
 // 重置筛选
 const resetFilters = () => {
   selectedStudentId.value = '';
-  selectedExamId.value = examList.value.length > 0 ? examList.value[0].id : 0;
+  selectedExamId.value = examList.value.length > 0 ? examList.value[examList.value.length - 1].id : 0;
   selectedComparedExamId.value = undefined;
   scoreDetails.value = {};
   passLineDetails.value = {};
@@ -1111,6 +1112,14 @@ const handleComparedExamChange = async (comparedExamId: number | undefined) => {
 const clearCompare = () => {
   selectedComparedExamId.value = undefined;
   compareData.value = null;
+};
+
+// 学号脱敏处理，只显示后四位
+const maskStudentId = (studentId: string) => {
+  if (!studentId) return '';
+  const idStr = String(studentId);
+  if (idStr.length <= 4) return idStr;
+  return '**' + idStr.slice(-4);
 };
 </script>
 
