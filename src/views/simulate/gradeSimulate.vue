@@ -2,7 +2,7 @@
   <div class="grade-simulate-container">
     <div class="header">
       <h2>成绩模拟查询</h2>
-      <p>根据学号查询成绩，模拟修改后查看班级和全校排名</p>
+      <p>根据学号查询成绩，模拟修改后查看班级和年级排名</p>
     </div>
 
     <!-- 查询区域 -->
@@ -223,7 +223,7 @@
                   <div class="rank-change-card grade-rank">
                     <div class="rank-title">
                       <GlobalOutlined style="font-size: 20px; margin-right: 8px;" />
-                      全校排名变化
+                      年级排名变化
                     </div>
                     <div class="rank-value">
                       <span class="original">{{ originalTotalRank.gradeRank }}</span>
@@ -422,7 +422,7 @@ const editScoreColumns: ColumnType[] = [
     width: 120
   },
   {
-    title: '全校排名',
+    title: '年级排名',
     dataIndex: 'gradeRank',
     key: 'gradeRank',
     align: 'center',
@@ -479,6 +479,7 @@ onMounted(async () => {
     // 获取该学生参加过的考试列表
     await fetchExamList();
   }
+  handleSearch();
 });
 
 // 获取班级列表(老师端)

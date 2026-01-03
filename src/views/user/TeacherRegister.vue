@@ -9,14 +9,14 @@
       @finishFailed="onFinishFailed"
    >
       <a-form-item
-         label="工号"
+         label="账号"
          name="uid"
          :rules="[
-            { required: true, message: '请输入7位数工号!' },
-            { pattern: /^\d{7}$/, message: '工号必须为7位数字' }
+            { required: true, message: '请输入7位数账号!' },
+            { pattern: /^\d{7}$/, message: '账号必须为7位数字' }
          ]"
       >
-         <a-input v-model:value="formparams.uid" placeholder="请输入7位数工号">
+         <a-input v-model:value="formparams.uid" placeholder="请输入7位数账号">
          <template #prefix>
             <UserOutlined class="site-form-item-icon" />
          </template>
@@ -178,12 +178,12 @@ const onFinish = async (values: any) => {
     
     // 注册用户信息
     const userData = {
-      email: formparams.uid, // 使用工号作为邮箱
+      email: formparams.uid, // 使用账号作为邮箱
       password: formparams.password,
       name: formparams.name,
       phone: formparams.phone,
       school_id: schoolId,
-      role: formparams.uid, // 使用工号作为角色标识
+      role: formparams.uid, // 使用账号作为角色标识
       bind_state: true,
     };
     
