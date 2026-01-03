@@ -367,6 +367,9 @@
     <!-- 加载状态 -->
     <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
 	
+	<StudentAnalysisPages 
+	:studentId="selectedStudentId" 
+	:studentName="currentStudentInfo.student_name" />
 
   </div>
 </template>
@@ -383,6 +386,7 @@ import { getGradeApi } from '@/servers/api/grade';
 import { getPassLine, getStudentSelfCompareApi } from '@/servers/api/analysis';
 import { getExamDetailApi } from '@/servers/api/exam';
 import type { ColumnType } from 'ant-design-vue/es/table';
+import StudentAnalysisPages from '@/views/teacher/components/StudentAnalysisPages.vue';
 import * as echarts from 'echarts';
 // 类型定义
 interface Student {
@@ -653,7 +657,6 @@ const compareColumns: ColumnType[] = [
     width: 80
   }
 ];
-
 // 原始成绩数据
 const rawScoreData = computed<ScoreDetail[]>(() => {
   if (!selectedStudentId.value || !selectedExamId.value) return [];
