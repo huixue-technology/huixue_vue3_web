@@ -379,7 +379,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
 import { SearchOutlined, UserOutlined } from '@ant-design/icons-vue';
-import { getClassesApi } from '@/servers/api/classes';
+import { getClassesApi, getClassesDetailApi } from '@/servers/api/classes';
 import { getStudentApi } from '@/servers/api/student';
 import { getClassExam } from '@/servers/api/grade';
 import { getGradeApi } from '@/servers/api/grade';
@@ -433,6 +433,16 @@ const classId = ref<number>(0);
 const teacherId = ref<number>(0);
 const loading = ref(false);
 const searchKeyword = ref('');
+
+// 班级信息
+interface ClassInfo {
+  id: number;
+  name: string;
+  header: number;
+  school_id: number;
+  subject_selection: string;
+}
+const classInfo = ref<ClassInfo | null>(null);
 
 // 数据列表
 const studentList = ref<Student[]>([]);
@@ -931,6 +941,10 @@ onMounted(async () => {
 
     teacherId.value = classRes.data[0].header;
     classId.value = classRes.data[0].id;
+    
+    // 获取班级详细信息(包含选科信息)
+    await fetchClassInfo(classId.value);
+    
     await fetchExamList()
     await fetchStudentList();
     await handleExamChange(selectedExamId.value);
@@ -982,40 +996,21 @@ const fetchExamList = async () => {
     // @ts-ignore
     const res = await getClassExam({ class_id: classId.value });
     if (res.code === 200) {
-      // 获取考试ID列表
-      const examIds = res.data;
+      // 直接使用返回的考试信息数组
+      const examData = res.data;
       
-      // 获取每个考试的详细信息
-      const examDetails = await Promise.all(
-        examIds.map(async (id: number) => {
-          try {
-            const examRes = await getExamDetailApi({ exam_id: id });
-            if (examRes.code === 200) {
-              examMap.value[id] = examRes.data[0].name;
-              return {
-                id,
-                name: examRes.data[0].name
-              };
-            } else {
-              return {
-                id,
-                name: `考试 ${id}`
-              };
-            }
-          } catch (err) {
-            console.error(`获取考试 ${id} 详情失败:`, err);
-            return {
-              id,
-              name: `考试 ${id}`
-            };
-          }
-        })
-      );
+      // 构建考试列表和映射
+      examList.value = examData.map((exam: any) => {
+        examMap.value[exam.id] = exam.name;
+        return {
+          id: exam.id,
+          name: exam.name
+        };
+      });
       
-      examList.value = examDetails;
-      if (examDetails.length > 0) {
+      if (examList.value.length > 0) {
         // 默认选中最后一个考试
-        selectedExamId.value = examDetails[examDetails.length - 1].id;
+        selectedExamId.value = examList.value[examList.value.length - 1].id;
         
         // 如果已经有选中的学生，获取该学生的考试成绩
         if (selectedStudentId.value) {
@@ -1058,9 +1053,34 @@ const fetchStudentGrades = async (studentId: string, examId: number) => {
 const fetchPassLine = async (examId: number) => {
   try {
     const res = await getPassLine({ exam_id: examId });
-    
     if (res.code === 200 && res.data.length > 0) {
-      passLineDetails.value[examId] = res.data[0];
+      let targetLine = null;
+      const subjectSel = classInfo.value?.subject_selection || '';
+      
+      // 精准匹配选科对应的一本线
+      if (subjectSel.includes('物')) {
+        // 物理类 → 匹配含"物/理"且含"一本"的分数线
+        targetLine = res.data.find((line: any) => 
+          line.line_name && (line.line_name.includes('物') || line.line_name.includes('理')) && line.line_name.includes('一本')
+        );
+      } else if (subjectSel.includes('史')) {
+        // 历史类 → 匹配含"史"且含"一本"的分数线
+        targetLine = res.data.find((line: any) => 
+          line.line_name && line.line_name.includes('史') && line.line_name.includes('一本')
+        );
+      } else {
+        // 无明确选科时查找包含"一本"的分数线
+        targetLine = res.data.find((line: any) => 
+          line.line_name && line.line_name.includes('一本')
+        ) || res.data[0];
+      }
+      
+      if (targetLine) {
+        passLineDetails.value[examId] = targetLine;
+      } else {
+        message.warning('未找到匹配的一本线数据');
+        passLineDetails.value[examId] = {};
+      }
     } else {
       message.warning('未获取到该考试的分数线数据');
       passLineDetails.value[examId] = {};
@@ -1163,6 +1183,21 @@ const handleComparedExamChange = async (comparedExamId: number | undefined) => {
 const clearCompare = () => {
   selectedComparedExamId.value = undefined;
   compareData.value = null;
+};
+
+// 获取班级信息
+const fetchClassInfo = async (classId: number) => {
+  try {
+    const res = await getClassesDetailApi({ class_id: classId });
+    if (res.code === 200 && res.data) {
+      classInfo.value = res.data;
+    } else {
+      message.warning('未获取到班级信息');
+    }
+  } catch (err) {
+    message.error('请求班级信息接口出错');
+    console.error(err);
+  }
 };
 </script>
 

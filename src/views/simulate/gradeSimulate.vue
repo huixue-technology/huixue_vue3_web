@@ -43,7 +43,7 @@
             </div>
           </a-col>
           <!-- 学生端：学号输入 -->
-          <a-col :xs="24" :sm="12" :md="6" v-else>
+          <!-- <a-col :xs="24" :sm="12" :md="6" v-else>
             <div class="search-item">
               <span class="search-label">学号：</span>
               <a-input
@@ -54,7 +54,7 @@
                 disabled
               />
             </div>
-          </a-col>
+          </a-col> -->
           <!-- 考试选择 -->
           <a-col :xs="24" :sm="12" :md="6">
             <div class="search-item">
@@ -352,6 +352,7 @@ const simulatedScores = ref<ScoreRecord[]>([]);
 // 学生信息
 const studentInfo = ref<any>(null);
 const schoolId = ref<string>('');
+const subjectSelection = ref<string>(''); // 学生或班级的选科信息
 
 // 科目映射
 const subjectMap: Record<string, { name: string; max: number }> = {
@@ -476,6 +477,9 @@ onMounted(async () => {
     studentId.value = userInfo.student.uid;
     schoolId.value = userInfo.student.school;
     studentInfo.value = userInfo.student;
+    // 获取学生的选科信息
+    subjectSelection.value = userInfo.student.subject_selection || '';
+    console.log('学生选科信息:', subjectSelection.value);
     // 获取该学生参加过的考试列表
     await fetchExamList();
   }
@@ -655,6 +659,19 @@ const handleClassChange = async (classId: number) => {
   hasSimulated.value = false;
   
   if (classId) {
+    // 获取班级的选科信息
+    try {
+      const classRes = await getClassesApi({ school_id: schoolId.value });
+      if (classRes.code === 200 && classRes.data) {
+        const classData = classRes.data.find((c: any) => c.id === classId);
+        if (classData && classData.subject_selection) {
+          subjectSelection.value = classData.subject_selection;
+          console.log('班级选科信息:', subjectSelection.value);
+        }
+      }
+    } catch (err) {
+      console.error('获取班级选科信息失败:', err);
+    }
     await fetchStudentList(classId);
   }
 };
@@ -714,6 +731,33 @@ const handleSearch = async () => {
   }
 };
 
+// 根据选科信息判断科目是否应该显示
+const shouldShowSubject = (subjectKey: string): boolean => {
+  // 如果没有选科信息，则显示所有科目
+  if (!subjectSelection.value || subjectSelection.value.trim() === '' || subjectSelection.value.trim() === '未选科') {
+    return true;
+  }
+
+  // 根据科目key判断是否应该显示
+  switch (subjectKey) {
+    case 'wuli':
+      return subjectSelection.value.includes('物') || subjectSelection.value.includes('理');
+    case 'huaxue':
+      return subjectSelection.value.includes('化');
+    case 'shengwu':
+      return subjectSelection.value.includes('生');
+    case 'lishi':
+      return subjectSelection.value.includes('史');
+    case 'zhengzhi':
+      return subjectSelection.value.includes('政');
+    case 'dili':
+      return subjectSelection.value.includes('地');
+    default:
+      // 语数英等主科以及总分 always 显示
+      return true;
+  }
+};
+
 // 解析成绩数据
 const parseGradeData = (gradeData: any) => {
   const scores: ScoreRecord[] = [];
@@ -736,8 +780,8 @@ const parseGradeData = (gradeData: any) => {
     const classRank = gradeData[`${subjectKey}b`];
     const gradeRank = gradeData[`${subjectKey}d`];
     
-    // 只显示有成绩的科目
-    if (score > 0 || classRank > 0 || gradeRank > 0) {
+    // 只显示有成绩且符合选科要求的科目
+    if ((score > 0 || classRank > 0 || gradeRank > 0) && shouldShowSubject(subjectKey)) {
       scores.push({
         key: subjectKey,
         subject: subjectMap[subjectKey].name,

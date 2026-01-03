@@ -42,11 +42,11 @@
               @change="handleExamChange"
             >
               <a-select-option 
-                v-for="examId in classExamList" 
-                :key="examId" 
-                :value="examId"
+                v-for="exam in classExamList" 
+                :key="exam.id" 
+                :value="exam.id"
               >
-                考试 {{ examId }}
+                {{ exam.name }}
               </a-select-option>
             </a-select>
           </div>
@@ -317,7 +317,7 @@ const user = useUserStore();
 const classInfo = ref<class_info>();
 const allClassList = ref<ClassItem[]>([]); // 所有班级列表
 const filteredClassList = ref<ClassItem[]>([]); // 筛选后的班级列表
-const classExamList = ref<number[]>([]);
+const classExamList = ref<any[]>([]);
 const selectedClassId = ref<number>(0); // 选中的班级ID
 const selectedExamId = ref<number>(0);
 const teacherId = ref<number>(0);
@@ -867,8 +867,8 @@ const handleClassChange = async (classId: number) => {
     const examRes = await getClassExam({ class_id: classId });
     if (examRes.code === 200 && examRes.data.length > 0) {
       // 考试列表按ID降序排序，最新考试（ID最大）排在前面
-      classExamList.value = examRes.data.sort((a: number, b: number) => b - a);
-      selectedExamId.value = classExamList.value[0];
+      classExamList.value = examRes.data.sort((a: any, b: any) => b.id - a.id);
+      selectedExamId.value = classExamList.value[0].id;
     } else {
       message.warning(examRes.msg || '该班级暂无考试数据');
     }
@@ -931,8 +931,10 @@ const add_filter = (params: any) => {
   if (maxClassRank.value !== null) params.max_class_rank = maxClassRank.value;
 };
 
-// 修改applyFilters函数，确保排序参数正确应用
+// 修改applyFilters函数,确保排序参数正确应用
 const applyFilters = async () => {
+  console.log('[applyFilters] 被调用, selectedExamId:', selectedExamId.value, 'selectedClassId:', selectedClassId.value);
+  
   if (!selectedExamId.value || !selectedClassId.value) {
     message.warning('请选择班级和考试');
     return;
@@ -940,11 +942,12 @@ const applyFilters = async () => {
   
   isFiltering.value = true;
   try {
-    // 直接调用handleExamChange，它会自动应用当前的排序参数
+    console.log('[applyFilters] 准备调用 handleExamChange, examId:', selectedExamId.value);
+    // 直接调用handleExamChange,它会自动应用当前的排序参数
     await handleExamChange(selectedExamId.value);
     message.success('筛选完成');
   } catch (err) {
-    message.error('筛选失败，请重试');
+    message.error('筛选失败,请重试');
     console.error('筛选错误:', err);
   } finally {
     isFiltering.value = false;
@@ -952,8 +955,13 @@ const applyFilters = async () => {
 };
 
 const handleExamChange = async (examId: number) => {
-  if (!examId || !selectedClassId.value) return;
+  console.log('[handleExamChange] 被调用, examId:', examId, 'selectedClassId:', selectedClassId.value);
   
+  if (!examId || !selectedClassId.value) {
+    console.error('[handleExamChange] 参数不完整:', { examId, selectedClassId: selectedClassId.value });
+    message.error("没有examId或班级ID");
+    return;
+  }
   try {
     const params: Record<string, any> = {
       class_id: selectedClassId.value.toString(),
@@ -1034,7 +1042,7 @@ const handleExamChange = async (examId: number) => {
 
 const resetFilters = () => {
   console.log('重置筛选条件');
-  selectedExamId.value = classExamList.value.length > 0 ? classExamList.value[0] : 0;
+  selectedExamId.value = classExamList.value.length > 0 ? classExamList.value[0].id : 0;
   selectedSubject.value = '';
   sortOrder.value = 'desc'; 
   minScore.value = null;
@@ -1182,20 +1190,30 @@ onMounted(async () => {
 
     // 加载班级考试列表
     if (selectedClassId.value) {
+      console.log('[onMounted] 开始加载考试列表, classId:', selectedClassId.value);
       const examRes = await getClassExam({ class_id: selectedClassId.value });
       if (examRes.code === 200 && examRes.data.length > 0) {
-        // 考试列表按ID降序排序，最新考试（ID最大）排在前面
-        classExamList.value = examRes.data.sort((a: number, b: number) => b - a);
-        // 默认选择第一个考试（最新的考试）
-        selectedExamId.value = classExamList.value[0];
+        // 考试列表按ID降序排序,最新考试(ID最大)排在前面
+        classExamList.value = examRes.data.sort((a: any, b: any) => b.id - a.id);
+        console.log('[onMounted] 考试列表加载成功:', classExamList.value.map(e => ({ id: e.id, name: e.name })));
+        
+        // 默认选择第一个考试(最新的考试)
+        selectedExamId.value = classExamList.value[0].id;
+        console.log('[onMounted] 设置 selectedExamId =', selectedExamId.value);
+        
+        // 等待下一个tick确保selectedExamId已更新
+        await new Promise(resolve => setTimeout(resolve, 0));
+        console.log('[onMounted] tick后 selectedExamId =', selectedExamId.value);
+        
         // 初始加载时自动加载数据
-        setTimeout(() => {
-          applyFilters();
-        }, 0);
+        console.log('[onMounted] 准备调用 applyFilters');
+        await applyFilters();
+        console.log('[onMounted] applyFilters 完成');
       } else {
         message.warning(examRes.msg || '获取考试列表失败');
         loadingPassLine.value = false;
       }
+
 
       // 加载年级考试列表
       await fetchGradeExams(selectedClassId.value);
@@ -1203,6 +1221,7 @@ onMounted(async () => {
 
     // 加载班级学生列表
     await fetchClassStudents();
+    
   } catch (err) {
     message.error('初始化失败，请重试');
     console.error('初始化错误:', err);

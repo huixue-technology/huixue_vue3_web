@@ -653,9 +653,9 @@ const init = async () => {
     if (currentClass.value.id) {
       const examRes = await getClassExam({ class_id: currentClass.value.id });
       if (examRes.code === 200 && examRes.data.length > 0) {
-        examList.value = examRes.data.map((exam: { id: number; name: string }) => ({
-          id: exam,
-          name:`考试${exam}`
+        examList.value = examRes.data.map((exam: any) => ({
+          id: exam.id,
+          name: exam.name
         }));
         if (examList.value.length > 0) {
           // 默认选择最新的考试（最后一个）

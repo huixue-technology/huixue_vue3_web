@@ -78,6 +78,25 @@
       </a-form-item>
        
       <a-form-item
+         label="所在年级"
+         name="grade"
+         :rules="[{ required: true, message: '请选择年级!' }]"
+      >
+         <a-select
+           v-model:value="formparams.grade"
+           @change="onGradeChange"
+           style="width: 100%"
+           placeholder="请选择年级"
+           :loading="gradeList.length === 0 && formparams.schoolName"
+           :disabled="!formparams.schoolName"
+         >
+           <a-select-option v-for="grade in gradeList" :key="grade" :value="grade">
+             {{ grade }}
+           </a-select-option>
+         </a-select>
+      </a-form-item>
+       
+      <a-form-item
          label="任教学科"
          name="subject"
          :rules="[{ required: true, message: '请选择任教学科!' }]"
@@ -108,8 +127,8 @@
            v-model:value="formparams.classId"
            style="width: 100%"
            placeholder="请选择班级"
-           :loading="classList.length === 0"
-           :disabled="!formparams.schoolName"
+           :loading="classList.length === 0 && formparams.grade"
+           :disabled="!formparams.grade"
          >
            <a-select-option v-for="cls in classList" :key="cls.id" :value="cls.id">
              {{ cls.name }}
@@ -146,17 +165,20 @@ interface FormParams {
   name: string
   phone: string
   schoolName: string
+  grade: string
   subject: string
   classId: number | undefined
 }
 
 // 学校列表
 const schoolList = ref<any[]>([])
+// 年级列表
+const gradeList = ref<string[]>([])
 // 班级列表
 const classList = ref<any[]>([])
 
 const disabled = computed(() => {
-  return !(formparams.uid && formparams.password && formparams.name && formparams.phone && formparams.schoolName && formparams.subject && formparams.classId);
+  return !(formparams.uid && formparams.password && formparams.name && formparams.phone && formparams.schoolName && formparams.grade && formparams.subject && formparams.classId);
 });
 
 const formparams = reactive<FormParams>({
@@ -165,22 +187,109 @@ const formparams = reactive<FormParams>({
   name: '',
   phone: '',
   schoolName: '',
+  grade: '',
   subject: '',
   classId: undefined
 })
 
 const userStore = useUserStore();
 
+// 从班级名称中提取年级信息
+// 例如: "淅川一高2302班" -> "2023级", "2401班" -> "2024级"
+const extractGradeFromClassName = (className: string): string | null => {
+  // 匹配连续的2位数字(年级简称)
+  const match = className.match(/(\d{2})/);
+  if (match) {
+    const yearShort = match[1];
+    // 将2位数字转换为完整年份(假设20xx年)
+    return `20${yearShort}级`;
+  }
+  return null;
+};
+
 // 学校选择事件处理
 const onSchoolChange = async (value: string) => {
   formparams.schoolName = value;
-  formparams.classId = undefined; // 重置班级选择
-  classList.value = []; // 清空班级列表
   
-  // 加载该学校的班级列表
-  const selectedSchool = schoolList.value.find(school => school.name === value);
-  if (selectedSchool) {
-    await loadClassData(selectedSchool.name);
+  // 重置年级、班级选择
+  gradeList.value = [];
+  classList.value = [];
+  formparams.grade = '';
+  formparams.classId = undefined;
+  
+  if (!formparams.schoolName) {
+    return; // 静默返回，不显示错误信息
+  }
+  
+  try {
+    // 获取学校的所有班级
+    const res = await getClassesApi({ school_id: formparams.schoolName });
+    if (res.code === 200 && res.data && res.data.length > 0) {
+      // 从班级名称中提取年级信息
+      const grades = new Set<string>();
+      res.data.forEach((cls: any) => {
+        const grade = extractGradeFromClassName(cls.name);
+        if (grade) {
+          grades.add(grade);
+        }
+      });
+      
+      if (grades.size === 0) {
+        message.warning('该学校暂无年级信息');
+        return;
+      }
+      
+      // 将年级按字典序排序(从大到小，新年级在前)
+      gradeList.value = Array.from(grades).sort((a, b) => b.localeCompare(a));
+      console.log('提取的年级列表:', gradeList.value);
+    } else {
+      message.error(res.message || '获取年级列表失败');
+    }
+  } catch (error) {
+    console.error('获取年级列表错误:', error);
+    message.error('获取年级列表失败');
+  }
+};
+
+// 年级选择事件处理
+const onGradeChange = async (value: string) => {
+  formparams.grade = value;
+  
+  // 重置班级选择
+  classList.value = [];
+  formparams.classId = undefined;
+  
+  if (!value || !formparams.schoolName) {
+    return; // 静默返回，不显示错误信息
+  }
+  
+  try {
+    // 使用学校名称作为school_id参数获取班级列表
+    const res = await getClassesApi({ school_id: formparams.schoolName });
+    if (res.code === 200 && res.data) {
+      // 筛选出对应年级的班级并按字典序排序
+      classList.value = res.data
+        .filter((cls: any) => {
+          // 从班级名称中提取年级，判断是否匹配
+          const grade = extractGradeFromClassName(cls.name);
+          return grade === value;
+        })
+        .sort((a: any, b: any) => {
+          // 按班级名称字典序排序
+          return a.name.localeCompare(b.name, 'zh-CN');
+        });
+      
+      console.log(`年级 ${value} 的班级列表:`, classList.value);
+      
+      if (classList.value.length === 0) {
+        message.warning(`该年级暂无班级信息`);
+      }
+    } else {
+      message.error(res.message || '获取班级列表失败');
+    }
+  } catch (error) {
+    console.error('获取班级列表错误:', error);
+    message.error('获取班级列表失败');
   }
 };
 
@@ -301,20 +410,7 @@ const loadSchoolData = async () => {
   }
 };
 
-// 加载班级数据
-const loadClassData = async (schoolId: string) => {
-  try {
-    const res = await getClassesApi({ school_id: schoolId });
-    if (res.code === 200) {
-      classList.value = res.data;
-    } else {
-      message.error('获取班级列表失败');
-    }
-  } catch (error) {
-    console.error('加载班级数据错误:', error);
-    message.error('加载班级数据失败');
-  }
-};
+
 
 // 组件挂载时加载数据
 onMounted(() => {

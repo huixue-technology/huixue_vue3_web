@@ -96,7 +96,7 @@
                 :key="student.id"
                 :value="student.id"
               >
-                {{ student.name }} ({{ student.uid }})
+                {{ student.name }}
               </a-select-option>
             </a-select>
           </div>
@@ -168,7 +168,7 @@
             >
               <template #bodyCell="{ column, record }">
                 <template v-if="column.dataIndex === 'diff'">
-                  <span :class="getScoreDiffClass(record.diff)">{{ record.diff }}</span>
+                  <span :class="getScoreDiffClass(record.diff)">{{ Math.abs(record.diff) }}</span>
                 </template>
               </template>
             </a-table>
@@ -247,8 +247,8 @@ const compareStudentData = ref<any>({});
 const scoreComparisonData = ref<any[]>([]); // 分数对比数据
 const rankComparisonData = ref<any[]>([]); // 段次对比数据
 
-// 学科名称映射
-const subjectMap = {
+// 学科名称映射（所有科目）
+const allSubjectMap: Record<string, string> = {
   'yuwen': '语文',
   'shuxue': '数学',
   'yingyu': '英语',
@@ -260,6 +260,32 @@ const subjectMap = {
   'dili': '地理',
   'sum': '总分'
 };
+
+// 根据学生选科过滤的科目映射
+const subjectMap = computed(() => {
+  const filteredMap: Record<string, string> = {
+    'yuwen': '语文',
+    'shuxue': '数学',
+    'yingyu': '英语',
+    'sum': '总分'
+  };
+
+  const selectedSubjects = userInfo?.student?.subject_selection;
+  if (!selectedSubjects) {
+    // 如果没有选科信息，显示所有科目
+    return allSubjectMap;
+  }
+
+  // 根据选科信息过滤科目
+  if (selectedSubjects.indexOf('物') !== -1) filteredMap.wuli = '物理';
+  if (selectedSubjects.indexOf('化') !== -1) filteredMap.huaxue = '化学';
+  if (selectedSubjects.indexOf('生') !== -1) filteredMap.shengwu = '生物';
+  if (selectedSubjects.indexOf('史') !== -1) filteredMap.lishi = '历史';
+  if (selectedSubjects.indexOf('政') !== -1) filteredMap.zhengzhi = '政治';
+  if (selectedSubjects.indexOf('地') !== -1) filteredMap.dili = '地理';
+
+  return filteredMap;
+});
 
 // 解析年级
 const getCurrentGrade = () => {
@@ -288,6 +314,7 @@ const init = async () => {
     const examRes = await getClassExam({ class_id: selectedClassId.value });
     console.log(examRes);
     if (examRes.code === 200 && examRes.data.length > 0) {
+      console.log(examRes.data)
       examList.value = examRes.data.map((examId: number) => ({
         id: examId,
         name: `考试${examId}` // 或根据实际接口返回的名称赋值
@@ -435,8 +462,8 @@ const runComparison = async () => {
       currentStudentData.value = res.data.current_student;
       compareStudentData.value = res.data.compare_student;
       
-      // 格式化分数对比数据
-      scoreComparisonData.value = Object.entries(subjectMap).map(([en, cn]) => {
+      // 格式化分数对比数据（只显示选科的科目）
+      scoreComparisonData.value = Object.entries(subjectMap.value).map(([en, cn]) => {
         const currentVal = getScoreValue(currentStudentData.value, en);
         const compareVal = getScoreValue(compareStudentData.value, en);
         return {
@@ -447,8 +474,8 @@ const runComparison = async () => {
         };
       });
 
-      // 格式化段次对比数据
-      rankComparisonData.value = Object.entries(subjectMap).map(([en, cn]) => {
+      // 格式化段次对比数据（只显示选科的科目）
+      rankComparisonData.value = Object.entries(subjectMap.value).map(([en, cn]) => {
       const currentClassRank = getClassRankValue(currentStudentData.value, en);
       const compareClassRank = getClassRankValue(compareStudentData.value, en);
       const currentGradeRank = getGradeRankValue(currentStudentData.value, en);
@@ -775,20 +802,24 @@ onMounted(init);
 
   .table-container {
     overflow-x: auto;
+
   }
 
   :deep(.ant-table) {
     width: 100%;
+    font-size: 16px; // 表格整体字体大小
     
     .ant-table-thead > tr > th {
       background-color: #f7f9fc;
       font-weight: 600;
       text-align: center;
+      font-size: 16px; // 表头字体大小
     }
     
     .ant-table-tbody > tr > td {
       text-align: center;
       vertical-align: middle;
+      font-size: 20px; // 表格内容字体大小
     }
   }
 

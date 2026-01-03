@@ -530,9 +530,9 @@ const fetchStudentListAndExams = async () => {
       message.warning(studentRes.msg || '获取学生列表失败');
     }
     if (examRes.code === 200 && examRes.data.length > 0) {
-      examList.value = examRes.data.map((examId: number) => ({
-        id: examId,
-        name: `考试${examId}`
+      examList.value = examRes.data.map((exam: any) => ({
+        id: exam.id,
+        name: exam.name
       }));
       // 默认选择最新的考试（最后一个）
       selectedExamId.value = examList.value[examList.value.length - 1].id;

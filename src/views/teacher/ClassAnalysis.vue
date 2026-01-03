@@ -55,8 +55,8 @@
           :data-source="filteredStudentRateList"
           bordered
           :columns="studentRateColumns"
-          :pagination="{ pageSize: 10, showTotal: (total) => `共 ${total} 名学生` }"
-          :scroll="{ x: 'max-content' }"
+          :pagination="false"
+          :scroll="{ x: 'max-content', y: 600 }"
           :loading="loading"
         />
       </a-card>
@@ -85,7 +85,8 @@ const subjectMap = {
   'shengwu': '生物',
   'lishi': '历史',
   'zhengzhi': '政治',
-  'dili': '地理'
+  'dili': '地理',
+  'sum_':'总分'
 };
 
 // 学生过线率列表数据
@@ -233,7 +234,7 @@ const fetchSubjectRateData = async () => {
             align: 'center',
             customRender: ({ text }: any) => {
               if (text === null || text === undefined) return '-';
-              return `${(text * 100)}%`;
+              return `${Math.round(text * 100)}%`;
             }
           });
           

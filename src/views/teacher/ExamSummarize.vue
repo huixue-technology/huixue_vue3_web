@@ -57,6 +57,15 @@ watch([() => props.exam_id, () => props.class_id], () => {
   classId.value = props.class_id;
   fetchClassAnalysis();
 })
+
+// 组件挂载时初始化数据
+onMounted(() => {
+  console.log('[ExamSummarize onMounted] exam_id:', props.exam_id, 'class_id:', props.class_id);
+  if (props.exam_id && props.class_id) {
+    fetchClassAnalysis();
+  }
+});
+
 // 科目名称映射表
 const subjectMap = {
   'yuwen': '语文',

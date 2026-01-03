@@ -27,7 +27,7 @@
             
             <a-col :span="24">
               <div class="info-item">
-                <span class="info-label">登录邮箱：</span>
+                <span class="info-label">登录手机号：</span>
                 <span class="info-value">{{ userData.email }}</span>
               </div>
             </a-col>
@@ -61,12 +61,12 @@
               </div>
             </a-col>
             
-            <a-col :span="12">
+            <!-- <a-col :span="12">
               <div class="info-item">
                 <span class="info-label">考号：</span>
                 <span class="info-value">{{ userData?.student?.uid }}</span>
               </div>
-            </a-col>
+            </a-col> -->
             
             <a-col :span="12">
               <div class="info-item">
@@ -171,7 +171,7 @@
           <a-form-item label="确认学生" v-if="selectedStudent">
             <a-descriptions size="small" :column="1">
               <a-descriptions-item label="学生姓名">{{ selectedStudent.name }}</a-descriptions-item>
-              <a-descriptions-item label="考号">{{ selectedStudent.uid }}</a-descriptions-item>
+              <!-- <a-descriptions-item label="考号">{{ selectedStudent.uid }}</a-descriptions-item> -->
               <a-descriptions-item label="学校">{{ selectedStudent.school_name || selectedStudent.school }}</a-descriptions-item>
               <a-descriptions-item label="年级">{{ selectedStudent.grade }}</a-descriptions-item>
             </a-descriptions>

@@ -69,9 +69,9 @@ const render = ({ text }: { text: number | null }) => {
         return '无数据';
     }
     if (text > 0) {
-        return `↑${text}`;
+        return `${text}`;
     } else if (text < 0) {
-        return `↓${Math.abs(text)}`;
+        return `${Math.abs(text)}`;
     }
     return String(text);
 }
