@@ -218,14 +218,14 @@
                   <tr>
                     <td class="row-label">线差</td>
                     <td :class="getDifferenceClass(totalScore - getSubjectPassLine('sum_'))">
-                      {{ totalScore - getSubjectPassLine('sum_') > 0 ? '+' : '' }}{{ totalScore - getSubjectPassLine('sum_') }}
+                      {{ Math.abs(totalScore - getSubjectPassLine('sum_')).toFixed(1) }}
                       <span v-if="totalScore - getSubjectPassLine('sum_') > 0">⬆</span>
                       <span v-if="totalScore - getSubjectPassLine('sum_') < 0">⬇</span>
                     </td>
                     <!-- 动态渲染科目线差 -->
                     <td v-for="subject in displaySubjects" :key="`diff-${subject.code}`"
                         :class="getDifferenceClass(getSubjectScore(subject.code) - getSubjectPassLine(subject.code))">
-                      {{ (getSubjectScore(subject.code) - getSubjectPassLine(subject.code)) > 0 ? '+' : '' }}{{ getSubjectScore(subject.code) - getSubjectPassLine(subject.code) }}
+                      {{ Math.abs(getSubjectScore(subject.code) - getSubjectPassLine(subject.code)).toFixed(1) }}
                       <span v-if="getSubjectScore(subject.code) - getSubjectPassLine(subject.code) > 0">⬆</span>
                       <span v-if="getSubjectScore(subject.code) - getSubjectPassLine(subject.code) < 0">⬇</span>
                     </td>
@@ -292,7 +292,7 @@
                 </template>
                 <template v-if="column.dataIndex === 'scoreDiff'">
                   <span :class="getDifferenceClass(record.scoreDiff)">
-                    {{ record.scoreDiff > 0 ? '+' : '' }}{{ formatScore(record.scoreDiff) }}
+                    {{ formatScore(Math.abs(record.scoreDiff)) }}
                     <span v-if="record.scoreDiff > 0">⬆</span>
                     <span v-if="record.scoreDiff < 0">⬇</span>
                   </span>
@@ -309,7 +309,7 @@
                 </template>
                 <template v-if="column.dataIndex === 'classRankDiff'">
                   <span :class="getRankDifferenceClass(record.classRankDiff)">
-                    {{ record.classRankDiff > 0 ? '+' : '' }}{{ record.classRankDiff }}
+                    {{ Math.abs(record.classRankDiff) }}
                     <span v-if="record.classRankDiff < 0">⬆</span>
                     <span v-if="record.classRankDiff > 0">⬇</span>
                   </span>
@@ -326,7 +326,7 @@
                 </template>
                 <template v-if="column.dataIndex === 'gradeRankDiff'">
                   <span :class="getRankDifferenceClass(record.gradeRankDiff)">
-                    {{ record.gradeRankDiff > 0 ? '+' : '' }}{{ record.gradeRankDiff }}
+                    {{ Math.abs(record.gradeRankDiff) }}
                     <span v-if="record.gradeRankDiff < 0">⬆</span>
                     <span v-if="record.gradeRankDiff > 0">⬇</span>
                   </span>
@@ -1455,6 +1455,7 @@ const clearCompare = () => {
   .color-legend {
     .legend-title {
       font-size: 14px;
+      text-align: left;
     }
     
     .legend-item {

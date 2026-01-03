@@ -99,6 +99,24 @@
          </a-select>
       </a-form-item>
 
+      <a-form-item
+         label="绑定班级"
+         name="classId"
+         :rules="[{ required: true, message: '请选择班级!' }]"
+      >
+         <a-select
+           v-model:value="formparams.classId"
+           style="width: 100%"
+           placeholder="请选择班级"
+           :loading="classList.length === 0"
+           :disabled="!formparams.schoolName"
+         >
+           <a-select-option v-for="cls in classList" :key="cls.id" :value="cls.id">
+             {{ cls.name }}
+           </a-select-option>
+         </a-select>
+      </a-form-item>
+
       <a-form-item>
          <a-button :disabled="disabled" type="primary" html-type="submit" class="login-form-button">
          注册
@@ -116,6 +134,7 @@ import { UserOutlined, LockOutlined, MobileOutlined } from '@ant-design/icons-vu
 import { postTeacherApi } from '@/servers/api/teacher';
 import { postUserApi, postUserLogin } from '@/servers/api/user';
 import { getSchoolApi } from '@/servers/api/school';
+import { getClassesApi, putClassesDetailApi, getClassesDetailApi } from '@/servers/api/classes';
 import router from '@/router';
 import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
@@ -128,13 +147,16 @@ interface FormParams {
   phone: string
   schoolName: string
   subject: string
+  classId: number | undefined
 }
 
 // 学校列表
 const schoolList = ref<any[]>([])
+// 班级列表
+const classList = ref<any[]>([])
 
 const disabled = computed(() => {
-  return !(formparams.uid && formparams.password && formparams.name && formparams.phone && formparams.schoolName && formparams.subject);
+  return !(formparams.uid && formparams.password && formparams.name && formparams.phone && formparams.schoolName && formparams.subject && formparams.classId);
 });
 
 const formparams = reactive<FormParams>({
@@ -143,14 +165,23 @@ const formparams = reactive<FormParams>({
   name: '',
   phone: '',
   schoolName: '',
-  subject: ''
+  subject: '',
+  classId: undefined
 })
 
 const userStore = useUserStore();
 
 // 学校选择事件处理
-const onSchoolChange = (value: string) => {
+const onSchoolChange = async (value: string) => {
   formparams.schoolName = value;
+  formparams.classId = undefined; // 重置班级选择
+  classList.value = []; // 清空班级列表
+  
+  // 加载该学校的班级列表
+  const selectedSchool = schoolList.value.find(school => school.name === value);
+  if (selectedSchool) {
+    await loadClassData(selectedSchool.name);
+  }
 };
 
 // 提交表单
@@ -174,6 +205,33 @@ const onFinish = async (values: any) => {
     if (teacherRes.code !== 200) {
       message.error('教师信息注册失败！');
       return;
+    }
+
+    // 更新班级的班主任信息
+    if (formparams.classId) {
+      try {
+        // 先获取班级详情
+        const classDetailRes = await getClassesDetailApi({ class_id: formparams.classId });
+        if (classDetailRes.code !== 200) {
+          message.error('获取班级信息失败！');
+          return;
+        }
+        
+        // 只更新header字段
+        const classData = classDetailRes.data;
+        await putClassesDetailApi(
+          { class_id: formparams.classId },
+          { 
+            ...classData,
+            header: formparams.uid
+          }
+        );
+        console.log('班级班主任绑定成功');
+      } catch (error) {
+        console.error('班级班主任绑定失败:', error);
+        message.error('班级班主任绑定失败！');
+        return;
+      }
     }
     
     // 注册用户信息
@@ -240,6 +298,21 @@ const loadSchoolData = async () => {
   } catch (error) {
     console.error('加载学校数据错误:', error);
     message.error('加载学校数据失败');
+  }
+};
+
+// 加载班级数据
+const loadClassData = async (schoolId: string) => {
+  try {
+    const res = await getClassesApi({ school_id: schoolId });
+    if (res.code === 200) {
+      classList.value = res.data;
+    } else {
+      message.error('获取班级列表失败');
+    }
+  } catch (error) {
+    console.error('加载班级数据错误:', error);
+    message.error('加载班级数据失败');
   }
 };
 
