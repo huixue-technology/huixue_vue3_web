@@ -877,6 +877,8 @@ const handleClassChange = async (classId: number) => {
     await fetchClassStudents();
     // 加载年级考试列表
     await fetchGradeExams(classId);
+	await fetchPassLine(selectedExamId.value)
+	await fetchPassLineList(selectedExamId.value)
   } catch (err) {
     console.error('获取班级考试列表失败:', err);
     message.error('获取班级考试信息失败');
@@ -1054,8 +1056,6 @@ const resetFilters = () => {
   // 分数线筛选
   passLineOffset.value = null;
   selectedPassLineId.value = null;
-  passLineList.value = [];
-  subjectPassLines.value = {}; // 重置各科分数线
   // 学生筛选
   selectedStudentId.value = '';
   searchKeyword.value = '';

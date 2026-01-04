@@ -21,7 +21,7 @@
             :key="line.id"
             :value="line.id"
           >
-            {{ line.line_name }}({{ line.sum_ }}分)
+            {{ line.line_name.slice(4) }}({{ line.sum_ }}分)
           </a-menu-item>
         </a-menu>
       </template>
