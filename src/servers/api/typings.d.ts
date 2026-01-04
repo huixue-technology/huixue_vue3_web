@@ -39,6 +39,8 @@ declare namespace API {
   type ClassAnalysis = {
     /** 班级ID */
     class_ids: number[];
+    /** 任务ID（用于查询异步任务状态） */
+    task_id?: string;
   };
 
   type Classes = {
@@ -613,6 +615,11 @@ declare namespace API {
   type StudentAverage = {
     /** 学生ID */
     student_id: string[];
+  };
+
+  type TaskStatus = {
+    /** 任务ID */
+    task_id: string;
   };
 
   type Teacher = {

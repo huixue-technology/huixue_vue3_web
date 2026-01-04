@@ -312,12 +312,11 @@ const init = async () => {
 
     // 2. 获取考试列表（默认选中最新考试）
     const examRes = await getClassExam({ class_id: selectedClassId.value });
-    console.log(examRes);
     if (examRes.code === 200 && examRes.data.length > 0) {
-      console.log(examRes.data)
-      examList.value = examRes.data.map((examId: number) => ({
-        id: examId,
-        name: `考试${examId}` // 或根据实际接口返回的名称赋值
+      // 直接使用返回的考试对象数组（包含id和name）
+      examList.value = examRes.data.map((exam: any) => ({
+        id: exam.id,
+        name: exam.name
       }));
       
       if (examList.value.length > 0) {

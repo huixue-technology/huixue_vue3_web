@@ -530,6 +530,7 @@ const fetchStudentListAndExams = async () => {
       message.warning(studentRes.msg || '获取学生列表失败');
     }
     if (examRes.code === 200 && examRes.data.length > 0) {
+      // 直接使用返回的考试对象数组（包含id和name）
       examList.value = examRes.data.map((exam: any) => ({
         id: exam.id,
         name: exam.name

@@ -106,3 +106,18 @@ export async function postStudentAverageAnalysis(
     ...(options || {}),
   });
 }
+
+/** 查询任务状态 POST /api/average/task_status */
+export async function postTaskStatus(
+  body: API.TaskStatus,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/average/task_status", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
