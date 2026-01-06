@@ -164,49 +164,48 @@
         </a-row>
       </div>
 
-      <!-- 科目平均分对比 -->
+      <!-- 科目平均分 + 最高分 表格 -->
       <div class="analysis-card">
-        <a-card title="科目平均分对比" class="chart-card">
+        <a-card title="科目平均分 & 最高分对比" class="chart-card">
           <div v-if="displayMode === 'table'" class="table-container">
             <a-table
-              :data-source="subjectAverageData"
+              :data-source="mergedSubjectTableData"
               bordered
-              :columns="subjectColumns"
+              :columns="mergedSubjectTableColumns"
               :pagination="false"
+              rowKey="subject"
             >
               <template #bodyCell="{ column, record }">
-                <template v-if="column.dataIndex === 'diff'">
-                  <span :class="getDifferenceClass(record.diff)">{{ formatScore(Math.abs(record.diff)) }}</span>
+                <template v-if="column.dataIndex === 'avgDiff' || column.dataIndex === 'topDiff'">
+                  <span :class="getDifferenceClass(record[column.dataIndex])">
+                    {{ formatScore(Math.abs(record[column.dataIndex])) }}
+                  </span>
+                </template>
+                <template v-else-if="column.dataIndex.includes('Score') || column.dataIndex.includes('Top')">
+                  {{ formatScore(Number(record[column.dataIndex])) }}
+                </template>
+                <template v-else>
+                  {{ record[column.dataIndex] }}
                 </template>
               </template>
             </a-table>
           </div>
+        </a-card>
+      </div>
 
-          <div v-if="displayMode === 'chart'" class="chart-container">
+      <!-- 科目平均分对比（图表） -->
+      <div class="analysis-card" v-if="displayMode === 'chart'">
+        <a-card title="科目平均分对比" class="chart-card">
+          <div class="chart-container">
             <v-chart :option="subjectChartOption" autoresize style="height: 400px" />
           </div>
         </a-card>
       </div>
 
-      <!-- 科目最高分对比 -->
-      <div class="analysis-card">
+      <!-- 科目最高分对比（图表） -->
+      <div class="analysis-card" v-if="displayMode === 'chart'">
         <a-card title="科目最高分对比" class="chart-card">
-          <div v-if="displayMode === 'table'" class="table-container">
-            <a-table
-              :data-source="subjectTopData"
-              bordered
-              :columns="subjectTopColumns"
-              :pagination="false"
-            >
-              <template #bodyCell="{ column, record }">
-                <template v-if="column.dataIndex === 'diff'">
-                  <span :class="getDifferenceClass(record.diff)">{{ formatScore(Math.abs(record.diff)) }}</span>
-                </template>
-              </template>
-            </a-table>
-          </div>
-
-          <div v-if="displayMode === 'chart'" class="chart-container">
+          <div class="chart-container">
             <v-chart :option="subjectTopChartOption" autoresize style="height: 400px" />
           </div>
         </a-card>
@@ -225,6 +224,7 @@
                     bordered
                     :columns="topStudentColumns"
                     :pagination="false"
+                    rowKey="id"
                   />
                 </div>
               </a-col>
@@ -236,6 +236,7 @@
                     bordered
                     :columns="topStudentColumns"
                     :pagination="false"
+                    rowKey="id"
                   />
                 </div>
               </a-col>
@@ -260,7 +261,7 @@ import { getClassesApi } from '@/servers/api/classes';
 import { getClassExam } from '@/servers/api/grade';
 import { getClassCompare } from '@/servers/api/grade';
 import { useUserStore } from '@/store';
-import { Row, Col, Card, Button, Empty, Alert } from "ant-design-vue";
+import { Row, Col, Card, Button, Empty, Alert, Select, Spin, Radio, Table } from "ant-design-vue";
 
 // 类型定义 
 interface ClassInfo {
@@ -364,7 +365,7 @@ const passCountDiff = computed(() => {
   return comparisonData.value.pass_count.current - comparisonData.value.pass_count.compare;
 });
 
-// 格式化科目平均分数据
+// 格式化科目平均分数据（用于图表）
 const subjectAverageData = computed(() => {
   if (!comparisonData.value) return [];
   
@@ -377,9 +378,8 @@ const subjectAverageData = computed(() => {
   })).filter(item => item.class1Score > 0 || item.class2Score > 0); // 过滤无效科目
 });
 
-// 格式化科目最高分数据
+// 格式化科目最高分数据（用于图表）
 const subjectTopData = computed(() => {
-  console.log(comparisonData.value)
   if (!comparisonData.value) return [];
   
   return Object.entries(subjectMap).map(([en, cn]) => {
@@ -394,43 +394,75 @@ const subjectTopData = computed(() => {
   }).filter(item => item.class1Top > 0 || item.class2Top > 0); // 过滤无效科目
 });
 
-// 科目平均分表格列定义
-const subjectColumns = computed(() => [
-  { title: '科目', dataIndex: 'subject', key: 'subject' },
-  { 
-    title: `${getClassName(selectedClass1.value)}平均分`, 
-    dataIndex: 'class1Score', 
-    key: 'class1Score',
-    customRender: ({ value }: { value: any }) => formatScore(Number(value))
-  },
-  { 
-    title: `${getClassName(selectedClass2.value)}平均分`, 
-    dataIndex: 'class2Score', 
-    key: 'class2Score',
-    customRender: ({ value }: { value: any }) => formatScore(Number(value))
-  },
-  { title: '差值(班级1-班级2)', dataIndex: 'diff', key: 'diff' }
-]);
+// 合并表格数据源
+const mergedSubjectTableData = computed(() => {
+  if (!comparisonData.value) return [];
+  
+  return Object.entries(subjectMap).map(([en, cn]) => {
+    // 平均分数据
+    const class1AvgScore = comparisonData.value!.subject_average_score.current[en as keyof SubjectScores] || 0;
+    const class2AvgScore = comparisonData.value!.subject_average_score.compare[en as keyof SubjectScores] || 0;
+    const avgDiff = class1AvgScore - class2AvgScore;
+    
+    // 最高分数据
+    const class1TopScore = comparisonData.value!.subject_top_score.current[en as keyof SubjectScores] || 0;
+    const class2TopScore = comparisonData.value!.subject_top_score.compare[en as keyof SubjectScores] || 0;
+    const topDiff = class1TopScore - class2TopScore;
+    
+    return {
+      subject: cn,
+      // 平均分相关
+      class1AvgScore,
+      class2AvgScore,
+      avgDiff,
+      // 最高分相关
+      class1TopScore,
+      class2TopScore,
+      topDiff
+    };
+  }).filter(item => item.class1AvgScore > 0 || item.class2AvgScore > 0 || item.class1TopScore > 0 || item.class2TopScore > 0);
+});
 
-// 科目最高分表格列定义
-const subjectTopColumns = computed(() => [
-  { title: '科目', dataIndex: 'subject', key: 'subject' },
+// 合并表格列定义
+const mergedSubjectTableColumns = computed(() => [
+  { title: '科目', dataIndex: 'subject', key: 'subject', align: 'center' },
+  // 平均分分组
   { 
-    title: `${getClassName(selectedClass1.value)}最高分`, 
-    dataIndex: 'class1Top', 
-    key: 'class1Top', 
-    render: (val: number) => formatScore(val) 
+    title: `${getClassName(selectedClass1.value)} 平均分`, 
+    dataIndex: 'class1AvgScore', 
+    key: 'class1AvgScore', 
+    align: 'center'
   },
   { 
-    title: `${getClassName(selectedClass2.value)}最高分`, 
-    dataIndex: 'class2Top', 
-    key: 'class2Top', 
-    render: (val: number) => formatScore(val) 
+    title: `${getClassName(selectedClass2.value)} 平均分`, 
+    dataIndex: 'class2AvgScore', 
+    key: 'class2AvgScore', 
+    align: 'center'
   },
   { 
-    title: '差值(我的班级-挑战班级)', 
-    dataIndex: 'diff', 
-    key: 'diff' 
+    title: '平均分差值(我的班级-挑战班级)', 
+    dataIndex: 'avgDiff', 
+    key: 'avgDiff', 
+    align: 'center'
+  },
+  // 最高分分组
+  { 
+    title: `${getClassName(selectedClass1.value)} 最高分`, 
+    dataIndex: 'class1TopScore', 
+    key: 'class1TopScore', 
+    align: 'center'
+  },
+  { 
+    title: `${getClassName(selectedClass2.value)} 最高分`, 
+    dataIndex: 'class2TopScore', 
+    key: 'class2TopScore', 
+    align: 'center'
+  },
+  { 
+    title: '最高分差值(我的班级-挑战班级)', 
+    dataIndex: 'topDiff', 
+    key: 'topDiff', 
+    align: 'center'
   }
 ]);
 
@@ -466,13 +498,27 @@ const subjectChartOption = computed(() => {
         name: getClassName(selectedClass1.value),
         type: 'bar',
         data: class1Scores,
-        itemStyle: { color: '#5470C6' }
+        itemStyle: { color: '#5470C6' },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: (params: any) => formatScore(params.value),
+          fontSize: 12,
+          color: '#333'
+        }
       },
       {
         name: getClassName(selectedClass2.value),
         type: 'bar',
         data: class2Scores,
-        itemStyle: { color: '#91CC75' }
+        itemStyle: { color: '#91CC75' },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: (params: any) => formatScore(params.value),
+          fontSize: 12,
+          color: '#333'
+        }
       }
     ]
   };
@@ -503,13 +549,27 @@ const subjectTopChartOption = computed(() => {
         name: getClassName(selectedClass1.value),
         type: 'bar',
         data: class1Tops,
-        itemStyle: { color: '#5470C6' }
+        itemStyle: { color: '#5470C6' },
+         label: {
+          show: true,
+          position: 'top',
+          formatter: (params: any) => formatScore(params.value),
+          fontSize: 12,
+          color: '#333'
+        }
       },
       {
         name: getClassName(selectedClass2.value),
         type: 'bar',
         data: class2Tops,
-        itemStyle: { color: '#91CC75' }
+        itemStyle: { color: '#91CC75' },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: (params: any) => formatScore(params.value),
+          fontSize: 12,
+          color: '#333'
+        }
       }
     ]
   };
@@ -517,23 +577,23 @@ const subjectTopChartOption = computed(() => {
 
 // 工具函数 
 const getClassName = (classId: number | undefined) => {
-  if (!classId) return ''; // 增加空值判断，避免报错
+  if (!classId) return '';
   const cls = allClassList.value.find(c => c.id === classId);
   return cls ? cls.name : '未知班级';
 };
 
 const getDifferenceClass = (diff: number) => {
-  if (diff > 0) return 'positive'; // 我的班级更高 → 绿色
-  if (diff < 0) return 'negative'; // 我的班级更低 → 红色
+  if (diff > 0) return 'positive'; // 我方更高 → 绿色
+  if (diff < 0) return 'negative'; // 我方更低 → 红色
   return 'zero';                   // 相等 → 灰色
 };
 
-// 格式化分数（保留2位小数）
+// 格式化分数
 const formatScore = (score: number) => {
   return score.toFixed(2);
 };
 
-// 格式化通过率（保留两位小数百分比）
+// 格式化通过率
 const formatRate = (rate: number) => {
   return (rate * 100).toFixed(2) + '%';
 };
@@ -548,13 +608,11 @@ const handleExamChange = (examId: number) => {
 };
 
 const fetchComparisonData = async () => {
-  // 后续添加其他班级数据计得修改！！！！！
   if (selectedClass1.value === selectedClass2.value) {
     message.warning('请选择不同的班级进行对比');
     return;
   }
   
-  // 确保必要的值存在
   if (!selectedClass1.value || !selectedClass2.value || !selectedExamId.value) {
     message.warning('请选择完整的对比条件');
     return;
@@ -600,15 +658,15 @@ const resetFilters = () => {
 // 计算"开始对比"按钮的禁用状态
 const isCompareBtnDisabled = computed(() => {
   return (
-    loading.value || // 加载中禁用
-    !selectedClass1.value || // 未选择"我的班级"（理论上不会出现，因自动绑定）
-    !selectedClass2.value || // 未选择"挑战班级"（筛选后无符合条件班级时触发）
-    !selectedExamId.value || // 未选择考试
-    selectedClass1.value === selectedClass2.value // 选择了相同班级（双重保险）
+    loading.value || 
+    !selectedClass1.value || 
+    !selectedClass2.value || 
+    !selectedExamId.value || 
+    selectedClass1.value === selectedClass2.value
   );
 });
 
-// 初始化数据 - 核心筛选逻辑修改
+// 初始化数据
 const init = async () => {
   try {
     const userInfo = userStore.getUserInfo();
@@ -658,7 +716,6 @@ const init = async () => {
           name: exam.name
         }));
         if (examList.value.length > 0) {
-          // 默认选择最新的考试（最后一个）
           selectedExamId.value = examList.value[examList.value.length - 1].id;
         }
       } else {
@@ -895,6 +952,8 @@ onMounted(init);
   .table-container {
     overflow-x: auto;
     padding: 10px 0;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
   }
 
   .chart-container {
@@ -923,16 +982,17 @@ onMounted(init);
     margin-bottom: 20px;
   }
 
+  // 差值颜色样式
   .positive {
-    color: #52c41a; // 绿色表示我的班级更高
+    color: #52c41a; // 我方更高 → 绿色
   }
 
   .negative {
-    color: #f5222d; // 红色表示我的班级更低
+    color: #f5222d; // 我方更低 → 红色
   }
 
   .zero {
-    color: #535353;
+    color: #535353; // 相等 → 灰色
   }
   
   // 响应式设计
@@ -988,6 +1048,10 @@ onMounted(init);
           font-size: 16px;
         }
       }
+    }
+    
+    .table-container {
+      overflow-x: scroll;
     }
   }
 }

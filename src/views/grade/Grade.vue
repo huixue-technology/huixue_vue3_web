@@ -63,9 +63,6 @@
         <!-- 右侧雷达图区域 -->
         <div class="right-column">
             <div class="radar-chart-section card">
-<!--                <div class="card-header">-->
-<!--                    <h3 class="card-title">成绩雷达图</h3>-->
-<!--                </div>-->
                 <div class="card-body chart-container">
                     <radar-chart 
                         :student-info="studentInfo"
@@ -94,19 +91,12 @@ import subjects_inflection from '@/utils/inflection';
 const calculateDaysUntilExam = () => {
     const today = new Date();
     const currentYear = today.getFullYear();
-    
-    // 创建今年的高考日期（6月7日）
-    let examDate = new Date(currentYear, 5, 7); // 月份从0开始，所以5代表6月
-    
-    // 如果今年的高考已经过去，就计算到明年的高考
+    let examDate = new Date(currentYear, 5, 7);
     if (today > examDate) {
         examDate = new Date(currentYear + 1, 5, 7);
     }
-    
-    // 计算天数差
     const diffTime = examDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
     return diffDays;
 };
 
@@ -116,22 +106,25 @@ const studentInfo = ref<any>(null);
 const daysUntilExam = ref(calculateDaysUntilExam());
 const userStore = useUserStore();
 
-// 比较考试数据
+// 比较考试数据（初始化空数组，避免undefined）
 const compareScoreData = ref<number[]>([]);
 const updateCompareScoreData = (data: number[]) => {
-    compareScoreData.value = data;
+    // 过滤异常大的数值（比如雷达图中的199、637）
+    const validData = data.map(num => isFinite(num) && num <= 150 ? num : 0);
+    compareScoreData.value = validData;
 };
 
-// 当前考试数据数组
+// 当前考试数据数组（过滤异常值）
 const currentExamDataArray = computed(() => {
-    let tmp = []
+    let tmp: number[] = [];
     if(currentExamData.value) {
         for(let i of dynamicSubjectNames.value){
-            // @ts-ignore
-            tmp.push(currentExamData.value[subjects_inflection[i.name]])
+            // @ts-ignore 过滤异常值，科目满分不超过150
+            const score = currentExamData.value[subjects_inflection[i.name]];
+            tmp.push(isFinite(score) && score <= 150 ? score : 0);
         }
     }
-    return tmp
+    return tmp;
 });
 
 // 根据选科动态确定科目名称
@@ -141,9 +134,9 @@ const dynamicSubjectNames = computed(() => {
         {name: '英语', max: 150},
         {name: '数学', max: 150}
     ]
-    if (studentInfo.value) {
+    if (studentInfo.value?.subject_selection) {
         for (let i  of [{name:'物',value:'物理'},{name:'化',value:'化学'}, {name:'生',value:'生物'},{name:'史',value:'历史'},{name:'地',value:'地理'},{name:'政',value:'政治'}]) {
-            if(studentInfo.value.subject_selection && studentInfo.value.subject_selection.includes(i.name)) {
+            if(studentInfo.value.subject_selection.includes(i.name)) {
                 subjects.push({name: i.value, max: 100})
             }
         }
@@ -154,35 +147,21 @@ const dynamicSubjectNames = computed(() => {
 // 每天更新倒计时
 let timer: number;
 onMounted(() => {
-    // 立即计算一次
     daysUntilExam.value = calculateDaysUntilExam();
-    
-    // 设置每天凌晨更新倒计时
     const updateAtMidnight = () => {
         const now = new Date();
-        const night = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate() + 1, // 第二天
-            0, 0, 0 // 0点0分0秒
-        );
+        const night = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
         const msUntilMidnight = night.getTime() - now.getTime();
-        
-        // 设置定时器在凌晨触发
         timer = window.setTimeout(() => {
             daysUntilExam.value = calculateDaysUntilExam();
-            updateAtMidnight(); // 重新设置下一天的定时器
+            updateAtMidnight();
         }, msUntilMidnight);
     };
-    
     updateAtMidnight();
 });
 
-// 组件卸载时清除定时器
 onUnmounted(() => {
-    if (timer) {
-        clearTimeout(timer);
-    }
+    if (timer) clearTimeout(timer);
 });
 
 interface Exam {
@@ -201,8 +180,9 @@ type TableData = {
 
 const examList = ref<Exam[]>([])
 const currentExamId = ref<string>('')
+const tableData = ref<TableData[]>([])
 
-onBeforeMount(() => {
+onBeforeMount(async () => {
     if (!userStore.isLogin) {
         router.push('/user/login');
         return
@@ -211,126 +191,138 @@ onBeforeMount(() => {
     const userInfo = userStore.getUserInfo();
     studentId.value = userInfo.role
     studentInfo.value = userInfo.student
-    getStudentExamApi({student_uid:userInfo.role},[]).then(res => {
+    try {
+        const res = await getStudentExamApi({student_uid:userInfo.role},[]);
         if (res.code === 200 ) {
-            res.data.map((item:Exam[]) => {
-                if (Array.isArray(item) && item[0] && item[0].id && item[0].name) {
-                    examList.value.push({
-                    id: item[0].id,
-                    name: item[0].name
+            // 1. 过滤有效考试数据
+            const validExams: Exam[] = [];
+            res.data.forEach((item: any) => {
+                if (Array.isArray(item) && item[0]?.id && item[0]?.name) {
+                    validExams.push({
+                        id: item[0].id,
+                        name: item[0].name
                     });
                 }
-            })
+            });
+            // 2. 按ID从大到小排序（ID大=最后一次考试）
+            examList.value = validExams.sort((a, b) => Number(b.id) - Number(a.id));
         }
         
-        // 默认选择第一个考试
+        // 3. 默认选择第一个考试（最后一次）
         if(examList.value.length > 0){
             currentExamId.value = examList.value[0].id;
-            getGradeApi({student_id:userInfo.role,exam_id:parseInt(currentExamId.value)}).then(res => {
-                const gradeData = res.data[0];
-                handleGradeDetail(gradeData)
-            })
+            const gradeRes = await getGradeApi({
+                student_id: userInfo.role,
+                exam_id: parseInt(currentExamId.value)
+            });
+            if (gradeRes.code === 200 && gradeRes.data?.[0]) {
+                handleGradeDetail(gradeRes.data[0]);
+            }
         }else{
             message.error('似乎还没有参加一场考试？')
-            return
         }
-    })
+    } catch (err) {
+        message.error('加载考试数据失败');
+    }
 })
 
 const handleGradeDetail = (gradeData:API.Grade) => {
     tableData.value = []
     currentExamData.value = gradeData
+    // 过滤异常成绩（比如超过满分的数值）
+    const safeScore = (score: any, max: number) => isFinite(score) && score <= max ? score : 0;
+    
     tableData.value = [
     {
         name: '总分',
-        sum_: gradeData.sum_ || 0,
+        sum_: safeScore(gradeData.sum_, 750),
         sumb: gradeData.sumb || 0,
         sumd: gradeData.sumd || 0,
-        maxB: gradeData.sum_ || 0, // Assuming maxB is total score for now
+        maxB: safeScore(gradeData.sum_, 750),
         passLine: 0,
     },
     {
         name: '语文',
-        sum_: gradeData.yuwen || 0,
+        sum_: safeScore(gradeData.yuwen, 150),
         sumb: gradeData.yuwenb || 0,
         sumd: gradeData.yuwend || 0,
-        maxB: gradeData.yuwen || 0,
+        maxB: safeScore(gradeData.yuwen, 150),
         passLine: 0,
     },
     {
         name: '英语',
-        sum_: gradeData.yingyu || 0,
+        sum_: safeScore(gradeData.yingyu, 150),
         sumb: gradeData.yingyub || 0,
         sumd: gradeData.yingyud || 0,
-        maxB: gradeData.yingyu || 0,
+        maxB: safeScore(gradeData.yingyu, 150),
         passLine: 0,
     },
     {
         name: '数学',
-        sum_: gradeData.shuxue || 0,
+        sum_: safeScore(gradeData.shuxue, 150),
         sumb: gradeData.shuxueb || 0,
         sumd: gradeData.shuxued || 0,
-        maxB: gradeData.shuxue || 0,
+        maxB: safeScore(gradeData.shuxue, 150),
         passLine: 0,
     }
 ];
-if (gradeData.wuli != null &&  gradeData.wuli!=0) {
+if (gradeData.wuli != null) {
     tableData.value.push({
         name: '物理',
-        sum_: gradeData.wuli || 0,
+        sum_: safeScore(gradeData.wuli, 100),
         sumb: gradeData.wulib || 0,
         sumd: gradeData.wulid || 0,
-        maxB: gradeData.wuli || 0,
+        maxB: safeScore(gradeData.wuli, 100),
         passLine: 0,
     });
 }
-if (gradeData.huaxue != null &&  gradeData.huaxue!=0) {
+if (gradeData.huaxue != null) {
     tableData.value.push({
         name: '化学',
-        sum_: gradeData.huaxue || 0,
+        sum_: safeScore(gradeData.huaxue, 100),
         sumb: gradeData.huaxueb || 0,
         sumd: gradeData.huaxued || 0,
-        maxB: gradeData.huaxue || 0,
+        maxB: safeScore(gradeData.huaxue, 100),
         passLine: 0,
     })
 }
-if (gradeData.shengwu!= null &&  gradeData.shengwu!=0) {
+if (gradeData.shengwu != null) {
     tableData.value.push({
         name: '生物',
-        sum_: gradeData.shengwu || 0,
+        sum_: safeScore(gradeData.shengwu, 100),
         sumb: gradeData.shengwub || 0,
         sumd: gradeData.shengwud || 0,
-        maxB: gradeData.shengwu || 0,
+        maxB: safeScore(gradeData.shengwu, 100),
         passLine: 0,
     });
 }
-if (gradeData.lishi != null &&  gradeData.lishi!=0) {
+if (gradeData.lishi != null) {
     tableData.value.push({
         name: '历史',
-        sum_: gradeData.lishi || 0,
+        sum_: safeScore(gradeData.lishi, 100),
         sumb: gradeData.lishib || 0,
         sumd: gradeData.lishid || 0,
-        maxB: gradeData.lishi || 0,
+        maxB: safeScore(gradeData.lishi, 100),
         passLine: 0,
     });
 }
-if (gradeData.dili!= null &&  gradeData.dili!=0) {
+if (gradeData.dili != null) {
     tableData.value.push({
         name: '地理',
-        sum_: gradeData.dili || 0,
+        sum_: safeScore(gradeData.dili, 100),
         sumb: gradeData.dilib || 0,
         sumd: gradeData.dilid || 0,
-        maxB: gradeData.dili || 0,
+        maxB: safeScore(gradeData.dili, 100),
         passLine: 0,
     });
 }
-if (gradeData.zhengzhi != null && gradeData.zhengzhi!=0) {
+if (gradeData.zhengzhi != null) {
         tableData.value.push({
         name: '政治',
-        sum_: gradeData.zhengzhi || 0,
+        sum_: safeScore(gradeData.zhengzhi, 100),
         sumb: gradeData.zhengzhib || 0,
         sumd: gradeData.zhengzhid || 0,
-        maxB: gradeData.zhengzhi || 0,
+        maxB: safeScore(gradeData.zhengzhi, 100),
         passLine: 0,
     });
 }
@@ -355,15 +347,19 @@ const  tableColumns = [{
     }
 ]
 
-const tableData = ref<TableData[]>([])
-
-const handleChange = (value:string) => {
+const handleChange = async (value:string) => {
     currentExamId.value = value;
-    // 获取考试成绩
-    getGradeApi({student_id:parseInt(studentId.value),exam_id:parseInt(currentExamId.value)}).then(res => {
-        const gradeData = res.data[0];
-        handleGradeDetail(gradeData)
-    })
+    try {
+        const gradeRes = await getGradeApi({
+            student_id: parseInt(studentId.value),
+            exam_id: parseInt(value)
+        });
+        if (gradeRes.code === 200 && gradeRes.data?.[0]) {
+            handleGradeDetail(gradeRes.data[0]);
+        }
+    } catch (err) {
+        message.error('切换考试失败');
+    }
 }
 </script>
 
