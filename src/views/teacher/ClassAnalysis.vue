@@ -9,6 +9,7 @@
         <!-- 搜索框 -->
         <div class="search-container">
           <a-space wrap :size="12">
+            <!-- 学生姓名搜索 -->
             <a-auto-complete
               v-model:value="searchName"
               :options="studentNameOptions"
@@ -19,21 +20,25 @@
               allowClear
             >
               <template #option="{ value, label }">
-                  <div>{{ label }} ({{ maskStudentId(value) }})</div>
+                <div>{{ label }} ({{ maskStudentId(value) }})</div>
               </template>
             </a-auto-complete>
             
+            <!-- 科目筛选 -->
             <a-select
               v-model:value="selectedSubject"
               placeholder="请选择科目"
               style="width: 150px"
               allowClear
+              @change="handleSubjectChange"
             >
+              <a-select-option value="">全部科目</a-select-option>
               <a-select-option v-for="subject in availableSubjects" :key="subject.value" :value="subject.value">
                 {{ subject.label }}
               </a-select-option>
             </a-select>
             
+            <!-- 过线率范围 -->
             <a-select
               v-model:value="rateRange"
               placeholder="过线率范围"
@@ -47,19 +52,42 @@
               <a-select-option value="80-100">80% - 100%</a-select-option>
             </a-select>
             
+            <!-- 排序方式 -->
+            <a-select
+              v-model:value="sortOrder"
+              placeholder="排序方式"
+              style="width: 150px"
+            >
+              <a-select-option value="desc">降序</a-select-option>
+              <a-select-option value="asc">升序</a-select-option>
+            </a-select>
+            
+            <!-- 确定筛选按钮 -->
+            <a-button type="primary" @click="applyFilters">确定筛选</a-button>
+            
+            <!-- 清除筛选按钮 -->
             <a-button @click="clearSearch">清除筛选</a-button>
           </a-space>
         </div>
-        
 
         <a-table
-          :data-source="filteredStudentRateList"
+          :data-source="sortedStudentRateList"
           bordered
           :columns="studentRateColumns"
-          :pagination="false"
+          :pagination="{ pageSize: 20 }"
           :scroll="{ x: 'max-content', y: 600 }"
           :loading="loading"
-        />
+          rowKey="uid"
+        >
+          <template #bodyCell="{ column, record }">
+            <!-- 过线率单元格颜色渲染 -->
+            <template v-if="isSubjectColumn(column.dataIndex)">
+              <span :class="getRateClass(record[column.dataIndex])">
+                {{ record[column.dataIndex] === null || record[column.dataIndex] === undefined ? '-' : `${Math.round(record[column.dataIndex] * 100)}%` }}
+              </span>
+            </template>
+          </template>
+        </a-table>
       </a-card>
     </div>
   </div>
@@ -75,7 +103,6 @@ const props = defineProps<{
   classId: number;
 }>();
 
-
 const loading = ref(false);
 
 // 科目名称映射表
@@ -89,13 +116,13 @@ const subjectMap = {
   'lishi': '历史',
   'zhengzhi': '政治',
   'dili': '地理',
-  'sum_':'总分'
+  'sum_': '总分'
 };
 
 // 学生过线率列表数据
 const studentRateList = ref<any[]>([]);
 
-// 学生过线率表格列定义
+// 表格列定义（增加排序功能）
 const studentRateColumns = ref<any[]>([
   { title: '学生姓名', dataIndex: 'name', width: 120, fixed: 'left', align: 'center' },
   { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left', align: 'center', customRender: ({ text }: any) => maskStudentId(text) },
@@ -103,8 +130,9 @@ const studentRateColumns = ref<any[]>([
 
 // 搜索相关
 const searchName = ref<string>('');
-const selectedSubject = ref<string | undefined>(undefined);
+const selectedSubject = ref<string>('');
 const rateRange = ref<string | undefined>(undefined);
+const sortOrder = ref<string>('desc'); // 排序方式，默认降序
 
 // 学生姓名选项（用于自动完成）
 const studentNameOptions = computed(() => {
@@ -130,37 +158,79 @@ const filteredStudentRateList = computed(() => {
     });
   }
   
-  // 按科目和过线率范围筛选（只有当科目和过线率范围都选择时才生效）
-  if (selectedSubject.value && rateRange.value) {
-    const [min, max] = rateRange.value.split('-').map(Number);
-    result = result.filter(student => {
-      const rate = student[selectedSubject.value!];
-      if (rate === null || rate === undefined) return false;
-      const ratePercent = rate * 100;
-      return ratePercent >= min && ratePercent <= max;
-    });
-  } else if (selectedSubject.value && !rateRange.value) {
-    // 只选择了科目，显示有该科目成绩的学生
+  // 按科目筛选
+  if (selectedSubject.value) {
     result = result.filter(student => {
       const rate = student[selectedSubject.value!];
       return rate !== null && rate !== undefined;
     });
-  } else if (!selectedSubject.value && rateRange.value) {
-    // 只选择了过线率范围，筛选任意科目过线率在范围内的学生
+  }
+  
+  // 按过线率范围筛选
+  if (rateRange.value) {
     const [min, max] = rateRange.value.split('-').map(Number);
     result = result.filter(student => {
-      // 检查学生是否有任何科目的过线率在指定范围内
-      return availableSubjects.value.some(subject => {
-        const rate = student[subject.value];
+      // 如果选择了具体科目，按该科目筛选；否则按任意科目筛选
+      if (selectedSubject.value) {
+        const rate = student[selectedSubject.value];
         if (rate === null || rate === undefined) return false;
         const ratePercent = rate * 100;
         return ratePercent >= min && ratePercent <= max;
-      });
+      } else {
+        // 检查学生是否有任何科目的过线率在指定范围内
+        return availableSubjects.value.some(subject => {
+          const rate = student[subject.value];
+          if (rate === null || rate === undefined) return false;
+          const ratePercent = rate * 100;
+          return ratePercent >= min && ratePercent <= max;
+        });
+      }
     });
   }
   
   return result;
 });
+
+// 排序后的学生列表
+const sortedStudentRateList = computed(() => {
+  const list = [...filteredStudentRateList.value];
+  
+  // 如果选择了科目，按该科目过线率排序
+  if (selectedSubject.value) {
+    return list.sort((a, b) => {
+      const rateA = a[selectedSubject.value] || 0;
+      const rateB = b[selectedSubject.value] || 0;
+      return sortOrder.value === 'desc' ? rateB - rateA : rateA - rateB;
+    });
+  }
+  
+  // 未选择科目时，按总分过线率排序
+  return list.sort((a, b) => {
+    const rateA = a['sum_'] || 0;
+    const rateB = b['sum_'] || 0;
+    return sortOrder.value === 'desc' ? rateB - rateA : rateA - rateB;
+  });
+});
+
+// 判断是否为科目列
+const isSubjectColumn = (dataIndex: string) => {
+  return availableSubjects.value.some(subject => subject.value === dataIndex);
+};
+
+// 获取过线率颜色样式类
+const getRateClass = (rate: number | null | undefined) => {
+  if (rate === null || rate === undefined) return 'normal-rate';
+  
+  const ratePercent = rate * 100;
+  
+  if (ratePercent < 50) {
+    return 'low-rate'; // 50%以下红色
+  } else if (ratePercent >= 50 && ratePercent < 60) {
+    return 'mid-rate'; // 50%-60%橙色
+  } else {
+    return 'normal-rate'; // 60%以上默认颜色
+  }
+};
 
 // 处理搜索
 const handleSearch = (value: string) => {
@@ -176,11 +246,23 @@ const handleSelect = (value: string) => {
   }
 };
 
+// 处理科目变更
+const handleSubjectChange = () => {
+  // 科目变更时可以重置排序或其他筛选条件
+};
+
+// 应用筛选
+const applyFilters = () => {
+  // 触发计算属性重新计算，无需额外逻辑
+  message.success('筛选条件已应用');
+};
+
 // 清除搜索
 const clearSearch = () => {
   searchName.value = '';
-  selectedSubject.value = undefined;
+  selectedSubject.value = '';
   rateRange.value = undefined;
+  sortOrder.value = 'desc';
 };
 
 // 学号脱敏处理，只显示后四位并在前面加两个星号
@@ -191,14 +273,10 @@ const maskStudentId = (studentId: string) => {
   return '**' + idStr.slice(-4);
 };
 
-
-
-
 // 初始化
 onMounted(() => {
   fetchSubjectRateData();
 });
-
 
 // 监听 classId 变化
 watch(() => props.classId, () => {
@@ -206,8 +284,6 @@ watch(() => props.classId, () => {
     fetchSubjectRateData();
   }
 });
-
-
 
 // 处理数据并更新表格
 const processStudentRateData = (classData: any) => {
@@ -221,17 +297,14 @@ const processStudentRateData = (classData: any) => {
   
   Object.entries(studentOneLineRate).forEach(([subject, students]: [string, any]) => {
     if (Array.isArray(students)) {
-      // 添加科目列
+      // 添加科目列（支持排序）
       const subjectName = subjectMap[subject] || subject;
       subjectColumns.push({
         title: subjectName,
         dataIndex: subject,
         width: 100,
         align: 'center',
-        customRender: ({ text }: any) => {
-          if (text === null || text === undefined) return '-';
-          return `${Math.round(text * 100)}%`;
-        }
+        // 移除自定义渲染，改用模板方式处理颜色
       });
       
       // 将每个学生的该科目过线率添加到学生数据中
@@ -267,7 +340,6 @@ const processStudentRateData = (classData: any) => {
   // 转换为数组
   studentRateList.value = Array.from(studentMap.values());
 };
-
 
 // 获取学生过线率数据
 const fetchSubjectRateData = async () => {
@@ -319,12 +391,15 @@ const fetchSubjectRateData = async () => {
 defineExpose({
   refresh: fetchSubjectRateData,
 });
-
 </script>
 
 <style scoped lang="less">
 .class-analysis-container {
   margin-bottom: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .section {
@@ -367,9 +442,6 @@ defineExpose({
   }
 }
 
-
-
-
 /* 表格样式优化 */
 :deep(.ant-table-thead > tr > th) {
   background: linear-gradient(180deg, #f0f5ff 0%, #e6f0ff 100%);
@@ -402,4 +474,43 @@ defineExpose({
   border-right: 1px solid #f0f0f0;
 }
 
-/* 响应式设计 */</style>
+/* 过线率颜色样式 */
+.normal-rate {
+  color: #333;
+  font-weight: 500;
+}
+
+.mid-rate {
+  color: #fa8c16; /* 橙色 */
+  font-weight: bold;
+}
+
+.low-rate {
+  color: #f5222d; /* 红色 */
+  font-weight: bold;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .class-analysis-container {
+    padding: 10px;
+  }
+  
+  .search-container {
+    :deep(.ant-space) {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    
+    :deep(.ant-space-item) {
+      margin-bottom: 8px;
+      width: 100%;
+    }
+    
+    :deep(.ant-select),
+    :deep(.ant-auto-complete) {
+      width: 100% !important;
+    }
+  }
+}
+</style>

@@ -53,14 +53,11 @@ const emit = defineEmits(['update:compareScoreData']);
 const compareExamId = ref<string>('');
 
 onMounted(()=> {
-  if(props.examList.length > 1) {
-    console.log(compareExamId)
-    console.log(props.examList[1].name)
-    compareExamId.value = props.examList[1].id
-    handleChange(compareExamId.value)
+  // 核心：选择切片后列表的第1个（对应原始列表第2个=上一次考试）
+  if(props.examList.length >= 1) {
+    compareExamId.value = props.examList[0].id;
+    handleChange(compareExamId.value);
   }
-  
-  // compareExamId.value = props.examList[-1].name
 })
 const tableData = ref<{
         subject : any | string,
@@ -80,11 +77,11 @@ const render = ({ text }: { text: number | null }) => {
     return String(text);
 }
 
-const customCell = (text:any) => {
-    text = text.rankChangeSegment
-    const numericText = Number(text); // 显式转换为数字
+const customCell = (record: any) => {
+    const text = record?.rankChangeSegment;
+    const numericText = Number(text);
     if (text === null || text === undefined || isNaN(numericText)) {
-        return { style: { color: 'rgba(0, 0, 0, 0.85)' } }; // Fallback to black for invalid data
+        return { style: { color: 'rgba(0, 0, 0, 0.85)' } };
     }
     const color = numericText > 0 ? '#52c41a' : numericText < 0 ? '#f5222d' : 'rgba(0, 0, 0, 0.85)';
     return { style: { color } };
@@ -118,28 +115,24 @@ const currentExamColumns: ColumnType[] = [
 
 const handleUpandDown = (res:any) => { 
     tableData.value = []
-    // 辅助函数：用于检查字段是否存在并推入数据
+    if (!res?.data?.[0]) return;
+    
     const addSubjectData = (
         subjectName: string,
         rankChangeClassField: any,
         rankChangeSegmentField: any
     ) => {
-        // 检查 rankChangeClassField 或 rankChangeSegmentField 是否为空或 null
-        if (
-            rankChangeClassField !== undefined &&
-            rankChangeSegmentField !== undefined
-        ) {
+        if (rankChangeClassField !== undefined || rankChangeSegmentField !== undefined) {
             tableData.value.push({
                 subject: subjectName,
-                rankChangeClass: rankChangeClassField,
-                rankChangeSegment: rankChangeSegmentField,
+                rankChangeClass: rankChangeClassField ?? '无数据',
+                rankChangeSegment: rankChangeSegmentField ?? '无数据',
             });
         }
     };
 
-    // 添加各学科数据
     addSubjectData('总分',res.data[0].compareB.sumb, res.data[0].compareD.sumd)
-    addSubjectData('语文', res.data[0].compareB.yuwenb, res.data[0].compareD.yingyud);
+    addSubjectData('语文', res.data[0].compareB.yuwenb, res.data[0].compareD.yuwend);
     addSubjectData('英语', res.data[0].compareB.yingyub, res.data[0].compareD.yingyud);
     addSubjectData('物理', res.data[0].compareB.wulib, res.data[0].compareD.wulid);
     addSubjectData('化学', res.data[0].compareB.huaxueb, res.data[0].compareD.huaxued);
@@ -172,12 +165,14 @@ const loadTableAndRadar = (value:string) => {
       student_id: props.student_id,
       exam_id: parseInt(value),
     }).then((res:{code:number,data:CompareScore[],msg:string})=> { 
-      if(res.code === 200) {
-        // @ts-ignore
+      if(res.code === 200 && res.data?.[0]) {
         const compareScoreData = []
+        // 过滤异常成绩
+        const safeScore = (score: any, max: number) => isFinite(score) && score <= max ? score : 0;
         for(let i of dynamicSubjectNames.value){
           // @ts-ignore
-          compareScoreData.push(res.data[0][subjects_inflection[i.name]])
+          const score = res.data[0][subjects_inflection[i.name]];
+          compareScoreData.push(safeScore(score, i.max));
         }
         emit('update:compareScoreData', compareScoreData);
       }else {
@@ -200,9 +195,9 @@ const dynamicSubjectNames = computed(() => {
     {name: '英语', max: 150},
     {name: '数学', max: 150}
   ]
-  if (props.studentInfo) {
+  if (props.studentInfo?.subject_selection) {
     for (let i  of [{name:'物',value:'物理'},{name:'化',value:'化学'}, {name:'生',value:'生物'},{name:'史',value:'历史'},{name:'地',value:'地理'},{name:'政',value:'政治'}]) {
-      if(props.studentInfo.subject_selection && props.studentInfo.subject_selection.includes(i.name)) {
+      if(props.studentInfo.subject_selection.includes(i.name)) {
         subjects.push({name: i.value, max: 100})
       }
     }
