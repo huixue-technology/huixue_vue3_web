@@ -340,12 +340,13 @@ const getSubjectOption = (subject: string) => {
         type: 'line',
         data: scores,
         itemStyle: { 
-          color: colors[0],
+          color: '#1890ff',
           shadowColor: 'rgba(0, 0, 0, 0.1)',
           shadowBlur: 3
         },
         lineStyle: {
-          width: 3
+          width: 3,
+          type: 'solid'
         },
         smooth: true,
         symbolSize: 6
@@ -355,7 +356,7 @@ const getSubjectOption = (subject: string) => {
         type: 'line',
         data: lines,
         itemStyle: { 
-          color: colors[1],
+          color: '#EE6666',
           shadowColor: 'rgba(0, 0, 0, 0.1)',
           shadowBlur: 3
         },

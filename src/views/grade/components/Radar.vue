@@ -1,7 +1,10 @@
 <template>
-  <div class="chart-container">
+  <div class="radar-wrapper">
     <v-chart class="radar-chart" :option="chartOption" autoresize />
-    <div class="description">综合分析：本次考试总分较上次考试退步，语文、数学、外语、综合科均较上次考试退步。</div>
+    <div class="analysis-footer">
+        <span class="icon">💡</span>
+        <span class="text">综合分析：本次考试总分较上次考试退步，语文、数学、外语、综合科均较上次考试退步。</span>
+    </div>
   </div>
 </template>
 
@@ -98,44 +101,41 @@ const chartOption = computed(() => {
 });
 </script>
 
-<style scoped>
-.chart-container {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+<style scoped lang="less">
+.radar-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: center;
   width: 100%;
   height: 100%;
+  gap: 16px;
 }
 
 .radar-chart {
   width: 100%;
-  min-height: 500px;
-  font-size: larger;
+  min-height: 400px;
   flex: 1;
 }
 
-.description {
-  margin-top: 10px;
-  font-size: 0.9em;
-  padding: 10px;
-  background-color: #f9f9f9;
+.analysis-footer {
+  background-color: #EFF6FF; // Blue 50
+  border: 1px solid #DBEAFE; // Blue 200
   border-radius: 8px;
-  width: 100%;
-  text-align: center;
-  border: 1px dashed #ddd;
+  padding: 12px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: #1E40AF; // Blue 800
+  line-height: 1.5;
+
+  .icon {
+    font-size: 16px;
+  }
 }
 
 @media (max-width: 768px) {
-  .chart-container {
-    padding: 15px;
-  }
-  
   .radar-chart {
-    min-height: 400px;
+    min-height: 350px;
   }
 }
 </style>

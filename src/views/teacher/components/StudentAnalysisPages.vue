@@ -220,8 +220,8 @@ const getSubjectOption = (subject: string) => {
         name: '本人成绩',
         type: 'line',
         data: scores,
-        itemStyle: { color: colors[0], shadowBlur: 3 },
-        lineStyle: { width: 3 },
+        itemStyle: { color: '#1890ff', shadowBlur: 3 },
+        lineStyle: { width: 3, type: 'solid' },
         smooth: true,
         symbolSize: 6
       },
@@ -229,7 +229,7 @@ const getSubjectOption = (subject: string) => {
         name: '一本线',
         type: 'line',
         data: lines,
-        itemStyle: { color: colors[1], shadowBlur: 3 },
+        itemStyle: { color: '#EE6666', shadowBlur: 3 },
         lineStyle: { width: 3, type: 'dashed' },
         smooth: true,
         symbolSize: 6

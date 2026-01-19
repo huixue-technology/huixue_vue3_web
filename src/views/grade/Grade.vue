@@ -1,52 +1,73 @@
 <template>
  <div class="grade-container">
-    <div class="header-section">
-        <div class="countdown-section">
-            <div class="countdown-box">
-                <span class="countdown-label">⏳距离高考还有</span>
-                <span class="countdown-days">{{ daysUntilExam }}</span>
-                <span class="countdown-unit">天</span>
+    <!-- 顶部导航/状态栏 -->
+    <div class="dashboard-header">
+        <div class="header-left">
+            <h1 class="page-title">成绩分析看板</h1>
+            <div class="exam-selector">
+                <span class="label">当前考试：</span>
+                <a-select
+                    placeholder="请选择考试"
+                    style="width: 240px"
+                    @change="handleChange"
+                    v-model:value="currentExamId"
+                    class="custom-select"
+                    :bordered="false"
+                >
+                    <a-select-option v-for="item in examList" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
+                </a-select> 
             </div>
         </div>
         
-        <div class="select-section">
-            <h2>选择查询考试：</h2>
-            <a-select
-                placeholder="请选择考试"
-                style="width: auto;min-width: 200px"
-                @change="handleChange"
-                v-model:value="currentExamId"
-                class="exam-select"
-            >
-                <a-select-option v-for="item in examList" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
-            </a-select> 
+        <div class="header-right">
+            <div class="countdown-card">
+                <div class="icon-wrapper">
+                    <span role="img" aria-label="hourglass">⏳</span>
+                </div>
+                <div class="countdown-info">
+                    <span class="label">距离高考仅剩</span>
+                    <div class="number-group">
+                        <span class="number">{{ daysUntilExam }}</span>
+                        <span class="unit">天</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
     <!-- 主要内容区域 -->
     <div class="main-content">
-        <!-- 左侧区域 -->
+        <!-- 左侧数据区域 -->
         <div class="left-column">
-            <div class="table-section card">
+            <!-- 成绩列表 -->
+            <div class="content-card table-card">
                 <div class="card-header">
-                    <h3 class="card-title">考试成绩</h3>
+                    <div class="header-title">
+                        <span class="indicator"></span>
+                        <h3>成绩概览</h3>
+                    </div>
+                    <span class="subtitle">详细得分情况</span>
                 </div>
                 <div class="card-body">
                     <a-table
-                        size="large"
                         :columns="tableColumns"
                         :data-source="tableData"
                         :pagination="false"
-                        class="grade-table"
+                        class="custom-table"
+                        size="middle"
+                        rowKey="name"
                     >
                     </a-table>
                 </div>
             </div>
             
-            <!-- 对比表格组件 -->
-            <div class="compare-table-section card" v-if="examList.length > 1">
+            <!-- 对比分析 -->
+            <div class="content-card compare-card" v-if="examList.length > 1">
                 <div class="card-header">
-                    <h3 class="card-title">考试对比分析</h3>
+                     <div class="header-title">
+                        <span class="indicator green"></span>
+                        <h3>进退步分析</h3>
+                    </div>
                 </div>
                 <div class="card-body">
                     <compare-table 
@@ -60,13 +81,16 @@
             </div>
         </div>
         
-        <!-- 右侧雷达图区域 -->
+        <!-- 右侧图表区域 -->
         <div class="right-column">
-            <div class="radar-chart-section card">
-<!--                <div class="card-header">-->
-<!--                    <h3 class="card-title">成绩雷达图</h3>-->
-<!--                </div>-->
-                <div class="card-body chart-container">
+            <div class="content-card chart-card">
+                <div class="card-header">
+                    <div class="header-title">
+                        <span class="indicator blue"></span>
+                        <h3>学科能力雷达</h3>
+                    </div>
+                </div>
+                <div class="card-body chart-wrapper">
                     <radar-chart 
                         :student-info="studentInfo"
                         :compare-score-data="compareScoreData"
@@ -369,195 +393,233 @@ const handleChange = (value:string) => {
 
 <style scoped lang="less">
 .grade-container {
-    position: relative;
-    height: 100vh;
-    overflow-y: auto;
-    padding: 20px;
-    background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+    min-height: 100vh;
+    padding: 24px;
+    background-color: #F8FAFC;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 24px;
     
-    .header-section {
+    // Header Styles
+    .dashboard-header {
         display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        align-items: center;
         justify-content: space-between;
-        
-        .countdown-section {
-            flex: 1;
-            min-width: 300px;
-            
-            .countdown-box {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                border-radius: 15px;
-                padding: 20px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-                text-align: center;
-                
-                .countdown-label {
-                    font-size: 20px;
-                    color: white;
-                    margin-right: 10px;
-                }
-                
-                .countdown-days {
-                    font-size: 40px;
-                    font-weight: 800;
-                    color: white;
-                }
-                
-                .countdown-unit {
-                    font-size: 20px;
-                    color: white;
-                    margin-left: 5px;
-                }
-            }
-        }
-        
-        .select-section {
-            flex: 1;
-            min-width: 300px;
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            padding: 15px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            
-            h2 {
-                margin: 0;
-                margin-right: 20px;
-                font-size: 18px;
-                color: #333;
-            }
-            
-            .exam-select {
-                min-width: 200px;
-            }
-        }
-    }
-    
-    .main-content {
-        display: flex;
+        align-items: center;
         flex-wrap: wrap;
         gap: 20px;
-        flex: 1;
-        
-        .left-column {
-            flex: 1;
-            min-width: 300px;
+
+        .header-left {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 12px;
             
-            .card {
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-                overflow: hidden;
-                display: flex;
-                flex-direction: column;
-                
-                .card-header {
-                    background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
-                    border-bottom: 1px solid #e8e8e8;
-                    padding: 16px 20px;
-                    
-                    .card-title {
-                        margin: 0;
-                        font-size: 18px;
-                        font-weight: 600;
-                        color: #333;
-                    }
-                }
-                
-                .card-body {
-                    padding: 20px;
-                    flex: 1;
-                }
+            .page-title {
+                font-size: 28px;
+                font-weight: 700;
+                color: #1E293B;
+                margin: 0;
+                letter-spacing: -0.5px;
             }
-            
-            .table-section {
-                .grade-table {
-                    :deep(.ant-table-thead > tr > th) {
-                        background-color: #fafafa;
-                        font-weight: bold;
-                        text-align: center;
-                    }
-                    
-                    :deep(.ant-table-tbody > tr > td) {
-                        text-align: center;
-                    }
+
+            .exam-selector {
+                display: flex;
+                align-items: center;
+                background: white;
+                padding: 4px 16px 4px 12px;
+                border-radius: 8px;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                border: 1px solid #E2E8F0;
+
+                .label {
+                    color: #64748B;
+                    font-size: 14px;
+                    margin-right: 8px;
+                }
+
+                :deep(.ant-select-selector) {
+                    font-size: 15px;
+                    color: #0F172A;
+                    font-weight: 500;
                 }
             }
         }
-        
-        .right-column {
-            flex: 1;
-            min-width: 300px;
-            display: flex;
-            flex-direction: column;
-            
-            .radar-chart-section {
-                flex: 1;
+
+        .header-right {
+            .countdown-card {
                 display: flex;
-                flex-direction: column;
-                
-                .chart-container {
-                    flex: 1;
+                align-items: center;
+                gap: 16px;
+                background: white;
+                padding: 12px 24px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                border: 1px solid rgba(59, 130, 246, 0.1);
+
+                .icon-wrapper {
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #EFF6FF;
+                    border-radius: 50%;
+                    font-size: 20px;
+                }
+
+                .countdown-info {
                     display: flex;
                     flex-direction: column;
                     
-                    :deep(.chart-container) {
-                        flex: 1;
-                        padding: 0;
+                    .label {
+                        font-size: 12px;
+                        color: #64748B;
+                        font-weight: 500;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
                     }
+
+                    .number-group {
+                        display: flex;
+                        align-items: baseline;
+                        gap: 4px;
+
+                        .number {
+                            font-size: 24px;
+                            font-weight: 800;
+                            color: #3B82F6;
+                            line-height: 1.2;
+                            font-family: 'Fira Sans', system-ui, sans-serif;
+                        }
+
+                        .unit {
+                            font-size: 14px;
+                            color: #64748B;
+                            font-weight: 600;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Main Content
+    .main-content {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+
+        .content-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid #F1F5F9;
+
+            .card-header {
+                padding: 20px 24px;
+                border-bottom: 1px solid #F8FAFC;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+
+                .header-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+
+                    .indicator {
+                        width: 4px;
+                        height: 16px;
+                        background: #3B82F6;
+                        border-radius: 2px;
+                        
+                        &.green { background: #10B981; }
+                        &.blue { background: #6366F1; }
+                    }
+
+                    h3 {
+                        margin: 0;
+                        font-size: 18px;
+                        font-weight: 600;
+                        color: #1E293B;
+                    }
+                }
+
+                .subtitle {
+                    font-size: 13px;
+                    color: #94A3B8;
+                }
+            }
+
+            .card-body {
+                padding: 24px;
+            }
+        }
+
+        .left-column {
+            flex: 3;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+
+            .table-card {
+                .custom-table {
+                    :deep(.ant-table-thead > tr > th) {
+                        background: #F8FAFC;
+                        color: #475569;
+                        font-weight: 600;
+                        font-size: 14px;
+                    }
+                    :deep(.ant-table-tbody > tr > td) {
+                        color: #334155;
+                        font-size: 15px;
+                        padding: 16px;
+                    }
+                    :deep(.ant-table-tbody > tr:hover > td) {
+                        background: #F0F9FF;
+                    }
+                }
+            }
+        }
+
+        .right-column {
+            flex: 2;
+            min-width: 350px;
+
+            .chart-card {
+                .chart-wrapper {
+                    display: flex;
+                    flex-direction: column;
                 }
             }
         }
     }
 }
 
-@media (max-width: 768px) {
+// Responsive Design
+@media (max-width: 1024px) {
     .grade-container {
-        padding: 10px;
-        
-        .header-section {
-            flex-direction: column;
-            
-            .countdown-section {
-                .countdown-box {
-                    padding: 15px;
-                    
-                    .countdown-label {
-                        font-size: 16px;
-                    }
-                    
-                    .countdown-days {
-                        font-size: 30px;
-                    }
-                    
-                    .countdown-unit {
-                        font-size: 16px;
-                    }
-                }
-            }
-            
-            .select-section {
-                flex-direction: column;
-                align-items: flex-start;
-                
-                h2 {
-                    margin-bottom: 10px;
-                }
-            }
-        }
+        padding: 16px;
         
         .main-content {
             flex-direction: column;
+            
+            .left-column, .right-column {
+                width: 100%;
+            }
+        }
+    }
+}
+
+@media (max-width: 640px) {
+    .grade-container {
+        .dashboard-header {
+            flex-direction: column;
+            align-items: stretch;
+            
+            .header-right .countdown-card {
+                justify-content: center;
+            }
         }
     }
 }

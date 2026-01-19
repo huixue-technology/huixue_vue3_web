@@ -1,25 +1,29 @@
 <template>
-  <div class="table-section">
-    <div class="section-header">
-        <h3 class="exam-title">考试对比分析</h3>
+  <div class="analysis-container">
+    <div class="controls-row">
+        <span class="label">对比考试：</span>
         <a-select
             placeholder="请选择考试"
-            style="min-width: 150px; margin-left: 15px;"
+            style="min-width: 150px;"
             @change="handleChange"
             v-model:value="compareExamId"
+            size="middle"
         >
             <a-select-option v-for="item in examList" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
         </a-select> 
     </div>
-    <p class="description">说明：<span style="color: red;">红色</span>表明较上次考试退步的名次，<span style="color: green;">绿色</span>表明较上次考试进步的名次。</p>
+    <div class="legend-bar">
+        <span class="legend-item"><span class="dot red"></span> 退步</span>
+        <span class="legend-item"><span class="dot green"></span> 进步</span>
+    </div>
     <div class="table-wrapper">
       <a-table
         :columns="currentExamColumns"
         :data-source="tableData"
         :pagination="false"
         size="middle"
-        style="font-size: larger;"
         bordered
+        class="analysis-table"
       />
     </div>
   </div>
@@ -207,40 +211,60 @@ const dynamicSubjectNames = computed(() => {
 });
 </script>
 
-<style scoped>
-.section-header {
+<style scoped lang="less">
+.analysis-container {
     display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-direction: column;
+    gap: 16px;
 }
 
-.exam-title {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
+.controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    
+    .label {
+        font-size: 14px;
+        color: #64748B;
+        margin-right: 8px;
+    }
+}
+
+.legend-bar {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: #64748B;
+    justify-content: flex-end;
+    margin-top: -8px; // Pull closer to controls
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            
+            &.red { background: #EF4444; } // Red 500
+            &.green { background: #10B981; } // Green 500
+        }
+    }
 }
 
 .table-wrapper {
   overflow-x: auto;
-}
-
-.table-section {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.description {
-  margin-top: 10px;
-  font-size: 0.9em;
-  margin-bottom: 15px;
-  padding: 10px;
-  background-color: #f9f9f9;
   border-radius: 8px;
-  border: 1px dashed #ddd;
+  border: 1px solid #F1F5F9;
+}
+
+:deep(.analysis-table) {
+    .ant-table-thead > tr > th {
+        background: #F8FAFC;
+        font-weight: 600;
+        color: #475569;
+    }
 }
 </style>

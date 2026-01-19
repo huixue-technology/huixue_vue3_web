@@ -1,14 +1,20 @@
 <template>
   <div class="student-challenge-page">
     <!-- 头部区域 -->
-    <div class="header">
-      <h2>学生挑战</h2>
-      <p>选择考试和对手，进行对比</p>
-    </div>
+    <a-card :bordered="false" class="header-card">
+      <div class="header-content">
+        <h2>学生挑战</h2>
+        <p>选择考试和对手，进行学科维度对比分析</p>
+      </div>
+    </a-card>
 
     <!-- 筛选区域 -->
-    <div class="filter-section">
-      <a-row :gutter="[16, 16]">
+    <a-card :bordered="false" class="filter-card">
+      <template #title>
+        <span class="card-title">筛选条件</span>
+      </template>
+      
+      <a-row :gutter="[24, 24]">
         <!-- 班级选择（不可改） -->
         <a-col :span="24" :md="12">
           <div class="filter-item">
@@ -52,8 +58,11 @@
         </a-col>
       </a-row>
 
-      <!-- 对手 -->
-      <a-row :gutter="[16, 16]" style="margin-top: 20px;">
+      <a-divider dashed />
+      
+      <div class="filter-subtitle">选择对手</div>
+
+      <a-row :gutter="[24, 24]">
         <!-- 对手班级 -->
         <a-col :span="24" :md="12">
           <div class="filter-item">
@@ -80,128 +89,131 @@
         <a-col :span="24" :md="12">
           <div class="filter-item">
             <span class="label">对手姓名：</span>
-            <a-select
-              v-model:value="finalOpponentId"
-              placeholder="选择或输入学生姓名/学号"
+            <a-input
+              v-model:value="opponentNameInput"
+              placeholder="请输入对手姓名"
               style="width: 100%"
-              :disabled="loading || !opponentStudents.length"
-              show-search
-              :filter-option="false"
-              @search="handleOpponentSearch"
-              @input="handleManualInput"
-              @change="handleOpponentSelect"
-            >
-              <a-select-option
-                v-for="student in filteredOpponentStudents"
-                :key="student.id"
-                :value="student.id"
-              >
-                {{ student.name }}
-              </a-select-option>
-            </a-select>
+              :disabled="loading"
+              allow-clear
+              @change="handleOpponentNameChange"
+            />
           </div>
         </a-col>
       </a-row>
 
       <!-- 开始对比按钮 -->
-      <a-row justify="center" style="margin-top: 20px;">
-        <a-col>
-          <a-button 
-            type="primary" 
-            @click="runComparison"
-            :disabled="isCompareBtnDisabled" 
-            class="compare-button"
-          >
-            开始挑战
-          </a-button>
-        </a-col>
-      </a-row>
-    </div>
-
-    <!-- 说明文本 -->
-    <p class="description">
-      说明：默认考试选择最近一次考试，您也可以选择其他考试，与对手进行学科维度比较。手动输入对手姓名时，请确保姓名准确。
-    </p>
+      <div class="action-area">
+        <a-button 
+          type="primary" 
+          @click="runComparison"
+          :disabled="isCompareBtnDisabled" 
+          :loading="loading"
+          class="compare-button"
+        >
+          开始挑战
+        </a-button>
+      </div>
+      
+      <div class="tip-section">
+        说明：默认选择最近一次考试，输入对手姓名后点击"开始挑战"进行学科维度比较。
+      </div>
+    </a-card>
 
     <!-- 加载状态 -->
-    <a-spin v-if="loading" tip="加载中..." class="loading-spin" />
+    <div v-if="loading" class="loading-container">
+      <a-spin size="large" tip="加载中..." />
+    </div>
 
     <!-- 挑战结果提示 -->
-     <div class="analysis-card" style="margin-bottom: 24px;">
-      <a-card 
-        :title="showComparisonTables ? '挑战结果' : ''" 
-        class="chart-card"
-        :loading="loading"
-      >
-      <div v-if="!loading && showComparisonTables" class="challenge-result-card">
-        <div class="result-header" :class="totalScoreDiff >= 0 ? 'success' : 'error'" style="justify-content: center;">
-          <span class="result-icon" :class="totalScoreDiff >= 0 ? 'success-icon' : 'error-icon'">
-            {{ totalScoreDiff >= 0 ? '✔' : '✖' }}
-          </span>
-          <span class="result-text">{{ userInfo?.student?.name || '本人' }} 挑战{{ totalScoreDiff >= 0 ? '成功' : '失败' }}</span>
+    <div v-if="!loading && showComparisonTables" class="result-section">
+      <a-card :bordered="false" class="result-card">
+        <div class="challenge-result-header" :class="totalScoreDiff >= 0 ? 'success' : 'error'">
+          <div class="result-badge">
+             <span v-if="totalScoreDiff >= 0">✔</span>
+             <span v-else>✖</span>
+          </div>
+          <div class="result-content">
+            <h3 class="result-title">{{ userInfo?.student?.name || '本人' }} 挑战{{ totalScoreDiff >= 0 ? '成功' : '失败' }}</h3>
+            <div class="score-diff">
+              <span class="diff-label">总分差距：</span>
+              <span class="diff-value" :class="totalScoreDiff >= 0 ? 'positive' : 'negative'">
+                {{ totalScoreDiff >= 0 ? '+' : '' }}{{ totalScoreDiff.toFixed(1) }}
+              </span>
+            </div>
+          </div>
         </div>
-        <div class="subject-analysis" style="text-align: center;">
-          <p>
-            <span class="advantage-label">优势科目：</span>
-            <span v-for="(sub, idx) in getAdvantageSubjects()" :key="idx" class="advantage-subject">{{ sub }}</span>
-          </p>
-          <p>
-            <span class="disadvantage-label">劣势科目：</span>
-            <span v-for="(sub, idx) in getDisadvantageSubjects()" :key="idx" class="disadvantage-subject">{{ sub }}</span>
-          </p>
-        </div>
-      </div>
-        </a-card>
-     </div>
+        
+        <a-row :gutter="24" class="analysis-row">
+          <a-col :span="24" :md="12">
+            <div class="analysis-item advantage">
+              <span class="analysis-label">优势科目：</span>
+              <div class="subject-tags">
+                <a-tag v-for="(sub, idx) in getAdvantageSubjects()" :key="idx" color="success">{{ sub }}</a-tag>
+                <span v-if="getAdvantageSubjects().length === 0" class="no-subject">暂无</span>
+              </div>
+            </div>
+          </a-col>
+          <a-col :span="24" :md="12">
+            <div class="analysis-item disadvantage">
+              <span class="analysis-label">劣势科目：</span>
+              <div class="subject-tags">
+                <a-tag v-for="(sub, idx) in getDisadvantageSubjects()" :key="idx" color="error">{{ sub }}</a-tag>
+                <span v-if="getDisadvantageSubjects().length === 0" class="no-subject">暂无</span>
+              </div>
+            </div>
+          </a-col>
+        </a-row>
+      </a-card>
+    </div>
 
     <!-- 对比结果区域（分数+段次双表格） -->
     <div v-if="!loading && showComparisonTables" class="comparison-results">
       <!-- 分数对比表格 -->
-      <div class="analysis-card" style="margin-bottom: 24px;">
-        <a-card :title="`分数对比结果`" class="chart-card">
-          <div class="table-container">
-            <a-table
-              :data-source="scoreComparisonData"
-              bordered
-              :columns="scoreColumns"
-              :pagination="false"
-            >
-              <template #bodyCell="{ column, record }">
-                <template v-if="column.dataIndex === 'diff'">
-                  <span :class="getScoreDiffClass(record.diff)">{{ Math.abs(record.diff) }}</span>
-                </template>
-              </template>
-            </a-table>
-          </div>
-        </a-card>
-      </div>
-
-      <!-- 段次对比表格 -->
-      <div class="analysis-card">
-        <a-card :title="`段次对比结果`" class="chart-card">
-          <div class="table-container">
-            <a-table
-              :data-source="rankComparisonData"
-              bordered
-              :columns="rankColumns"
-              :pagination="false"
-            >
-            <template #bodyCell="{ column, record }">
-            <template v-if="column.dataIndex === 'classDiff'">
-              <span :class="getRankDiffClass(record.classDiffRaw)">{{ record.classDiff }}</span>
-            </template>
-            <template v-else-if="column.dataIndex === 'gradeDiff'">
-              <span :class="getRankDiffClass(record.gradeDiffRaw)">{{ record.gradeDiff }}</span>
+      <a-card :bordered="false" class="table-card" title="分数对比">
+        <a-table
+          :data-source="scoreComparisonData"
+          bordered
+          :columns="scoreColumns"
+          :pagination="false"
+          size="middle"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.dataIndex === 'diff'">
+              <span class="diff-text" :class="getScoreDiffClass(record.diff)">
+                {{ Number(record.diff) > 0 ? '+' : '' }}{{ record.diff }}
+              </span>
             </template>
           </template>
-            </a-table>
-          </div>
-        </a-card>
-      </div>
+        </a-table>
+      </a-card>
+
+      <!-- 段次对比表格 -->
+      <a-card :bordered="false" class="table-card" title="段次对比">
+        <a-table
+          :data-source="rankComparisonData"
+          bordered
+          :columns="rankColumns"
+          :pagination="false"
+          size="middle"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.dataIndex === 'classDiff'">
+              <span class="diff-text" :class="getRankDiffClass(record.classDiffRaw)">
+                {{ record.classDiffRaw < 0 ? '-' : record.classDiffRaw > 0 ? '+' : '' }}{{ record.classDiff }}
+              </span>
+            </template>
+            <template v-else-if="column.dataIndex === 'gradeDiff'">
+              <span class="diff-text" :class="getRankDiffClass(record.gradeDiffRaw)">
+                {{ record.gradeDiffRaw < 0 ? '-' : record.gradeDiffRaw > 0 ? '+' : '' }}{{ record.gradeDiff }}
+              </span>
+            </template>
+          </template>
+        </a-table>
+      </a-card>
     </div>
 
     <!-- 无数据状态 -->
-    <div v-if="!loading && !showComparisonTables && hasSearched" class="no-data">
+    <div v-if="!loading && !showComparisonTables && hasSearched" class="empty-state">
       <a-empty description="未找到对比数据，请检查选择条件或对手信息是否正确" />
     </div>
   </div>
@@ -240,6 +252,7 @@ const opponentStudents = ref<any[]>([]); // 对手班级学生列表
 const filteredOpponentStudents = ref<any[]>([]); // 搜索过滤后的学生列表
 const finalOpponentId = ref<string | undefined>(); // 最终使用的对手ID（选择/输入一体化）
 const finalOpponentName = ref<string>('未知对手'); // 最终显示的对手姓名
+const opponentNameInput = ref<string>(''); // 对手姓名输入框
 
 // 对比数据
 const currentStudentData = ref<any>({});
@@ -410,6 +423,22 @@ const handleManualInput = (value: string) => {
     finalOpponentName.value = value;
     const matchedStudent = opponentStudents.value.find(
       (s: any) => s.name.toLowerCase() === value.toLowerCase()
+    );
+    finalOpponentId.value = matchedStudent?.id || value;
+  } else {
+    finalOpponentId.value = undefined;
+    finalOpponentName.value = '未知对手';
+  }
+};
+
+// 处理对手姓名输入变化
+const handleOpponentNameChange = () => {
+  const value = opponentNameInput.value?.trim();
+  if (value) {
+    finalOpponentName.value = value;
+    // 先尝试从已加载的学生列表中匹配
+    const matchedStudent = opponentStudents.value.find(
+      (s: any) => s.name === value
     );
     finalOpponentId.value = matchedStudent?.id || value;
   } else {
@@ -626,265 +655,222 @@ onMounted(init);
 
 <style scoped lang="less">
 .student-challenge-page {
-  padding: 20px;
-  position: relative;
-  height: 100%;
-  overflow-y: auto;
-  box-sizing: border-box;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+  padding: 24px;
+  min-height: 100%;
+  background-color: #f0f2f5;
 
-  .header {
-    background: linear-gradient(120deg, #4b6cb7, #1890ff);
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    color: white;
+  .header-card {
+    margin-bottom: 24px;
+    border-radius: 8px;
     
-    h2 {
-      margin: 0 0 10px 0;
-      font-size: 24px;
-      font-weight: 600;
-    }
-    
-    p {
-      margin: 0;
-      font-size: 16px;
-      opacity: 0.9;
+    .header-content {
+      h2 {
+        margin: 0 0 8px 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: rgba(0, 0, 0, 0.85);
+      }
+      p {
+        margin: 0;
+        color: rgba(0, 0, 0, 0.45);
+      }
     }
   }
 
-  .filter-section {
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  .filter-card {
     margin-bottom: 24px;
-    margin-top: 2%;
-    
+    border-radius: 8px;
+
+    .card-title {
+      font-weight: 600;
+      font-size: 16px;
+    }
+
     .filter-item {
       display: flex;
-      align-items: center;
-      width: 100%;
+      flex-direction: column;
+      gap: 8px;
       
       .label {
-        width: 80px;
-        font-weight: 600;
-        color: #333;
-        text-align: right;
-        margin-right: 10px;
-        white-space: nowrap;
-      }
-      
-      :deep(.ant-select),
-      :deep(.ant-input) {
-        flex: 1;
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.85);
       }
     }
 
-    .compare-button {
-      height: 38px;
-      padding: 0 32px;
+    .filter-subtitle {
+      font-weight: 600;
+      color: rgba(0, 0, 0, 0.85);
+      margin: 16px 0;
+      font-size: 15px;
+      border-left: 3px solid #1890ff;
+      padding-left: 10px;
     }
-  }
 
-  .description {
-    margin: 0 0 20px 0;
-    font-size: 0.9em;
-    color: red;
-    line-height: 1.5;
-  }
-
-  .loading-spin {
-    display: block;
-    margin: 80px auto;
-  }
-
-  .challenge-result-card {
-  background: #f9f9f9;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-
-  .result-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 12px;
-    color: #333;
-    font-size: 1.5rem;
-
-    .result-icon {
-      display: inline-flex;
-      align-items: center;
+    .action-area {
+      margin-top: 32px;
+      display: flex;
       justify-content: center;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      margin-right: 8px;
-      font-weight: bold;
+
+      .compare-button {
+        width: 160px;
+        height: 40px;
+        font-size: 16px;
+        border-radius: 4px;
+      }
     }
 
-    .success {
-      color: #52c41a;
-      font-size: 1rem;
-    }
-    .success-icon {
-      background: #52c41a;
-      color: white;
-    }
-
-    .error {
-      color: #f5222d; /* 失败文字红色 */
-    }
-    .error-icon {
-      background: #f5222d;
-      color: white;
+    .tip-section {
+      margin-top: 24px;
+      padding: 12px 16px;
+      background-color: #e6f7ff;
+      border: 1px solid #91d5ff;
+      border-radius: 4px;
+      color: rgba(0, 0, 0, 0.65);
+      font-size: 14px;
     }
   }
 
-  .subject-analysis {
-    line-height: 1.8;
-
-    .advantage-label {
-      font-weight: 600;
-      color: #52c41a;
-    }
-    .advantage-subject {
-      color: #52c41a;
-      margin-right: 8px;
-    }
-
-    .disadvantage-label {
-      font-weight: 600;
-      color: #f5222d;
-    }
-    .disadvantage-subject {
-      color: #f5222d;
-      margin-right: 8px;
-    }
-  }
-}
-
-  .comparison-results {
-    width: 100%;
+  .loading-container {
+    padding: 60px;
+    text-align: center;
   }
 
-  .analysis-card {
+  .result-section {
     margin-bottom: 24px;
-    
-    .chart-card {
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      overflow: hidden;
-      font-size: 1.3rem;
+
+    .result-card {
+      border-radius: 8px;
+    }
+
+    .challenge-result-header {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
       
-      :deep(.ant-card-head) {
-        background: linear-gradient(120deg, #f0f2f5, #e4e7ec);
-        border-bottom: 1px solid #e8e8e8;
-        padding: 0 16px;
+      &.success {
+        background-color: #f6ffed;
+        border: 1px solid #b7eb8f;
+        .result-badge { color: #52c41a; background: #fff; }
+        .result-title { color: #1f1f1f; }
+      }
+
+      &.error {
+        background-color: #fff1f0;
+        border: 1px solid #ffa39e;
+        .result-badge { color: #f5222d; background: #fff; }
+        .result-title { color: #1f1f1f; }
+      }
+
+      .result-badge {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-right: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      }
+
+      .result-content {
+        flex: 1;
         
-        .ant-card-head-title {
+        .result-title {
+          margin: 0 0 4px 0;
+          font-size: 18px;
           font-weight: 600;
-          color: #333;
-          font-size: 16px;
+        }
+
+        .score-diff {
+          font-size: 14px;
+          color: rgba(0,0,0,0.65);
+          
+          .diff-value {
+            font-weight: 600;
+            margin-left: 4px;
+            &.positive { color: #52c41a; }
+            &.negative { color: #f5222d; }
+          }
         }
       }
+    }
+
+    .analysis-row {
+      .analysis-item {
+        padding: 16px;
+        background: #fafafa;
+        border-radius: 4px;
+        height: 100%;
+
+        .analysis-label {
+          display: block;
+          margin-bottom: 12px;
+          font-weight: 600;
+          color: rgba(0,0,0,0.85);
+        }
+
+        .subject-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          
+          .no-subject {
+            color: rgba(0,0,0,0.45);
+            font-style: italic;
+          }
+        }
+      }
+    }
+  }
+
+  .comparison-results {
+    .table-card {
+      margin-bottom: 24px;
+      border-radius: 8px;
       
-      :deep(.ant-card-body) {
-        padding: 20px;
+      :deep(.ant-card-head) {
+        border-bottom: 1px solid #f0f0f0;
       }
     }
-  }
 
-  .table-container {
-    overflow-x: auto;
-
-  }
-
-  :deep(.ant-table) {
-    width: 100%;
-    font-size: 16px; // 表格整体字体大小
-    
-    .ant-table-thead > tr > th {
-      background-color: #f7f9fc;
+    .diff-text {
       font-weight: 600;
-      text-align: center;
-      font-size: 16px; // 表头字体大小
+      
+      &.positive { color: #52c41a; } // 绿色
+      &.negative { color: #f5222d; } // 红色
+      &.zero { color: rgba(0,0,0,0.45); }
+    }
+  }
+
+  .empty-state {
+    padding: 60px 0;
+    text-align: center;
+    background: #fff;
+    border-radius: 8px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    
+    .filter-item {
+      margin-bottom: 16px;
     }
     
-    .ant-table-tbody > tr > td {
-      text-align: center;
-      vertical-align: middle;
-      font-size: 20px; // 表格内容字体大小
-    }
-  }
-
-  .no-data {
-    background: white;
-    border-radius: 12px;
-    padding: 80px 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    text-align: center;
-    margin-bottom: 20px;
-  }
-
-  :deep(.ant-table-tbody .positive) {
-  color: #52c41a !important; // 绿色：优于对手
-  }
-
-  :deep(.ant-table-tbody .negative) {
-    color: #f5222d !important; // 红色：弱于对手
-  }
-
-  :deep(.ant-table-tbody .zero) {
-    color: #535353 !important; // 黑色：持平
-  }
-
-  .positive {
-    color: #52c41a; // 绿色表示优于对手
-  }
-
-  .negative {
-    color: #f5222d; // 红色表示弱于对手
-  }
-
-  .zero {
-    color: #535353; // 黑色表示持平
-  }
-  
-  // 响应式设计
-  @media (max-width: 768px) {
-    padding: 12px;
-
-    .filter-section {
-      padding: 16px;
-    }
-
-    .filter-item {
+    .challenge-result-header {
       flex-direction: column;
-      align-items: stretch;
-
-      .label {
-        width: 100%;
-        text-align: left;
-        margin-bottom: 8px;
+      text-align: center;
+      
+      .result-badge {
+        margin-right: 0;
+        margin-bottom: 12px;
       }
     }
-
-    .compare-button {
-      width: 100%;
-      padding: 0;
-    }
-
-    .analysis-card :deep(.ant-card-body) {
-      padding: 12px;
-    }
-
-    :deep(.ant-table) {
-      font-size: 14px;
+    
+    .analysis-row .analysis-item {
+      margin-bottom: 16px;
     }
   }
 }
