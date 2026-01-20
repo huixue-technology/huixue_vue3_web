@@ -180,7 +180,7 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.dataIndex === 'diff'">
               <span class="diff-text" :class="getScoreDiffClass(record.diff)">
-                {{ Number(record.diff) > 0 ? '+' : '' }}{{ record.diff }}
+                {{ Math.abs(parseFloat(record.diff)) }}{{ record.diff > 0 ? '↑' : '↓' }}
               </span>
             </template>
           </template>
@@ -199,12 +199,12 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.dataIndex === 'classDiff'">
               <span class="diff-text" :class="getRankDiffClass(record.classDiffRaw)">
-                {{ record.classDiffRaw < 0 ? '-' : record.classDiffRaw > 0 ? '+' : '' }}{{ record.classDiff }}
+                {{ record.classDiff }}{{ record.classDiff > 0 ? '↑' : '↓' }}
               </span>
             </template>
             <template v-else-if="column.dataIndex === 'gradeDiff'">
               <span class="diff-text" :class="getRankDiffClass(record.gradeDiffRaw)">
-                {{ record.gradeDiffRaw < 0 ? '-' : record.gradeDiffRaw > 0 ? '+' : '' }}{{ record.gradeDiff }}
+                {{ record.gradeDiff }}{{ record.gradeDiff > 0 ? '↑' : '↓' }}
               </span>
             </template>
           </template>

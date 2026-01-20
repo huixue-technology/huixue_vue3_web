@@ -168,7 +168,7 @@
               <span class="color-desc">分数高/排名升</span>
             </div>
           </a-col>
-          <a-col :xs="8" :sm="6" :md="4" v-if="!$isMobile">
+          <a-col :xs="8" :sm="6" :md="4">
             <div class="legend-item">
               <span class="color-block" style="background-color: #f5222d;"></span>
               <span class="color-text">负向差值 ⬇</span>
@@ -219,15 +219,15 @@
                     <td class="row-label">线差</td>
                     <td :class="getDifferenceClass(totalScore - getSubjectPassLine('sum_'))">
                       {{ Math.abs(totalScore - getSubjectPassLine('sum_')).toFixed(1) }}
-                      <span v-if="totalScore - getSubjectPassLine('sum_') > 0">⬆</span>
-                      <span v-if="totalScore - getSubjectPassLine('sum_') < 0">⬇</span>
+                      <ArrowUpOutlined v-if="totalScore - getSubjectPassLine('sum_') > 0" />
+                      <ArrowDownOutlined v-else-if="totalScore - getSubjectPassLine('sum_') < 0" />
                     </td>
                     <!-- 动态渲染科目线差 -->
                     <td v-for="subject in displaySubjects" :key="`diff-${subject.code}`"
                         :class="getDifferenceClass(getSubjectScore(subject.code) - getSubjectPassLine(subject.code))">
                       {{ Math.abs(getSubjectScore(subject.code) - getSubjectPassLine(subject.code)).toFixed(1) }}
-                      <span v-if="getSubjectScore(subject.code) - getSubjectPassLine(subject.code) > 0">⬆</span>
-                      <span v-if="getSubjectScore(subject.code) - getSubjectPassLine(subject.code) < 0">⬇</span>
+                      <ArrowUpOutlined v-if="getSubjectScore(subject.code) - getSubjectPassLine(subject.code) > 0" />
+                      <ArrowDownOutlined v-else-if="getSubjectScore(subject.code) - getSubjectPassLine(subject.code) < 0" />
                     </td>
                   </tr>
                   <!-- 班次（班级排名）行 -->
@@ -293,8 +293,8 @@
                 <template v-if="column.dataIndex === 'scoreDiff'">
                   <span :class="getDifferenceClass(record.scoreDiff)">
                     {{ formatScore(Math.abs(record.scoreDiff)) }}
-                    <span v-if="record.scoreDiff > 0">⬆</span>
-                    <span v-if="record.scoreDiff < 0">⬇</span>
+                    <ArrowUpOutlined v-if="record.scoreDiff > 0" />
+                    <ArrowDownOutlined v-else-if="record.scoreDiff < 0" />
                   </span>
                 </template>
                 <template v-if="column.dataIndex === 'currentClassRank'">
@@ -310,8 +310,8 @@
                 <template v-if="column.dataIndex === 'classRankDiff'">
                   <span :class="getRankDifferenceClass(record.classRankDiff)">
                     {{ Math.abs(record.classRankDiff) }}
-                    <span v-if="record.classRankDiff < 0">⬆</span>
-                    <span v-if="record.classRankDiff > 0">⬇</span>
+                    <ArrowUpOutlined v-if="record.classRankDiff < 0" />
+                    <ArrowDownOutlined v-else-if="record.classRankDiff > 0" />
                   </span>
                 </template>
                 <template v-if="column.dataIndex === 'currentGradeRank'">
@@ -327,8 +327,8 @@
                 <template v-if="column.dataIndex === 'gradeRankDiff'">
                   <span :class="getRankDifferenceClass(record.gradeRankDiff)">
                     {{ Math.abs(record.gradeRankDiff) }}
-                    <span v-if="record.gradeRankDiff < 0">⬆</span>
-                    <span v-if="record.gradeRankDiff > 0">⬇</span>
+                    <ArrowUpOutlined v-if="record.gradeRankDiff < 0" />
+                    <ArrowDownOutlined v-else-if="record.gradeRankDiff > 0" />
                   </span>
                 </template>
               </template>
@@ -341,16 +341,23 @@
       <div class="charts-section">
         <a-row :gutter="16" style="margin-top: 20px;">
           <a-col :span="24" :md="12">
-            <a-card title="排名分布图" class="chart-card">
+            <a-card title="成绩分布图" class="chart-card">
               <div class="chart-container">
                 <e-charts :option="scoreChartOption" style="height: 300px" />
               </div>
             </a-card>
           </a-col>
           <a-col :span="24" :md="12">
-            <a-card title="排名趋势图" class="chart-card">
+            <a-card title="班级排名分布" class="chart-card">
               <div class="chart-container">
-                <e-charts :option="rankChartOption" style="height: 300px" />
+                <e-charts :option="classRankChartOption" style="height: 300px" />
+              </div>
+            </a-card>
+          </a-col>
+          <a-col :span="24" :md="12">
+            <a-card title="年级排名分布" class="chart-card">
+              <div class="chart-container">
+                <e-charts :option="gradeRankChartOption" style="height: 300px" />
               </div>
             </a-card>
           </a-col>
@@ -378,7 +385,7 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
-import { SearchOutlined, UserOutlined } from '@ant-design/icons-vue';
+import { SearchOutlined, UserOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons-vue';
 import { getClassesApi, getClassesDetailApi } from '@/servers/api/classes';
 import { getStudentApi } from '@/servers/api/student';
 import { getClassExam } from '@/servers/api/grade';
@@ -387,7 +394,6 @@ import { getPassLine, getStudentSelfCompareApi } from '@/servers/api/analysis';
 import { getExamDetailApi } from '@/servers/api/exam';
 import type { ColumnType } from 'ant-design-vue/es/table';
 import StudentAnalysisPages from '@/views/teacher/components/StudentAnalysisPages.vue';
-import * as echarts from 'echarts';
 // 类型定义
 interface Student {
   student_id: string;
@@ -443,6 +449,19 @@ interface ClassInfo {
   subject_selection: string;
 }
 const classInfo = ref<ClassInfo | null>(null);
+
+// 备用选科配置（如果 API 返回的选科信息为空，使用此配置）
+const defaultSubjectSelection = '物化生史地'; // 可以修改为实际的默认选科
+
+// 获取班级选科信息的备用函数
+const getEffectiveSubjectSelection = (): string => {
+  // 优先使用班级信息的选科
+  if (classInfo.value?.subject_selection && classInfo.value.subject_selection.trim() !== '') {
+    return classInfo.value.subject_selection;
+  }
+  // 如果班级信息中没有选科，使用默认配置
+  return defaultSubjectSelection;
+};
 
 // 数据列表
 const studentList = ref<Student[]>([]);
@@ -512,31 +531,68 @@ const currentExamInfo = computed(() => {
 
 const displaySubjects = computed<SubjectItem[]>(() => {
   if (!selectedStudentId.value || !selectedExamId.value) return [];
-  
+
   const scoreDetail = scoreDetails.value[selectedExamId.value];
   if (!scoreDetail) return [];
-  
+
+  // 获取班级选科信息（使用备用函数）
+  const subjectSelection = getEffectiveSubjectSelection();
+  console.log('displaySubjects - 班级选科信息:', subjectSelection);
+
+  // 判断科目是否应该显示（根据班级选科）
+  const shouldShowSubject = (code: string): boolean => {
+    // 如果没有选科信息或为空字符串，显示所有科目
+    if (!subjectSelection || subjectSelection.trim() === '') {
+      return true;
+    }
+
+    // 根据科目code判断
+    switch (code) {
+      case 'wuli':
+        return subjectSelection.includes('物');
+      case 'huaxue':
+        return subjectSelection.includes('化');
+      case 'shengwu':
+        return subjectSelection.includes('生');
+      case 'lishi':
+        return subjectSelection.includes('史');
+      case 'zhengzhi':
+        return subjectSelection.includes('政');
+      case 'dili':
+        return subjectSelection.includes('地');
+      default:
+        // 语数英等主科始终显示
+        return true;
+    }
+  };
+
   // 筛选出有成绩、班级排名和年级排名的科目
   const validSubjects = Object.keys(allSubjectMap)
     .filter(code => {
       // 排除总分，只保留单科
       if (code === 'sum_') return false;
-      
+
+      // 根据选科过滤
+      const shouldShow = shouldShowSubject(code);
+      console.log(`displaySubjects - 科目 ${code} (${allSubjectMap[code]}) 是否显示:`, shouldShow);
+      if (!shouldShow) return false;
+
       // 获取成绩和排名数据
       const score = scoreDetail[code];
       const classRank = scoreDetail[`${code}b`];
       const gradeRank = scoreDetail[`${code}d`];
-      
-      // 只保留成绩、班级排名和年级排名都存在且不为null的科目
-      return score !== null && score !== undefined && 
-             classRank !== null && classRank !== undefined && 
+
+      // 只保留成绩、班级排名和年级排名都存在的科目（0也是有效值）
+      return score !== null && score !== undefined &&
+             classRank !== null && classRank !== undefined &&
              gradeRank !== null && gradeRank !== undefined;
     })
     .map(code => ({
       code,
       name: allSubjectMap[code] || code
     }));
-  
+
+  console.log('displaySubjects - 过滤后的科目:', validSubjects.map(s => s.name));
   return validSubjects;
 });
 
@@ -667,26 +723,60 @@ const compareColumns: ColumnType[] = [
     width: 80
   }
 ];
-// 原始成绩数据
+  // 原始成绩数据
 const rawScoreData = computed<ScoreDetail[]>(() => {
   if (!selectedStudentId.value || !selectedExamId.value) return [];
-  
+
   const data: ScoreDetail[] = [];
   const scoreDetail = scoreDetails.value[selectedExamId.value];
-  
+
   if (!scoreDetail) return [];
-  
+
+  // 获取班级选科信息（使用相同的逻辑）
+  const subjectSelection = getEffectiveSubjectSelection();
+  console.log('rawScoreData - 班级选科信息:', subjectSelection);
+
+  // 判断科目是否应该显示（根据班级选科）
+  const shouldShowSubject = (code: string): boolean => {
+    // 如果没有选科信息或为空字符串，显示所有科目
+    if (!subjectSelection || subjectSelection.trim() === '') {
+      return true;
+    }
+
+    // 根据科目code判断
+    switch (code) {
+      case 'wuli':
+        return subjectSelection.includes('物');
+      case 'huaxue':
+        return subjectSelection.includes('化');
+      case 'shengwu':
+        return subjectSelection.includes('生');
+      case 'lishi':
+        return subjectSelection.includes('史');
+      case 'zhengzhi':
+        return subjectSelection.includes('政');
+      case 'dili':
+        return subjectSelection.includes('地');
+      default:
+        // 语数英等主科始终显示
+        return true;
+    }
+  };
+
   // 遍历所有可能的科目
   Object.keys(allSubjectMap).forEach(subject => {
     if (subject === 'sum_') return;
-    
+
+    // 根据选科过滤
+    if (!shouldShowSubject(subject)) return;
+
     const score = scoreDetail[subject];
     const classRank = scoreDetail[`${subject}b`];
     const gradeRank = scoreDetail[`${subject}d`];
-    
-    // 只添加成绩、班级排名和年级排名都存在的科目
-    if (score !== null && score !== undefined && 
-        classRank !== null && classRank !== undefined && 
+
+    // 只添加成绩、班级排名和年级排名都存在的科目（0也是有效值）
+    if (score !== null && score !== undefined &&
+        classRank !== null && classRank !== undefined &&
         gradeRank !== null && gradeRank !== undefined) {
       data.push({
         subject,
@@ -697,7 +787,8 @@ const rawScoreData = computed<ScoreDetail[]>(() => {
       });
     }
   });
-  
+
+  console.log('rawScoreData - 过滤后的科目:', data.map(s => s.name));
   return data;
 });
 
@@ -722,6 +813,33 @@ const compareTableData = computed(() => {
   const data: any[] = [];
   const compareDataValue = compareData.value;
   
+  // 获取班级选科信息
+  const subjectSelection = getEffectiveSubjectSelection();
+  console.log('compareTableData - 班级选科信息:', subjectSelection);
+
+  // 判断科目是否应该显示（根据班级选科）
+  const shouldShowSubject = (code: string): boolean => {
+    if (!subjectSelection || subjectSelection.trim() === '') {
+      return true;
+    }
+    switch (code) {
+      case 'wuli':
+        return subjectSelection.includes('物');
+      case 'huaxue':
+        return subjectSelection.includes('化');
+      case 'shengwu':
+        return subjectSelection.includes('生');
+      case 'lishi':
+        return subjectSelection.includes('史');
+      case 'zhengzhi':
+        return subjectSelection.includes('政');
+      case 'dili':
+        return subjectSelection.includes('地');
+      default:
+        return true;
+    }
+  };
+  
   // 添加总分
   if (compareDataValue.sum_) {
     data.push({
@@ -739,9 +857,15 @@ const compareTableData = computed(() => {
     });
   }
   
-  // 添加有完整数据的科目成绩
+  // 添加有完整数据的科目成绩（根据班级选科过滤）
   Object.keys(allSubjectMap).forEach(subject => {
-    if (subject === 'sum_') return; // 排除总分
+    if (subject === 'sum_') return;
+    
+    // 根据选科过滤
+    if (!shouldShowSubject(subject)) {
+      console.log(`compareTableData - 跳过科目: ${subject} (${allSubjectMap[subject]})`);
+      return;
+    }
     
     const subjectData = compareDataValue[subject];
     if (!subjectData) return;
@@ -749,7 +873,6 @@ const compareTableData = computed(() => {
     const classRankKey = `${subject}b`;
     const gradeRankKey = `${subject}d`;
     
-    // 检查是否有完整的对比数据
     if (compareDataValue[classRankKey] && compareDataValue[gradeRankKey]) {
       data.push({
         subject,
@@ -767,6 +890,7 @@ const compareTableData = computed(() => {
     }
   });
   
+  console.log('compareTableData - 过滤后的科目:', data.map(s => s.subjectName));
   return data;
 });
 
@@ -774,13 +898,25 @@ const compareTableData = computed(() => {
 const scoreChartOption = computed(() => {
   const subjects = filteredScoreData.value.map(item => item.subjectName);
   const scores = filteredScoreData.value.map(item => item.score);
-  
+  // 获取一本线数据
+  const passLineData = filteredScoreData.value.map(item => {
+    const passLine = passLineDetails.value[selectedExamId.value];
+    if (!passLine) return 0;
+    // 根据科目编码查找对应的一本线
+    const code = item.subject;
+    return passLine[code] || 0;
+  });
+
   return {
     tooltip: {
       trigger: 'axis',
       axisPointer: {
-        type: 'shadow'
+        type: 'line'
       }
+    },
+    legend: {
+      data: ['本人成绩', '一本线'],
+      top: '5%'
     },
     xAxis: {
       type: 'category',
@@ -790,37 +926,62 @@ const scoreChartOption = computed(() => {
       type: 'value',
       name: '分数'
     },
-    series: [{
-      type: 'bar',
-      data: scores,
-      itemStyle: {
-        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: '#83bff6' },
-          { offset: 0.5, color: '#188df0' },
-          { offset: 1, color: '#1890ff' }
-        ])
+    series: [
+      {
+        name: '本人成绩',
+        type: 'line',
+        data: scores,
+        itemStyle: {
+          color: '#1890ff'
+        },
+        lineStyle: {
+          color: '#1890ff',
+          width: 3,
+          type: 'solid'
+        },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: '{c}',
+          color: '#333'
+        },
+        symbolSize: 8
       },
-      label: {
-        show: true,
-        position: 'top',
-        formatter: '{c}'
+      {
+        name: '一本线',
+        type: 'line',
+        data: passLineData,
+        itemStyle: {
+          color: '#f5222d'
+        },
+        lineStyle: {
+          color: '#f5222d',
+          width: 2,
+          type: 'dashed'
+        },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: '{c}',
+          color: '#f5222d'
+        },
+        symbolSize: 6
       }
-    }]
+    ]
   };
 });
 
-// 排名图表选项（只展示有完整数据的科目）
-const rankChartOption = computed(() => {
+// 班级排名图表选项（只展示有完整数据的科目）
+const classRankChartOption = computed(() => {
   const subjects = filteredScoreData.value.map(item => item.subjectName);
   const classRanks = filteredScoreData.value.map(item => item.classRank);
-  const gradeRanks = filteredScoreData.value.map(item => item.gradeRank);
-  
+
   return {
     tooltip: {
       trigger: 'axis'
     },
     legend: {
-      data: ['班级排名', '年级排名']
+      data: ['班级排名']
     },
     xAxis: {
       type: 'category',
@@ -837,28 +998,66 @@ const rankChartOption = computed(() => {
         type: 'line',
         data: classRanks,
         itemStyle: {
-          color: '#FF6B6B'
+          color: '#1890ff'
+        },
+        lineStyle: {
+          color: '#1890ff',
+          width: 3,
+          type: 'solid'
         },
         label: {
           show: true,
           position: 'top',
-          formatter: '{c}'
+          formatter: '{c}',
+          color: '#333'
         },
-        smooth: true
-      },
+        symbolSize: 8
+      }
+    ]
+  };
+});
+
+// 年级排名图表选项（只展示有完整数据的科目）
+const gradeRankChartOption = computed(() => {
+  const subjects = filteredScoreData.value.map(item => item.subjectName);
+  const gradeRanks = filteredScoreData.value.map(item => item.gradeRank);
+
+  return {
+    tooltip: {
+      trigger: 'axis'
+    },
+    legend: {
+      data: ['年级排名']
+    },
+    xAxis: {
+      type: 'category',
+      data: subjects
+    },
+    yAxis: {
+      type: 'value',
+      name: '排名',
+      inverse: true
+    },
+    series: [
       {
         name: '年级排名',
         type: 'line',
         data: gradeRanks,
         itemStyle: {
-          color: '#4ECDC4'
+          color: '#fa8c16'
+        },
+        lineStyle: {
+          color: '#fa8c16',
+          width: 3,
+          type: 'solid'
         },
         label: {
           show: true,
           position: 'top',
-          formatter: '{c}'
+          formatter: '{c}',
+          color: '#333'
         },
-        smooth: true
+        symbolSize: 8
       }
     ]
   };
@@ -1099,14 +1298,14 @@ const handleStudentChange = async (studentId: string) => {
   passLineDetails.value = {};
   compareData.value = null;
   selectedComparedExamId.value = undefined; // 重置对比考试选择
- 
+
   // 获取该学生的考试成绩和分数线
   if (selectedExamId.value) {
     await Promise.all([
       fetchStudentGrades(studentId, selectedExamId.value),
       fetchPassLine(selectedExamId.value)
     ]);
-    
+
     // 自动设置对比考试
     await autoSetComparedExam();
   }
@@ -1191,6 +1390,8 @@ const fetchClassInfo = async (classId: number) => {
     const res = await getClassesDetailApi({ class_id: classId });
     if (res.code === 200 && res.data) {
       classInfo.value = res.data;
+      console.log('班级信息:', res.data);
+      console.log('选科信息:', res.data?.subject_selection);
     } else {
       message.warning('未获取到班级信息');
     }
@@ -1523,26 +1724,26 @@ const fetchClassInfo = async (classId: number) => {
   }
   
   .excellent-score {
-    color: #52c41a;
+    color: #333;
     font-weight: bold;
   }
-  
+
   .good-score {
-    color: #1890ff;
+    color: #333;
     font-weight: 600;
   }
-  
+
   .normal-score {
     color: #333;
   }
-  
+
   .top-rank {
-    color: #f5222d;
+    color: #333;
     font-weight: bold;
   }
-  
+
   .good-rank {
-    color: #fa8c16;
+    color: #333;
     font-weight: 600;
   }
   

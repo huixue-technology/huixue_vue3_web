@@ -45,15 +45,16 @@
               <span class="label">我的班级：</span>
               <a-select
                 v-model:value="selectedClass1"
-                placeholder="我的班级"
+                placeholder="选择班级"
                 style="flex: 1;"
-                disabled  
+                :disabled="loading"
               >
                 <a-select-option
-                  :key="currentClass.id"
-                  :value="currentClass.id"
+                  v-for="cls in allClassList"
+                  :key="cls.id"
+                  :value="cls.id"
                 >
-                  {{ currentClass.name }}
+                  {{ cls.name }}
                 </a-select-option>
               </a-select>
             </div>
@@ -621,22 +622,22 @@ const fetchComparisonData = async () => {
   try {
     loading.value = true;
     hasSearched.value = true;
-    
+
     const res = await getClassCompare({
       class_id: selectedClass1.value,
-      compare_class_id: selectedClass2.value.toString(),
+      compare_class_id: selectedClass2.value,
       exam_id: selectedExamId.value
     });
-    
+
     if (res) {
       comparisonData.value = res;
     } else {
       message.error(res?.msg || '获取对比数据失败');
       comparisonData.value = null;
     }
-  } catch (err) {
-    message.error('获取对比数据失败');
-    console.error(err);
+  } catch (err: any) {
+    const errorMsg = err?.data?.data || '获取对比数据失败，注意只能对比同一年级的班级';
+    message.error(errorMsg);
     comparisonData.value = null;
   } finally {
     loading.value = false;
