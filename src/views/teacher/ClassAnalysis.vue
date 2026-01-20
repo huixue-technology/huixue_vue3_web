@@ -220,15 +220,13 @@ const isSubjectColumn = (dataIndex: string) => {
 // 获取过线率颜色样式类
 const getRateClass = (rate: number | null | undefined) => {
   if (rate === null || rate === undefined) return 'normal-rate';
-  
+
   const ratePercent = rate * 100;
-  
-  if (ratePercent < 50) {
-    return 'low-rate'; // 50%以下红色
-  } else if (ratePercent >= 50 && ratePercent < 60) {
-    return 'mid-rate'; // 50%-60%橙色
+
+  if (ratePercent >= 50 && ratePercent <= 70) {
+    return 'low-rate'; // 50%-70%红色
   } else {
-    return 'normal-rate'; // 60%以上默认颜色
+    return 'normal-rate'; // 其他范围默认颜色
   }
 };
 

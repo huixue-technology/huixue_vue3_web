@@ -22,7 +22,7 @@
       <div class="table-section">
         <h2>考试统计 <span class="total-exams">共统计{{ examListSelected.length }}场考试</span></h2>
         <p class="description">
-          说明：一本率低于60%为<span style="color: red;">红色</span>，在60%到80%之间为<span style="color: orange;">橙色</span>；变异系数≥0.2的科目标<span style="color: red;">红色</span>（成绩不稳定）。
+          说明：一本进线率低于60%为<span style="color: red;">红色</span>，在60%到80%之间为<span style="color: orange;">橙色</span>，高于80%为<span style="color: green;">绿色</span>。
         </p>
         <!-- 横向滚动：表格列过多时横向滚动 -->
         <div class="table-horizontal-scroll">
@@ -63,14 +63,13 @@ type MergedAnalysisItem = {
   passCount: number;
   passRate: string | number;
   averageScore: number;
-  maxScore: number;
-  minScore: number;
-  median: number;
-  stdDev: number;
-  zScore: number;
-  tScore: number;
   averageRank: number;
-  cv: number;
+  bestRank: number;
+  oneLineCount: number;
+  averagePassRate: number;
+  averageTopRate: number;
+  top985Rate: number;
+  top211Rate: number;
 };
 
 // 状态定义
@@ -96,21 +95,20 @@ const termSelected = ref<string>(default_term[0].value);
 // 合并后的表格数据
 const mergedAnalysisList = computed<MergedAnalysisItem[]>(() => {
   if (!examAnalysisRaw.value.length || !comprehensiveAnalysisRaw.value.length) return [];
-  
+
   return examAnalysisRaw.value.map(examItem => {
     const compItem = comprehensiveAnalysisRaw.value.find((item: any) => item.subject === examItem.subject);
     return {
       ...examItem,
       passRate: examItem.passRate || '0',
       averageScore: compItem?.averageScore || 0,
-      maxScore: compItem?.maxScore || 0,
-      minScore: compItem?.minScore || 0,
-      median: compItem?.median || 0,
-      stdDev: compItem?.stdDev || 0,
-      zScore: compItem?.zScore || 0,
-      tScore: compItem?.tScore || 0,
       averageRank: compItem?.averageRank || 0,
-      cv: compItem?.cv || 0,
+      bestRank: compItem?.bestRank || 0,
+      oneLineCount: compItem?.oneLineCount || 0,
+      averagePassRate: compItem?.averagePassRate || 0,
+      averageTopRate: compItem?.averageTopRate || 0,
+      top985Rate: compItem?.top985Rate || 0,
+      top211Rate: compItem?.top211Rate || 0,
     };
   });
 });
@@ -143,7 +141,7 @@ const getPassRateColor = (text: string) => {
   }
 };
 
-// 表格列定义（修复颜色逻辑）
+// 表格列定义
 const mergedStatsColumns: ColumnType[] = [
   {
     title: '科目',
@@ -159,7 +157,7 @@ const mergedStatsColumns: ColumnType[] = [
     dataIndex: 'passCount',
     key: 'passCount',
     align: 'center',
-    width: 120,
+    width: 130,
     customRender: ({ value }: { value: number }) => value || 0,
   },
   {
@@ -168,10 +166,7 @@ const mergedStatsColumns: ColumnType[] = [
     key: 'passRate',
     align: 'center',
     width: 120,
-    customRender: ({ text }: { text: string }) => {
-      return text;
-    },
-    // 修复颜色逻辑
+    customRender: ({ text }: { text: string }) => text,
     customCell: (record: any) => {
       const text = record.passRate || '0';
       const color = getPassRateColor(text);
@@ -183,41 +178,11 @@ const mergedStatsColumns: ColumnType[] = [
     dataIndex: 'averageScore',
     key: 'averageScore',
     align: 'center',
-    width: 110,
-    customRender: ({ value }: { value: number }) => value.toFixed(2),
-  },
-  {
-    title: '最高分',
-    dataIndex: 'maxScore',
-    key: 'maxScore',
-    align: 'center',
-    width: 110,
-  },
-  {
-    title: '最低分',
-    dataIndex: 'minScore',
-    key: 'minScore',
-    align: 'center',
-    width: 110,
-  },
-  {
-    title: '标准分',
-    dataIndex: 'zScore',
-    key: 'zScore',
-    align: 'center',
-    width: 110,
-    customRender: ({ value }: { value: number }) => value.toFixed(4),
-  },
-  {
-    title: 'T分',
-    dataIndex: 'tScore',
-    key: 'tScore',
-    align: 'center',
     width: 100,
     customRender: ({ value }: { value: number }) => value.toFixed(2),
   },
   {
-    title: '平均名次',
+    title: '平均排名',
     dataIndex: 'averageRank',
     key: 'averageRank',
     align: 'center',
@@ -225,27 +190,52 @@ const mergedStatsColumns: ColumnType[] = [
     customRender: ({ value }: { value: number }) => Math.round(value),
   },
   {
-    title: '变异系数',
-    dataIndex: 'cv',
-    key: 'cv',
+    title: '最佳排名',
+    dataIndex: 'bestRank',
+    key: 'bestRank',
     align: 'center',
     width: 110,
-    customRender: ({ value }: { value: number }) => {
-      const numValue = typeof value === 'number' ? value : parseFloat(value);
-      return isNaN(numValue) ? '0.0000' : numValue.toFixed(4);
-    },
-    customCell: (record: any) => {
-      const value = record.cv || 0;
-      const numValue = typeof value === 'number' ? value : parseFloat(value);
-      const shouldHighlight = !isNaN(numValue) && numValue >= 0.2;
-      
-      return {
-        style: {
-          color: shouldHighlight ? '#f5222d' : 'rgba(0, 0, 0, 0.85)',
-          fontWeight: shouldHighlight ? '600' : 'normal',
-        }
-      };
-    },
+    customRender: ({ value }: { value: number }) => value || 0,
+  },
+  {
+    title: '一本达线次数',
+    dataIndex: 'oneLineCount',
+    key: 'oneLineCount',
+    align: 'center',
+    width: 130,
+    customRender: ({ value }: { value: number }) => value || 0,
+  },
+  {
+    title: '平均及格率',
+    dataIndex: 'averagePassRate',
+    key: 'averagePassRate',
+    align: 'center',
+    width: 120,
+    customRender: ({ value }: { value: number }) => (value * 100).toFixed(2) + '%',
+  },
+  {
+    title: '清北率',
+    dataIndex: 'averageTopRate',
+    key: 'averageTopRate',
+    align: 'center',
+    width: 120,
+    customRender: ({ value }: { value: number }) => (value * 100).toFixed(2) + '%',
+  },
+  {
+    title: '985达线率',
+    dataIndex: 'top985Rate',
+    key: 'top985Rate',
+    align: 'center',
+    width: 120,
+    customRender: ({ value }: { value: number }) => (value * 100).toFixed(2) + '%',
+  },
+  {
+    title: '211达线率',
+    dataIndex: 'top211Rate',
+    key: 'top211Rate',
+    align: 'center',
+    width: 120,
+    customRender: ({ value }: { value: number }) => (value * 100).toFixed(2) + '%',
   },
 ];
 
@@ -348,23 +338,47 @@ const fetchComprehensiveAnalysis = async () => {
   try {
     const studentId = userInfo.value?.student?.uid;
     if (!studentId || !examListSelected.value.length) return;
-    const res = await postStudentAverageAnalysis({ student_id: studentId, exam_ids: examListSelected.value }as any);
-    if (res.code === 200 && res.data?.comprehensive) {
-      const compData = res.data.comprehensive;
+
+    // 新接口返回结构：data 是数组，取第一个元素
+    interface StudentAverageAnalysisResponse {
+      code: number;
+      msg: string;
+      data: Array<{
+        id: number;
+        class_id: number;
+        student_id: string;
+        average_rank: { [key: string]: number };
+        average_pass_rate: { [key: string]: number };
+        average_top_rate: { [key: string]: number };
+        one_line_count: { [key: string]: number };
+        top_985_rate: { [key: string]: number };
+        top_211_rate: { [key: string]: number };
+        best_rank: { [key: string]: number };
+        average_score: { [key: string]: number };
+      }>;
+    }
+
+    const res = await postStudentAverageAnalysis({
+      student_id: studentId,
+      exam_ids: examListSelected.value
+    }) as StudentAverageAnalysisResponse;
+
+    if (res.code === 200 && res.data && res.data.length > 0) {
+      const compData = res.data[0]; // 取数组第一个元素
+
       comprehensiveAnalysisRaw.value = Object.entries(subjects_map.value)
-        .filter(([key]) => compData.average_score[key])
+        .filter(([key]) => compData.average_score[key] !== undefined)
         .map(([key, subject]) => ({
           key,
           subject,
-          averageScore: compData.average_score[key],
-          maxScore: compData.max_score[key],
-          minScore: compData.min_score[key],
-          zScore: compData.z_score[key],
-          tScore: compData.T[key],
-          averageRank: compData.average_rank[key],
-          cv: compData.cv[key],
-          median: compData.median[key],
-          stdDev: compData.std_dev[key],
+          averageScore: compData.average_score[key] || 0,
+          averageRank: compData.average_rank[key] || 0,
+          bestRank: compData.best_rank[key] || 0,
+          oneLineCount: compData.one_line_count[key] || 0,
+          averagePassRate: compData.average_pass_rate[key] || 0,
+          averageTopRate: compData.average_top_rate[key] || 0,
+          top985Rate: compData.top_985_rate[key] || 0,
+          top211Rate: compData.top_211_rate[key] || 0,
         }));
     } else {
       comprehensiveAnalysisRaw.value = [];

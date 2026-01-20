@@ -26,7 +26,7 @@
     
     <div class="charts-area" v-if="studentId">
       <a-card 
-        v-for="(subject, index) in subjects" 
+        v-for="(subject, index) in subject_selection" 
         :key="subject" 
         class="chart-card"
         :bordered="false"
@@ -45,15 +45,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import VChart from 'vue-echarts'
 import { getPassLine, getUpDownDetailAnalysis } from '@/servers/api/analysis'
-import { message, Empty } from 'ant-design-vue'
+import { message } from 'ant-design-vue'
 
 // 接收父组件传入的学生信息
 const props = defineProps<{
   studentId?: string | number; // 学生ID
   studentName?: string; // 学生姓名
+  classInfo?: Array<string>;
 }>()
 
 // 1. 响应式状态
@@ -68,7 +69,26 @@ const studentId = computed(() => props.studentId)
 const studentName = computed(() => props.studentName || '选中学生')
 
 // 3. 科目配置
-const subjects = ['总分','语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治']
+const subjects = ['总分','语文', '数学', '英语']
+
+const subject_selection = computed(() => {
+  for (const subject of props.classInfo?.subject_selection || []) {
+    if (subject.includes('物')) {
+      subjects.push('物理')
+    }else if (subject.includes('化')) {
+      subjects.push('化学')
+    } else if (subject.includes('生')) {
+      subjects.push('生物')
+    } else if (subject.includes('史')) {
+      subjects.push('历史')
+    } else if (subject.includes('地')) {
+      subjects.push('地理')
+    } else if (subject.includes('政')) {
+      subjects.push('政治')
+    }
+  }
+  return subjects
+})
 const fieldMappingRank = {
   '语文': 'yuwend',
   '数学': 'shuxued',
@@ -122,11 +142,11 @@ const fetchStudentData = async (stuId: number) => {
 
 // 6. 生成图表数据
 const generateTable = async (examData: any[], types: Record<string, string>) => {
-  const tempData: Record<string, any> = subjects.reduce((acc, subject) => {
+ 
+  const tempData: Record<string, any> = subject_selection.value.reduce((acc, subject) => {
     acc[subject] = { x_name: [], y_score: [] }
     return acc
-  }, {})
-
+  }, {})  
   for (const item of examData) {
     if (!item.exam?.length) continue
     
@@ -157,11 +177,14 @@ const generateTable = async (examData: any[], types: Record<string, string>) => 
 
     // 处理各科目
     for (const [subject, field] of Object.entries(types)) {
-      tempData[subject].x_name.push(examName)
-      tempData[subject].y_score.push({
-        score: item[field] ?? 0,
-        line: selectedPassLine?.[field] ?? 0
-      })
+      console.log("@@",subject_selection.value)
+      if (subject_selection.value.includes(subject)) {
+        tempData[subject].x_name.push(examName)
+        tempData[subject].y_score.push({
+          score: item[field] ?? 0,
+          line: selectedPassLine?.[field] ?? 0
+        })
+      }
     }
   }
 
@@ -174,20 +197,6 @@ const getSubjectOption = (subject: string) => {
   const subjectData = totalData.value[subject] || { x_name: [], y_score: [] }
   const scores = subjectData.y_score.map((d: any) => d.score || 0)
   const lines = subjectData.y_score.map((d: any) => d.line || 0)
-
-  const colorMap: Record<string, string[]> = {
-    '总分': ['#5470C6', '#EE6666'],
-    '语文': ['#91CC75', '#EA7CCC'],
-    '数学': ['#FAC858', '#73C0DE'],
-    '英语': ['#EE6666', '#5470C6'],
-    '物理': ['#73C0DE', '#FAC858'],
-    '化学': ['#91CC75', '#EA7CCC'],
-    '生物': ['#FAC858', '#73C0DE'],
-    '历史': ['#EA7CCC', '#91CC75'],
-    '地理': ['#5470C6', '#EE6666'],
-    '政治': ['#73C0DE', '#FAC858']
-  }
-  const colors = colorMap[subject] || ['#5470C6', '#EE6666']
 
   return {
     tooltip: { 

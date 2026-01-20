@@ -126,41 +126,7 @@
       <div class="color-legend" style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
         <div class="legend-title" style="font-weight: 600; margin-bottom: 8px; color: #333;">成绩颜色说明：</div>
         <a-row :gutter="16">
-          <a-col :xs="8" :sm="6" :md="4">
-            <div class="legend-item">
-              <span class="color-block" style="background-color: #52c41a;"></span>
-              <span class="color-text">优秀成绩</span>
-              <span class="color-desc">总分≥600/单科≥90</span>
-            </div>
-          </a-col>
-          <a-col :xs="8" :sm="6" :md="4">
-            <div class="legend-item">
-              <span class="color-block" style="background-color: #1890ff;"></span>
-              <span class="color-text">良好成绩</span>
-              <span class="color-desc">总分≥500/单科≥80</span>
-            </div>
-          </a-col>
-          <a-col :xs="8" :sm="6" :md="4">
-            <div class="legend-item">
-              <span class="color-block" style="background-color: #333;"></span>
-              <span class="color-text">普通成绩</span>
-              <span class="color-desc">总分<500/单科<80</span>
-            </div>
-          </a-col>
-          <a-col :xs="8" :sm="6" :md="4">
-            <div class="legend-item">
-              <span class="color-block" style="background-color: #f5222d;"></span>
-              <span class="color-text">顶尖排名</span>
-              <span class="color-desc">前3名</span>
-            </div>
-          </a-col>
-          <a-col :xs="8" :sm="6" :md="4">
-            <div class="legend-item">
-              <span class="color-block" style="background-color: #fa8c16;"></span>
-              <span class="color-text">良好排名</span>
-              <span class="color-desc">4-10名</span>
-            </div>
-          </a-col>
+         
           <a-col :xs="8" :sm="6" :md="4">
             <div class="legend-item">
               <span class="color-block" style="background-color: #52c41a;"></span>
@@ -340,21 +306,21 @@
       <!-- 图表展示 -->
       <div class="charts-section">
         <a-row :gutter="16" style="margin-top: 20px;">
-          <a-col :span="24" :md="12">
+          <a-col :span="24" :md="8">
             <a-card title="成绩分布图" class="chart-card">
               <div class="chart-container">
                 <e-charts :option="scoreChartOption" style="height: 300px" />
               </div>
             </a-card>
           </a-col>
-          <a-col :span="24" :md="12">
+          <a-col :span="24" :md="8">
             <a-card title="班级排名分布" class="chart-card">
               <div class="chart-container">
                 <e-charts :option="classRankChartOption" style="height: 300px" />
               </div>
             </a-card>
           </a-col>
-          <a-col :span="24" :md="12">
+          <a-col :span="24" :md="8">
             <a-card title="年级排名分布" class="chart-card">
               <div class="chart-container">
                 <e-charts :option="gradeRankChartOption" style="height: 300px" />
@@ -376,6 +342,7 @@
 	
 	<StudentAnalysisPages 
 	:studentId="selectedStudentId" 
+  :classInfo="classInfo"
 	:studentName="currentStudentInfo.student_name" />
 
   </div>
@@ -456,9 +423,12 @@ const defaultSubjectSelection = '物化生史地'; // 可以修改为实际的�
 // 获取班级选科信息的备用函数
 const getEffectiveSubjectSelection = (): string => {
   // 优先使用班级信息的选科
+  console.log("!!!!!!!!!!!",classInfo.value);
   if (classInfo.value?.subject_selection && classInfo.value.subject_selection.trim() !== '') {
     return classInfo.value.subject_selection;
   }
+
+  
   // 如果班级信息中没有选科，使用默认配置
   return defaultSubjectSelection;
 };
@@ -537,7 +507,6 @@ const displaySubjects = computed<SubjectItem[]>(() => {
 
   // 获取班级选科信息（使用备用函数）
   const subjectSelection = getEffectiveSubjectSelection();
-  console.log('displaySubjects - 班级选科信息:', subjectSelection);
 
   // 判断科目是否应该显示（根据班级选科）
   const shouldShowSubject = (code: string): boolean => {
@@ -574,7 +543,6 @@ const displaySubjects = computed<SubjectItem[]>(() => {
 
       // 根据选科过滤
       const shouldShow = shouldShowSubject(code);
-      console.log(`displaySubjects - 科目 ${code} (${allSubjectMap[code]}) 是否显示:`, shouldShow);
       if (!shouldShow) return false;
 
       // 获取成绩和排名数据
@@ -592,7 +560,6 @@ const displaySubjects = computed<SubjectItem[]>(() => {
       name: allSubjectMap[code] || code
     }));
 
-  console.log('displaySubjects - 过滤后的科目:', validSubjects.map(s => s.name));
   return validSubjects;
 });
 
@@ -1389,9 +1356,9 @@ const fetchClassInfo = async (classId: number) => {
   try {
     const res = await getClassesDetailApi({ class_id: classId });
     if (res.code === 200 && res.data) {
-      classInfo.value = res.data;
-      console.log('班级信息:', res.data);
-      console.log('选科信息:', res.data?.subject_selection);
+      classInfo.value = res.data[0];
+      console.log('???班级信息:', res.data[0]);
+      console.log('!!!!!!!!!选科信息:', res.data[0]?.subject_selection);
     } else {
       message.warning('未获取到班级信息');
     }
@@ -1405,7 +1372,7 @@ const fetchClassInfo = async (classId: number) => {
 <style scoped lang="less">
 .student-analysis-container {
   padding: 20px;
-  height: 100vh;
+
   box-sizing: border-box;
   overflow-y: auto;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
@@ -1752,7 +1719,7 @@ const fetchClassInfo = async (classId: number) => {
   }
   
   .pass-line {
-    color: #1890ff;
+
     font-weight: bold;
   }
   
@@ -1774,7 +1741,7 @@ const fetchClassInfo = async (classId: number) => {
   .rank-down {
     color: #f5222d;
     font-weight: 600;
-  }
+  } 
   
   .rank-same {
     color: #666;
