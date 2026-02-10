@@ -1,9 +1,11 @@
+import router from '@/router';
+import { message } from 'ant-design-vue';
 import { extend } from 'umi-request';
 
 const request = extend({
   // 默认请求前缀
-  prefix: 'https://monitor.xipinkj.cn/api',
-  timeout: 10000,
+  // prefix: 'https://monitor.xipinkj.cn/api',
+  timeout: 300000,
   changeOrigin: true,
   pathRewrite: {
           '^': '' // 修改为正确的路径重写规则，如果需要的话
@@ -13,6 +15,7 @@ const request = extend({
 // 请求拦截器
 request.interceptors.request.use((url, options) => {
   const token = localStorage.getItem('token');
+  console.log("拦截器请求执行",token)
   if (token) {
     return {
       url: url,
@@ -28,12 +31,21 @@ request.interceptors.request.use((url, options) => {
   return { url, options };
 });
 
-// 响应拦截器
+// 响应拦截器 ： 只有当函数的await都执行完毕后才会执行
 request.interceptors.response.use(async (response) => {
-  if (response.status === 401) {
-    // 处理未授权，例如跳转到登录页
-    console.error('Unauthorized: Token might be invalid or expired. Redirecting to login...');
-    // window.location.href = '/login'; // 请根据您的实际登录路由修改
+  switch (response.status) {
+    case 401:
+      // 处理未授权，例如跳转到登录页
+      message.error('认证失败，重新登录');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      message.info('正在跳转到登录页面...');
+      setTimeout(() => {
+        router.push('/user/login');
+      }, 1000);
+      break;
+    default:
+      break;
   }
   return response;
 });

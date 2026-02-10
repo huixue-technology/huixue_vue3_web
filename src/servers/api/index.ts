@@ -6,6 +6,7 @@ import * as analysis from "./analysis";
 import * as average from "./average";
 import * as classes from "./classes";
 import * as exam from "./exam";
+import * as feedback from "./feedback";
 import * as grade from "./grade";
 import * as school from "./school";
 import * as student from "./student";
@@ -17,6 +18,7 @@ export default {
   average,
   classes,
   exam,
+  feedback,
   grade,
   school,
   student,

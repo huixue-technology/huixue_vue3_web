@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from "umi-request";
+import request from "@/utils/request";
 
 /** 获取学生记录列表，支持分页和条件过滤 GET /api/student/ */
 export async function getStudentApi(
@@ -110,6 +110,21 @@ export async function postBatchGetStudentApi(
       "Content-Type": "application/json",
     },
     data: body,
+    ...(options || {}),
+  });
+}
+
+/** 获取年级学生数量 GET /api/student/grade_student_count */
+export async function getGetGradeStudentCountApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getGetGradeStudentCountApiParams,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/student/grade_student_count", {
+    method: "GET",
+    params: {
+      ...params,
+    },
     ...(options || {}),
   });
 }

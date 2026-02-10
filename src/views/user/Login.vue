@@ -75,11 +75,15 @@ const onFinish = async (values: any) => {
    const res = await postUserLogin(values);
    console.log(res);
    localStorage.setItem('user', JSON.stringify(res.data));
+   localStorage.setItem('token', res.data.token);
    if(! res.data.teacher) {
       // 从res.data中获取对应的班级，然后根据班级获取对应的选科
       const classId = res.data.student.class_id;
-      
-      const r = await  getClassesDetailApi({ class_id: classId });
+
+      // 因为这里要立即请求后端获取所在班级，请求拦截器没法拦住，所以这里得添加authorization才行
+      const r = await  getClassesDetailApi({ class_id: classId },
+         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
       // 在res.data中添加subject_selection字段
       console.log(r.data);
       res.data.student.subject_selection = r.data[0].subject_selection;

@@ -8,7 +8,7 @@
 
 <script setup lang="ts">
 import {h, ref, onMounted, computed} from 'vue'
-import { MailOutlined, AppstoreOutlined, SettingOutlined,ThunderboltOutlined, UserOutlined, LogoutOutlined,UsergroupAddOutlined, ToolOutlined, SolutionOutlined, FrownOutlined, ForkOutlined, SecurityScanOutlined, MergeCellsOutlined } from '@ant-design/icons-vue';
+import { MailOutlined, AppstoreOutlined, SettingOutlined,ThunderboltOutlined, UserOutlined, LogoutOutlined,UsergroupAddOutlined, ToolOutlined, SolutionOutlined, FrownOutlined, ForkOutlined, SecurityScanOutlined, MergeCellsOutlined, MessageOutlined } from '@ant-design/icons-vue';
 import { MenuProps } from 'ant-design-vue';
 import router from '@/router';
 import { useLogout } from '@/composables/useLogout';
@@ -134,6 +134,15 @@ const items =  computed<MenuProps['items']>(()=>{
         }
     );
   }
+
+  // 所有用户都可以访问意见反馈
+  menuItems.push({
+    key: 'feedback',
+    icon: () => h(MessageOutlined),
+    label: '意见反馈',
+    title: '意见反馈',
+  });
+
   menuItems.push({
     key: 'logout',
     icon: () => h(LogoutOutlined),

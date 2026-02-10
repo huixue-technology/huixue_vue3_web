@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from "umi-request";
+import request from "@/utils/request";
 
 /** 获取班级分析 GET /api/analysis/class_analysis */
 export async function getClassAnalysis(

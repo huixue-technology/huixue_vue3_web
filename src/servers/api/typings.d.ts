@@ -39,8 +39,6 @@ declare namespace API {
   type ClassAnalysis = {
     /** 班级ID */
     class_ids: number[];
-    /** 任务ID（用于查询异步任务状态） */
-    task_id?: string;
   };
 
   type Classes = {
@@ -104,6 +102,43 @@ declare namespace API {
     student_grade?: string;
     /** 考试试卷ID列表，以逗号分隔 */
     exam_paper_ids?: string;
+  };
+
+  type FeedbackSubmit = {
+    /** 用户工号/学号（可选） */
+    role?: string;
+    /** 用户邮箱（可选） */
+    user_email?: string;
+    /** 用户姓名（可选） */
+    user_name?: string;
+    /** 反馈类型：bug/feature/improvement/other */
+    feedback_type: string;
+    /** 反馈标题 */
+    title: string;
+    /** 反馈内容 */
+    content: string;
+    /** 联系方式类型：email/phone/wechat */
+    contact_method: string;
+    /** 联系方式值 */
+    contact_value: string;
+    /** 优先级：low/normal/high/urgent，默认normal */
+    priority?: string;
+  };
+
+  type FeedbackUpdate = {
+    /** 状态：pending/processing/resolved/closed */
+    status: string;
+    /** 管理员回复 */
+    admin_reply?: string;
+  };
+
+  type getAllFeedbacksParams = {
+    /** 状态筛选 */
+    status?: string;
+    /** 每页数量 */
+    page_size?: number;
+    /** 页码 */
+    page?: number;
   };
 
   type getClassAnalysisParams = {
@@ -219,6 +254,15 @@ declare namespace API {
     student_id: string;
   };
 
+  type getFeedbackDetailParams = {
+    feedback_id: number;
+  };
+
+  type getGetGradeStudentCountApiParams = {
+    /** 学校ID */
+    school?: string;
+  };
+
   type getGradeApiParams = {
     /** 页码 */
     page?: number;
@@ -236,6 +280,13 @@ declare namespace API {
 
   type getGradeDetailApiParams = {
     grade_id: number;
+  };
+
+  type getMyFeedbacksParams = {
+    /** 每页数量 */
+    page_size?: number;
+    /** 页码 */
+    page?: number;
   };
 
   type getPassLineParams = {
@@ -527,7 +578,13 @@ declare namespace API {
   type postUploadParams = {
     /** 请选择上传类型 */
     type: string;
-    /** 附加信息JSON格式（可选）{"exam_id": 1, "subject": 2}（可选） */
+    /** 学校ID（grade/student/teacher/exam_pass_line/classes类型建议传入） */
+    school_id?: number;
+    /** 考试编号（grade/exam_pass_line/small_point类型建议传入） */
+    exam_id?: number;
+    /** 考试名称（grade类型可选，默认从文件名提取） */
+    exam_name?: string;
+    /** 附加信息JSON格式（可选）{"subject": "语文"}（small_point类型必填subject字段） */
     additional_info?: string;
   };
 
@@ -633,6 +690,10 @@ declare namespace API {
     subject?: string;
     /** 学校ID */
     school_id?: string;
+  };
+
+  type updateFeedbackStatusParams = {
+    feedback_id: number;
   };
 
   type UpdateTeacher = {

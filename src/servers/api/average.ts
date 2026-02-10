@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from "umi-request";
+import request from "@/utils/request";
 
 /** 获取班级成绩综合分析 POST /api/average/class_analysis */
 export async function postClassAnalysis(
@@ -92,7 +92,7 @@ export async function postClassAlwaysTopBottomStudents(
   });
 }
 
-/** 获取学生平均分分析 POST /api/average/student_average_analysis */
+/** 获取学生平均分分析（直接查询数据库） POST /api/average/student_average_analysis */
 export async function postStudentAverageAnalysis(
   body: API.StudentAverage,
   options?: { [key: string]: any }
