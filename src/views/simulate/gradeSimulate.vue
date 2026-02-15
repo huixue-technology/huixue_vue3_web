@@ -968,7 +968,7 @@ const getRankDiffText = (diff: number) => {
   padding: 20px;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
   overflow-y: auto;
-  max-height: 100vh;
+  
   
   .header {
     background: linear-gradient(120deg, #4b6cb7, #1890ff);
