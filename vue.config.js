@@ -17,7 +17,7 @@ module.exports = defineConfig({
         //target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         pathRewrite: {
-          '^': '' // 去掉前缀 `/api`
+          '^': '/api' // 去掉前缀 `/api`
         }
       },
     },
