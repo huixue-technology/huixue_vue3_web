@@ -25,20 +25,23 @@ const showNavBar = computed(() => {
 </script>
 <style>
 
+html, body, #app {
+  height: 100%;
+  margin: 0;
+}
 
 .index {
-    .index-nav-bar {
-        position: fixed;
-        top:10px;
-        left: 20px;
-        min-width: 100vw;
-    }
-    .index-router-view {
-      position: fixed;
-      width: 100vw;
-      height: calc(100vh - 60px);
-      overflow-y: auto;
-  }
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.index .index-nav-bar {
+  width: 100%;
+}
+.index .index-router-view {
+  flex: 1 1 auto;
+  width: 100%;
+  overflow: visible;
 }
 
 #app {

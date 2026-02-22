@@ -74,8 +74,7 @@ const generate = () => {
 .mistakes-page {
   padding: 20px;
   background-color: #f5f5f5;
-  height: 100vh;
-  overflow-y: auto;
+  min-height: 100vh;
 }
 
 .header {

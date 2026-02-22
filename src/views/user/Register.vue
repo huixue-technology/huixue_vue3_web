@@ -344,9 +344,9 @@ onMounted(() => {
 }
 
 .container {
-   position: fixed;
-   top: 20%;
-   left: 40%;
-   width: 20%;
+  max-width: 520px;
+  width: 92vw;
+  margin: 32px auto;
+  padding: 24px;
 }
 </style>

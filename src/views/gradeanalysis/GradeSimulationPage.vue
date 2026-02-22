@@ -403,8 +403,8 @@ const submit = async () => {
 .grade-simulation-page {
   padding: 20px;
   background-color: #f5f5f5;
-  height: 100vh;
-  overflow-x: auto; /* 添加这行 */
+  min-height: 100vh;
+  overflow-x: auto;
 
 }
 

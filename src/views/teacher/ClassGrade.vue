@@ -1233,9 +1233,8 @@ onMounted(async () => {
 <style scoped lang="less">
 .class-grade-container {
   padding: 20px;
-  height: 100vh;
+  min-height: 100vh;
   box-sizing: border-box;
-  overflow-y: auto;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
   
   .header {

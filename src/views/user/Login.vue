@@ -126,12 +126,9 @@ const onFinishFailed = (errorInfo: any) => {
 }
 
 .container {
-   position: fixed;
-   top: 20%;
-   left: 50%;
-transform: translate(-50%, -50%);
-   width: auto;
-   margin: 0;
-   padding: 0;
+  max-width: 420px;
+  width: 92vw;
+  margin: 48px auto;
+  padding: 24px;
 }
 </style>

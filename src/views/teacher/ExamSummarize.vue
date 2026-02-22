@@ -313,9 +313,8 @@ const totalScoreOption = computed(() => {
 <style scoped>
 .class-analysis-container {
   padding: 20px;
-  height: 100vh;
+  min-height: 100vh;
   box-sizing: border-box;
-  overflow-y: auto;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
   font-size: 16px; /* 设置基础字体大小 */
 }
