@@ -27,7 +27,7 @@
 <script setup lang="ts">
 import { getClassAnalysis } from '@/servers/api/analysis';
 import { message } from 'ant-design-vue';
-import { ref, defineProps, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 // 引入 echarts 组件
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
