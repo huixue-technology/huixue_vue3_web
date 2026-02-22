@@ -152,7 +152,7 @@ import { reactive, computed, onMounted } from 'vue'
 import { UserOutlined, LockOutlined, MobileOutlined } from '@ant-design/icons-vue';
 import { postTeacherApi } from '@/servers/api/teacher';
 import { postUserApi, postUserLogin } from '@/servers/api/user';
-import { putClassesDetailApi, getClassesDetailApi } from '@/servers/api/classes';
+import { putClassesDetailApi } from '@/servers/api/classes';
 import router from '@/router';
 import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
@@ -235,33 +235,6 @@ const onFinish = async (values: any) => {
       return;
     }
 
-    // 更新班级的班主任信息
-    if (formparams.classId) {
-      try {
-        // 先获取班级详情
-        const classDetailRes = await getClassesDetailApi({ class_id: formparams.classId });
-        if (classDetailRes.code !== 200) {
-          message.error('获取班级信息失败！');
-          return;
-        }
-        
-        // 只更新header字段
-        const classData = classDetailRes.data;
-        await putClassesDetailApi(
-          { class_id: formparams.classId },
-          { 
-            ...classData,
-            header: formparams.uid
-          }
-        );
-        console.log('班级班主任绑定成功');
-      } catch (error) {
-        console.error('班级班主任绑定失败:', error);
-        message.error('班级班主任绑定失败！');
-        return;
-      }
-    }
-    
     // 注册用户信息
     const userData = {
       email: formparams.uid, // 使用账号作为邮箱
@@ -300,6 +273,21 @@ const onFinish = async (values: any) => {
       ...loginRes.data,
       token: loginRes.data.token
     });
+
+    // 登录成功后，更新班级的班主任信息（此时有token）
+    if (formparams.classId) {
+      try {
+        await putClassesDetailApi(
+          { class_id: formparams.classId },
+          { header: formparams.uid }
+        );
+        console.log('班级班主任绑定成功');
+      } catch (error) {
+        console.error('班级班主任绑定失败:', error);
+        message.error('班级班主任绑定失败！');
+        return;
+      }
+    }
     
     message.success('注册并登录成功！');
     router.push('/teacher_info');

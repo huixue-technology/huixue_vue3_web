@@ -246,13 +246,30 @@ const onFinish = async (values: any) => {
       return;
     }
     
-    // 存储用户信息和token
-    localStorage.setItem('user', JSON.stringify(loginRes.data));
     localStorage.setItem('token', loginRes.data.token);
+
+    let enrichedUserData = { ...loginRes.data };
+    try {
+      if (!enrichedUserData.teacher && enrichedUserData.student?.class_id) {
+        const { getClassesDetailApi } = await import('@/servers/api/classes');
+        const classId = enrichedUserData.student.class_id;
+        const r = await getClassesDetailApi(
+          { class_id: classId },
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        );
+        if (r?.code === 200 && r.data?.[0]?.subject_selection) {
+          enrichedUserData.student.subject_selection = r.data[0].subject_selection;
+        }
+      }
+    } catch (e) {
+      console.warn('获取班级选科信息失败', e);
+    }
+
     userStore.setUserInfo({
-      ...loginRes.data,
-      token: loginRes.data.token
+      ...enrichedUserData,
+      token: enrichedUserData.token
     });
+    localStorage.setItem('user', JSON.stringify(userStore.userInfo));
     
     // 进行角色绑定
     const selectedStudent = status_id.data[0];

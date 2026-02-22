@@ -11,37 +11,37 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import VChart from 'vue-echarts';
-import subjects_inflection from '@/utils/inflection';
 
 const props = defineProps<{
   studentInfo: any,
   compareScoreData: number[],
   currentExamData: number[],
+  subjects?: Array<{ name: string; max: number }>
 }>();
 
-// 根据选科动态确定科目名称
-const dynamicSubjectNames = computed(() => {
-  let subjects = [
-    {name: '语文', max: 150},
-    {name: '英语', max: 150},
-    {name: '数学', max: 150}
-  ]
-  for (let i  of [{name:'物',value:'物理'},{name:'化',value:'化学'}, {name:'生',value:'生物'},{name:'史',value:'历史'},{name:'地',value:'地理'},{name:'政',value:'政治'}]) {
-    if(props.studentInfo && props.studentInfo.subject_selection && props.studentInfo.subject_selection.includes(i.name)) {
-      subjects.push({name: i.value, max: 100})
+const indicators = computed(() => {
+  if (props.subjects && props.subjects.length) return props.subjects;
+  const base = [
+    { name: '语文', max: 150 },
+    { name: '英语', max: 150 },
+    { name: '数学', max: 150 }
+  ];
+  const result = [...base];
+  const extra = [{ n: '物', v: '物理' }, { n: '化', v: '化学' }, { n: '生', v: '生物' }, { n: '史', v: '历史' }, { n: '地', v: '地理' }, { n: '政', v: '政治' }];
+  for (const i of extra) {
+    if (props.studentInfo?.subject_selection?.includes(i.n)) {
+      result.push({ name: i.v, max: 100 });
     }
   }
-  return subjects
+  return result;
 });
 
-// ECharts 雷达图配置
 const chartOption = computed(() => {
-  // 创建 indicator 配置
-  const indicators = dynamicSubjectNames.value;
+  const inds = indicators.value;
 
   return {
     radar: {
-      indicator: indicators,
+      indicator: inds,
     },
     
     legend:{
@@ -67,7 +67,6 @@ const chartOption = computed(() => {
         lineStyle: { color: '#1890ff' },
         itemStyle: { color: '#1890ff' },
         areaStyle: { color: 'rgba(24, 144, 255, 0.2)' },
-        // 在这里配置显示数值
         label: {
           normal: {
           show: true,
@@ -86,7 +85,6 @@ const chartOption = computed(() => {
         lineStyle: { color: 'red' },
         itemStyle: { color: 'red' },
         areaStyle: { color: 'rgba(255, 77, 79, 0.2)' },
-        // 在这里配置显示数值
         label: {
           normal: {
           show: true,

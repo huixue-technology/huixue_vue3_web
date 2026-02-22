@@ -46,6 +46,7 @@ const props = defineProps<{
     selected_id:number,
     examList:Array<Exam>,
     studentInfo: any,
+    subjects?: Array<{ name: string; max: number }>
 }>();
 
 const emit = defineEmits(['update:compareScoreData']);
@@ -169,7 +170,7 @@ const loadTableAndRadar = (value:string) => {
         const compareScoreData = []
         // 过滤异常成绩
         const safeScore = (score: any, max: number) => isFinite(score) && score <= max ? score : 0;
-        for(let i of dynamicSubjectNames.value){
+        for(let i of subjectsList.value){
           // @ts-ignore
           const score = res.data[0][subjects_inflection[i.name]];
           compareScoreData.push(safeScore(score, i.max));
@@ -188,21 +189,21 @@ const handleChange = (value:string) => {
     debouncedLoadTableAndRadar(value)
 }
 
-// 根据选科动态确定科目名称
-const dynamicSubjectNames = computed(() => {
-  let subjects = [
-    {name: '语文', max: 150},
-    {name: '英语', max: 150},
-    {name: '数学', max: 150}
-  ]
-  if (props.studentInfo?.subject_selection) {
-    for (let i  of [{name:'物',value:'物理'},{name:'化',value:'化学'}, {name:'生',value:'生物'},{name:'史',value:'历史'},{name:'地',value:'地理'},{name:'政',value:'政治'}]) {
-      if(props.studentInfo.subject_selection.includes(i.name)) {
-        subjects.push({name: i.value, max: 100})
-      }
+const subjectsList = computed(() => {
+  if (props.subjects && props.subjects.length) return props.subjects;
+  const base = [
+    { name: '语文', max: 150 },
+    { name: '英语', max: 150 },
+    { name: '数学', max: 150 }
+  ];
+  const extra = [{ n:'物', v:'物理' },{ n:'化', v:'化学' },{ n:'生', v:'生物' },{ n:'史', v:'历史' },{ n:'地', v:'地理' },{ n:'政', v:'政治' }];
+  const result = [...base];
+  for (const i of extra) {
+    if (props.studentInfo?.subject_selection?.includes(i.n)) {
+      result.push({ name: i.v, max: 100 });
     }
   }
-  return subjects
+  return result;
 });
 </script>
 
