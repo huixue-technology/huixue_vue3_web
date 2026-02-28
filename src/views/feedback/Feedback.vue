@@ -121,8 +121,8 @@
           </a-form>
         </a-tab-pane>
 
-        <!-- 我的反馈标签页 -->
-        <a-tab-pane key="history" tab="我的反馈">
+        <!-- 当前反馈标签页 -->
+        <a-tab-pane key="history" tab="当前反馈">
           <a-spin :spinning="loading">
             <div v-if="feedbackList.length === 0" class="empty-state">
               <a-empty description="暂无反馈记录" />

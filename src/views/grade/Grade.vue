@@ -165,11 +165,11 @@ const dynamicSubjectNames = computed(() => {
         { short: '地', label: '地理', key: 'dili' },
         { short: '政', label: '政治', key: 'zhengzhi' }
     ] as const;
+    const selection = studentInfo.value?.subject_selection;
+    const hasSelection = typeof selection === 'string' && selection.length > 0;
     const result = [...base];
     for (const e of extras) {
-        const bySelection = !!studentInfo.value?.subject_selection && studentInfo.value.subject_selection.includes(e.short);
-        const byGradeData = currentExamData.value && (currentExamData.value as any)[e.key] != null;
-        if (bySelection || byGradeData) {
+        if (!hasSelection || selection.includes(e.short)) {
             result.push({ name: e.label, max: 100 });
         }
     }
@@ -298,66 +298,29 @@ const handleGradeDetail = (gradeData:API.Grade) => {
         passLine: 0,
     }
 ];
-if (gradeData.wuli != null) {
-    tableData.value.push({
-        name: '物理',
-        sum_: safeScore(gradeData.wuli, 100),
-        sumb: gradeData.wulib || 0,
-        sumd: gradeData.wulid || 0,
-        maxB: safeScore(gradeData.wuli, 100),
-        passLine: 0,
-    });
-}
-if (gradeData.huaxue != null) {
-    tableData.value.push({
-        name: '化学',
-        sum_: safeScore(gradeData.huaxue, 100),
-        sumb: gradeData.huaxueb || 0,
-        sumd: gradeData.huaxued || 0,
-        maxB: safeScore(gradeData.huaxue, 100),
-        passLine: 0,
-    })
-}
-if (gradeData.shengwu != null) {
-    tableData.value.push({
-        name: '生物',
-        sum_: safeScore(gradeData.shengwu, 100),
-        sumb: gradeData.shengwub || 0,
-        sumd: gradeData.shengwud || 0,
-        maxB: safeScore(gradeData.shengwu, 100),
-        passLine: 0,
-    });
-}
-if (gradeData.lishi != null) {
-    tableData.value.push({
-        name: '历史',
-        sum_: safeScore(gradeData.lishi, 100),
-        sumb: gradeData.lishib || 0,
-        sumd: gradeData.lishid || 0,
-        maxB: safeScore(gradeData.lishi, 100),
-        passLine: 0,
-    });
-}
-if (gradeData.dili != null) {
-    tableData.value.push({
-        name: '地理',
-        sum_: safeScore(gradeData.dili, 100),
-        sumb: gradeData.dilib || 0,
-        sumd: gradeData.dilid || 0,
-        maxB: safeScore(gradeData.dili, 100),
-        passLine: 0,
-    });
-}
-if (gradeData.zhengzhi != null) {
-        tableData.value.push({
-        name: '政治',
-        sum_: safeScore(gradeData.zhengzhi, 100),
-        sumb: gradeData.zhengzhib || 0,
-        sumd: gradeData.zhengzhid || 0,
-        maxB: safeScore(gradeData.zhengzhi, 100),
-        passLine: 0,
-    });
-}
+    const selection = studentInfo.value?.subject_selection;
+    const hasSelection = typeof selection === 'string' && selection.length > 0;
+    const extras = [
+        { short: '物', label: '物理', key: 'wuli' },
+        { short: '化', label: '化学', key: 'huaxue' },
+        { short: '生', label: '生物', key: 'shengwu' },
+        { short: '史', label: '历史', key: 'lishi' },
+        { short: '地', label: '地理', key: 'dili' },
+        { short: '政', label: '政治', key: 'zhengzhi' }
+    ] as const;
+    for (const e of extras) {
+        if (!hasSelection || selection.includes(e.short)) {
+            const score = (gradeData as any)[e.key];
+            tableData.value.push({
+                name: e.label,
+                sum_: safeScore(score, 100),
+                sumb: (gradeData as any)[`${e.key}b`] || 0,
+                sumd: (gradeData as any)[`${e.key}d`] || 0,
+                maxB: safeScore(score, 100),
+                passLine: 0,
+            });
+        }
+    }
 }
 
 const  tableColumns = [{

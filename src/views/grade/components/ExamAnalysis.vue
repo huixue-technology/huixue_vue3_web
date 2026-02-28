@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import type { ColumnType } from 'ant-design-vue/es/table';
 import { postCompareRankMultiExam } from '@/servers/api/analysis';
 import { getGradeApi } from '@/servers/api/grade';
@@ -132,15 +132,31 @@ const handleUpandDown = (res:any) => {
         }
     };
 
-    addSubjectData('总分',res.data[0].compareB.sumb, res.data[0].compareD.sumd)
+    const selection = props.studentInfo?.subject_selection;
+    const hasSelection = typeof selection === 'string' && selection.length > 0;
+    const extras = [
+        { short: '物', name: '物理', b: 'wulib', d: 'wulid' },
+        { short: '化', name: '化学', b: 'huaxueb', d: 'huaxued' },
+        { short: '生', name: '生物', b: 'shengwub', d: 'shengwud' },
+        { short: '史', name: '历史', b: 'lishib', d: 'lishid' },
+        { short: '地', name: '地理', b: 'dilib', d: 'dilid' },
+        { short: '政', name: '政治', b: 'zhengzhib', d: 'zhengzhid' }
+    ] as const;
+
+    addSubjectData('总分', res.data[0].compareB.sumb, res.data[0].compareD.sumd);
     addSubjectData('语文', res.data[0].compareB.yuwenb, res.data[0].compareD.yuwend);
     addSubjectData('英语', res.data[0].compareB.yingyub, res.data[0].compareD.yingyud);
-    addSubjectData('物理', res.data[0].compareB.wulib, res.data[0].compareD.wulid);
-    addSubjectData('化学', res.data[0].compareB.huaxueb, res.data[0].compareD.huaxued);
-    addSubjectData('生物', res.data[0].compareB.shengwub, res.data[0].compareD.shengwud);
     addSubjectData('数学', res.data[0].compareB.shuxueb, res.data[0].compareD.shuxued);
-    addSubjectData('历史', res.data[0].compareB.lishib, res.data[0].compareD.lishid);
-    addSubjectData('地理', res.data[0].compareB.dilib, res.data[0].compareD.dilid);
+
+    for (const e of extras) {
+        if (!hasSelection || selection.includes(e.short)) {
+            addSubjectData(
+                e.name,
+                (res.data[0].compareB as any)[e.b],
+                (res.data[0].compareD as any)[e.d]
+            );
+        }
+    }
 }
 const debounce = (func: Function, wait: number) => {
   let timeout: number | null = null;
@@ -205,6 +221,68 @@ const subjectsList = computed(() => {
   }
   return result;
 });
+
+watch(
+  () => props.examList,
+  (list) => {
+    if (list?.length && !compareExamId.value) {
+      compareExamId.value = list[0].id;
+      handleChange(compareExamId.value);
+    }
+  },
+  { deep: true }
+);
+
+watch(
+  () => props.selected_id,
+  () => {
+    if (compareExamId.value) {
+      debouncedLoadTableAndRadar(compareExamId.value);
+    }
+  }
+);
+
+watch(
+  () => subjectsList.value,
+  () => {
+    if (compareExamId.value) {
+      debouncedLoadTableAndRadar(compareExamId.value);
+    }
+  },
+  { deep: true }
+);
+
+
+watch(
+  () => props.examList,
+  (list) => {
+    if (list?.length && !compareExamId.value) {
+      compareExamId.value = list[0].id;
+      handleChange(compareExamId.value);
+    }
+  },
+  { deep: true }
+);
+
+watch(
+  () => props.selected_id,
+  () => {
+    if (compareExamId.value) {
+      debouncedLoadTableAndRadar(compareExamId.value);
+    }
+  }
+);
+
+watch(
+  () => subjectsList.value,
+  () => {
+    if (compareExamId.value) {
+      debouncedLoadTableAndRadar(compareExamId.value);
+    }
+  },
+  { deep: true }
+);
+
 </script>
 
 <style scoped lang="less">
