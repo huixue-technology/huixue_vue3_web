@@ -66,7 +66,7 @@
       >
          <a-select
            v-model:value="formparams.schoolName"
-           @change="onSchoolChange"
+           @change="handleSchoolChange"
            style="width: 100%"
            placeholder="请选择学校"
            :loading="schoolList.length === 0"
@@ -84,7 +84,7 @@
       >
          <a-select
            v-model:value="formparams.grade"
-           @change="onGradeChange"
+           @change="handleGradeChange"
            style="width: 100%"
            placeholder="请选择年级"
            :loading="gradeList.length === 0 && formparams.schoolName"
@@ -148,15 +148,25 @@
 
 </template>
 <script setup lang="ts">
-import { reactive, computed, ref, onMounted } from 'vue'
+import { reactive, computed, onMounted } from 'vue'
 import { UserOutlined, LockOutlined, MobileOutlined } from '@ant-design/icons-vue';
 import { postTeacherApi } from '@/servers/api/teacher';
 import { postUserApi, postUserLogin } from '@/servers/api/user';
-import { getSchoolApi } from '@/servers/api/school';
-import { getClassesApi, putClassesDetailApi, getClassesDetailApi } from '@/servers/api/classes';
+import { putClassesDetailApi } from '@/servers/api/classes';
 import router from '@/router';
 import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
+import { useSchoolSelection } from '@/composables/useSchoolSelection';
+
+// 使用共用的学校/年级/班级选择逻辑
+const {
+  schoolList,
+  gradeList,
+  classList,
+  fetchGradesBySchool,
+  fetchClassesByGrade,
+  loadSchoolData,
+} = useSchoolSelection();
 
 // 表单参数
 interface FormParams {
@@ -169,13 +179,6 @@ interface FormParams {
   subject: string
   classId: number | undefined
 }
-
-// 学校列表
-const schoolList = ref<any[]>([])
-// 年级列表
-const gradeList = ref<string[]>([])
-// 班级列表
-const classList = ref<any[]>([])
 
 const disabled = computed(() => {
   return !(formparams.uid && formparams.password && formparams.name && formparams.phone && formparams.schoolName && formparams.grade && formparams.subject && formparams.classId);
@@ -194,103 +197,19 @@ const formparams = reactive<FormParams>({
 
 const userStore = useUserStore();
 
-// 从班级名称中提取年级信息
-// 例如: "淅川一高2302班" -> "2023级", "2401班" -> "2024级"
-const extractGradeFromClassName = (className: string): string | null => {
-  // 匹配连续的2位数字(年级简称)
-  const match = className.match(/(\d{2})/);
-  if (match) {
-    const yearShort = match[1];
-    // 将2位数字转换为完整年份(假设20xx年)
-    return `20${yearShort}级`;
-  }
-  return null;
-};
-
 // 学校选择事件处理
-const onSchoolChange = async (value: string) => {
+const handleSchoolChange = async (value: string) => {
   formparams.schoolName = value;
-  
-  // 重置年级、班级选择
-  gradeList.value = [];
-  classList.value = [];
   formparams.grade = '';
   formparams.classId = undefined;
-  
-  if (!formparams.schoolName) {
-    return; // 静默返回，不显示错误信息
-  }
-  
-  try {
-    // 获取学校的所有班级
-    const res = await getClassesApi({ school_id: formparams.schoolName });
-    if (res.code === 200 && res.data && res.data.length > 0) {
-      // 从班级名称中提取年级信息
-      const grades = new Set<string>();
-      res.data.forEach((cls: any) => {
-        const grade = extractGradeFromClassName(cls.name);
-        if (grade) {
-          grades.add(grade);
-        }
-      });
-      
-      if (grades.size === 0) {
-        message.warning('该学校暂无年级信息');
-        return;
-      }
-      
-      // 将年级按字典序排序(从大到小，新年级在前)
-      gradeList.value = Array.from(grades).sort((a, b) => b.localeCompare(a));
-      console.log('提取的年级列表:', gradeList.value);
-    } else {
-      message.error(res.message || '获取年级列表失败');
-    }
-  } catch (error) {
-    console.error('获取年级列表错误:', error);
-    message.error('获取年级列表失败');
-  }
+  await fetchGradesBySchool(value);
 };
 
 // 年级选择事件处理
-const onGradeChange = async (value: string) => {
+const handleGradeChange = async (value: string) => {
   formparams.grade = value;
-  
-  // 重置班级选择
-  classList.value = [];
   formparams.classId = undefined;
-  
-  if (!value || !formparams.schoolName) {
-    return; // 静默返回，不显示错误信息
-  }
-  
-  try {
-    // 使用学校名称作为school_id参数获取班级列表
-    const res = await getClassesApi({ school_id: formparams.schoolName });
-    if (res.code === 200 && res.data) {
-      // 筛选出对应年级的班级并按字典序排序
-      classList.value = res.data
-        .filter((cls: any) => {
-          // 从班级名称中提取年级，判断是否匹配
-          const grade = extractGradeFromClassName(cls.name);
-          return grade === value;
-        })
-        .sort((a: any, b: any) => {
-          // 按班级名称字典序排序
-          return a.name.localeCompare(b.name, 'zh-CN');
-        });
-      
-      console.log(`年级 ${value} 的班级列表:`, classList.value);
-      
-      if (classList.value.length === 0) {
-        message.warning(`该年级暂无班级信息`);
-      }
-    } else {
-      message.error(res.message || '获取班级列表失败');
-    }
-  } catch (error) {
-    console.error('获取班级列表错误:', error);
-    message.error('获取班级列表失败');
-  }
+  await fetchClassesByGrade(formparams.schoolName, value);
 };
 
 // 提交表单
@@ -316,33 +235,6 @@ const onFinish = async (values: any) => {
       return;
     }
 
-    // 更新班级的班主任信息
-    if (formparams.classId) {
-      try {
-        // 先获取班级详情
-        const classDetailRes = await getClassesDetailApi({ class_id: formparams.classId });
-        if (classDetailRes.code !== 200) {
-          message.error('获取班级信息失败！');
-          return;
-        }
-        
-        // 只更新header字段
-        const classData = classDetailRes.data;
-        await putClassesDetailApi(
-          { class_id: formparams.classId },
-          { 
-            ...classData,
-            header: formparams.uid
-          }
-        );
-        console.log('班级班主任绑定成功');
-      } catch (error) {
-        console.error('班级班主任绑定失败:', error);
-        message.error('班级班主任绑定失败！');
-        return;
-      }
-    }
-    
     // 注册用户信息
     const userData = {
       email: formparams.uid, // 使用账号作为邮箱
@@ -381,6 +273,21 @@ const onFinish = async (values: any) => {
       ...loginRes.data,
       token: loginRes.data.token
     });
+
+    // 登录成功后，更新班级的班主任信息（此时有token）
+    if (formparams.classId) {
+      try {
+        await putClassesDetailApi(
+          { class_id: formparams.classId },
+          { header: formparams.uid }
+        );
+        console.log('班级班主任绑定成功');
+      } catch (error) {
+        console.error('班级班主任绑定失败:', error);
+        message.error('班级班主任绑定失败！');
+        return;
+      }
+    }
     
     message.success('注册并登录成功！');
     router.push('/teacher_info');
@@ -395,24 +302,7 @@ const onFinishFailed = (errorInfo: any) => {
   message.error('注册失败！');
 }
 
-// 加载学校数据
-const loadSchoolData = async () => {
-  try {
-    const res = await getSchoolApi({});
-    if (res.code === 200) {
-      schoolList.value = res.data;
-    } else {
-      message.error('获取学校列表失败');
-    }
-  } catch (error) {
-    console.error('加载学校数据错误:', error);
-    message.error('加载学校数据失败');
-  }
-};
-
-
-
-// 组件挂载时加载数据
+// 组件挂载时加载学校数据
 onMounted(() => {
   loadSchoolData();
 });
@@ -421,10 +311,10 @@ onMounted(() => {
 
 <style scoped lang="less">
 .container {
-   position: fixed;
-   top: 20%;
-   left: 40%;
-   width: 20%;
+  max-width: 520px;
+  width: 92vw;
+  margin: 32px auto;
+  padding: 24px;
 }
 
 .register-form {

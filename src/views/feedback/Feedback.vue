@@ -27,7 +27,7 @@
                 placeholder="请选择反馈类型"
                 size="large"
               >
-                <a-select-option value="bug">Bug反馈</a-select-option>
+                <a-select-option value="bug">问题反馈</a-select-option>
                 <a-select-option value="feature">功能建议</a-select-option>
                 <a-select-option value="improvement">优化建议</a-select-option>
                 <a-select-option value="other">其他</a-select-option>
@@ -68,9 +68,8 @@
             </a-form-item>
 
             <a-form-item
-              label="联系方式"
+              label="联系方式（可选）"
               name="contact_method"
-              :rules="[{ required: true, message: '请选择联系方式' }]"
             >
               <a-radio-group v-model:value="formData.contact_method" size="large">
                 <a-radio value="email">邮箱</a-radio>
@@ -83,7 +82,6 @@
               :label="contactLabel"
               name="contact_value"
               :rules="[
-                { required: true, message: `请输入${contactLabel}` },
                 { validator: validateContact }
               ]"
             >
@@ -123,8 +121,8 @@
           </a-form>
         </a-tab-pane>
 
-        <!-- 我的反馈标签页 -->
-        <a-tab-pane key="history" tab="我的反馈">
+        <!-- 当前反馈标签页 -->
+        <a-tab-pane key="history" tab="当前反馈">
           <a-spin :spinning="loading">
             <div v-if="feedbackList.length === 0" class="empty-state">
               <a-empty description="暂无反馈记录" />
@@ -249,8 +247,9 @@ const contactLabel = computed(() => {
 
 // 验证联系方式
 const validateContact = (_rule: any, value: string) => {
+  // 如果没有输入联系方式，则不进行验证
   if (!value) {
-    return Promise.reject('请输入联系方式');
+    return Promise.resolve();
   }
 
   if (formData.contact_method === 'email') {
@@ -355,7 +354,7 @@ const getTypeColor = (type: string) => {
 // 获取类型文本
 const getTypeText = (type: string) => {
   const texts: Record<string, string> = {
-    bug: 'Bug',
+    bug: '问题反馈',
     feature: '功能建议',
     improvement: '优化建议',
     other: '其他'

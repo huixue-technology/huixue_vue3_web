@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import type { ColumnType } from 'ant-design-vue/es/table';
 import { postCompareRankMultiExam } from '@/servers/api/analysis';
 import { getGradeApi } from '@/servers/api/grade';
@@ -46,6 +46,7 @@ const props = defineProps<{
     selected_id:number,
     examList:Array<Exam>,
     studentInfo: any,
+    subjects?: Array<{ name: string; max: number }>
 }>();
 
 const emit = defineEmits(['update:compareScoreData']);
@@ -131,15 +132,31 @@ const handleUpandDown = (res:any) => {
         }
     };
 
-    addSubjectData('总分',res.data[0].compareB.sumb, res.data[0].compareD.sumd)
+    const selection = props.studentInfo?.subject_selection;
+    const hasSelection = typeof selection === 'string' && selection.length > 0;
+    const extras = [
+        { short: '物', name: '物理', b: 'wulib', d: 'wulid' },
+        { short: '化', name: '化学', b: 'huaxueb', d: 'huaxued' },
+        { short: '生', name: '生物', b: 'shengwub', d: 'shengwud' },
+        { short: '史', name: '历史', b: 'lishib', d: 'lishid' },
+        { short: '地', name: '地理', b: 'dilib', d: 'dilid' },
+        { short: '政', name: '政治', b: 'zhengzhib', d: 'zhengzhid' }
+    ] as const;
+
+    addSubjectData('总分', res.data[0].compareB.sumb, res.data[0].compareD.sumd);
     addSubjectData('语文', res.data[0].compareB.yuwenb, res.data[0].compareD.yuwend);
     addSubjectData('英语', res.data[0].compareB.yingyub, res.data[0].compareD.yingyud);
-    addSubjectData('物理', res.data[0].compareB.wulib, res.data[0].compareD.wulid);
-    addSubjectData('化学', res.data[0].compareB.huaxueb, res.data[0].compareD.huaxued);
-    addSubjectData('生物', res.data[0].compareB.shengwub, res.data[0].compareD.shengwud);
     addSubjectData('数学', res.data[0].compareB.shuxueb, res.data[0].compareD.shuxued);
-    addSubjectData('历史', res.data[0].compareB.lishib, res.data[0].compareD.lishid);
-    addSubjectData('地理', res.data[0].compareB.dilib, res.data[0].compareD.dilid);
+
+    for (const e of extras) {
+        if (!hasSelection || selection.includes(e.short)) {
+            addSubjectData(
+                e.name,
+                (res.data[0].compareB as any)[e.b],
+                (res.data[0].compareD as any)[e.d]
+            );
+        }
+    }
 }
 const debounce = (func: Function, wait: number) => {
   let timeout: number | null = null;
@@ -169,7 +186,7 @@ const loadTableAndRadar = (value:string) => {
         const compareScoreData = []
         // 过滤异常成绩
         const safeScore = (score: any, max: number) => isFinite(score) && score <= max ? score : 0;
-        for(let i of dynamicSubjectNames.value){
+        for(let i of subjectsList.value){
           // @ts-ignore
           const score = res.data[0][subjects_inflection[i.name]];
           compareScoreData.push(safeScore(score, i.max));
@@ -188,22 +205,84 @@ const handleChange = (value:string) => {
     debouncedLoadTableAndRadar(value)
 }
 
-// 根据选科动态确定科目名称
-const dynamicSubjectNames = computed(() => {
-  let subjects = [
-    {name: '语文', max: 150},
-    {name: '英语', max: 150},
-    {name: '数学', max: 150}
-  ]
-  if (props.studentInfo?.subject_selection) {
-    for (let i  of [{name:'物',value:'物理'},{name:'化',value:'化学'}, {name:'生',value:'生物'},{name:'史',value:'历史'},{name:'地',value:'地理'},{name:'政',value:'政治'}]) {
-      if(props.studentInfo.subject_selection.includes(i.name)) {
-        subjects.push({name: i.value, max: 100})
-      }
+const subjectsList = computed(() => {
+  if (props.subjects && props.subjects.length) return props.subjects;
+  const base = [
+    { name: '语文', max: 150 },
+    { name: '英语', max: 150 },
+    { name: '数学', max: 150 }
+  ];
+  const extra = [{ n:'物', v:'物理' },{ n:'化', v:'化学' },{ n:'生', v:'生物' },{ n:'史', v:'历史' },{ n:'地', v:'地理' },{ n:'政', v:'政治' }];
+  const result = [...base];
+  for (const i of extra) {
+    if (props.studentInfo?.subject_selection?.includes(i.n)) {
+      result.push({ name: i.v, max: 100 });
     }
   }
-  return subjects
+  return result;
 });
+
+watch(
+  () => props.examList,
+  (list) => {
+    if (list?.length && !compareExamId.value) {
+      compareExamId.value = list[0].id;
+      handleChange(compareExamId.value);
+    }
+  },
+  { deep: true }
+);
+
+watch(
+  () => props.selected_id,
+  () => {
+    if (compareExamId.value) {
+      debouncedLoadTableAndRadar(compareExamId.value);
+    }
+  }
+);
+
+watch(
+  () => subjectsList.value,
+  () => {
+    if (compareExamId.value) {
+      debouncedLoadTableAndRadar(compareExamId.value);
+    }
+  },
+  { deep: true }
+);
+
+
+watch(
+  () => props.examList,
+  (list) => {
+    if (list?.length && !compareExamId.value) {
+      compareExamId.value = list[0].id;
+      handleChange(compareExamId.value);
+    }
+  },
+  { deep: true }
+);
+
+watch(
+  () => props.selected_id,
+  () => {
+    if (compareExamId.value) {
+      debouncedLoadTableAndRadar(compareExamId.value);
+    }
+  }
+);
+
+watch(
+  () => subjectsList.value,
+  () => {
+    if (compareExamId.value) {
+      debouncedLoadTableAndRadar(compareExamId.value);
+    }
+  },
+  { deep: true }
+);
+
 </script>
 
 <style scoped lang="less">

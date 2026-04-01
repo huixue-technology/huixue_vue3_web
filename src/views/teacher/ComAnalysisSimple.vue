@@ -580,7 +580,6 @@ onUnmounted(() => {
   padding: 20px;
   min-height: 100vh;
   box-sizing: border-box;
-  overflow-y: auto;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
   
   .header {

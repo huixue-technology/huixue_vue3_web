@@ -420,8 +420,6 @@ watch(termSelected, () => {
   padding-bottom: 80px;
   background-color: #f5f5f5;
   min-height: 100vh;
-  max-height: 100vh;
-  overflow-y: auto;
   box-sizing: border-box;
 }
 

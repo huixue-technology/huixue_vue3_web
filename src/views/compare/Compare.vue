@@ -383,8 +383,7 @@ const getSubjectOption = (subject: string) => {
 <style scoped lang="less">
 .compare-container {
   position: relative;
-  height: 100vh;
-  overflow: auto;
+  min-height: 100vh;
   padding: 20px;
   background-color: #f0f2f5;
 }

@@ -27,7 +27,7 @@
 <script setup lang="ts">
 import { getClassAnalysis } from '@/servers/api/analysis';
 import { message } from 'ant-design-vue';
-import { ref, defineProps, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 // 引入 echarts 组件
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -313,9 +313,8 @@ const totalScoreOption = computed(() => {
 <style scoped>
 .class-analysis-container {
   padding: 20px;
-  height: 100vh;
+  min-height: 100vh;
   box-sizing: border-box;
-  overflow-y: auto;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
   font-size: 16px; /* 设置基础字体大小 */
 }
