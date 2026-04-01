@@ -11,6 +11,7 @@ import * as grade from "./grade";
 import * as school from "./school";
 import * as student from "./student";
 import * as teacher from "./teacher";
+import * as testPaper from "./testPaper";
 import * as upload from "./upload";
 import * as user from "./user";
 export default {
@@ -23,6 +24,7 @@ export default {
   school,
   student,
   teacher,
+  testPaper,
   upload,
   user,
 };

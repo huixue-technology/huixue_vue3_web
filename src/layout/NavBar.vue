@@ -81,6 +81,12 @@ const items =  computed<MenuProps['items']>(()=>{
           icon: () => h(FrownOutlined),
           label: '成绩模拟',
           title: '成绩模拟',
+        },
+        {
+          key: 'paper_view',
+          icon: () => h(ForkOutlined),
+          label: '试卷查看',
+          title: '试卷查看',
         }
         // {
         //   key: 'ai_assistant',
@@ -131,6 +137,12 @@ const items =  computed<MenuProps['items']>(()=>{
           icon: () => h(FrownOutlined),
           label: '成绩模拟',
           title: '成绩模拟',
+        },
+        {
+          key: 'paper_view',
+          icon: () => h(ForkOutlined),
+          label: '试卷查看',
+          title: '试卷查看',
         }
     );
   }
