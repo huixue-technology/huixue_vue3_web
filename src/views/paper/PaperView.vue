@@ -184,6 +184,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
+import router from "@/router";
 import { getExamApi } from "@/servers/api/exam";
 import {
   getStudentTestPaperApi,
@@ -738,6 +739,11 @@ onMounted(async () => {
   userInfo.value = userStore.getUserInfo();
   if (!userInfo.value || !userInfo.value.role) {
     message.error("请先登录");
+    return;
+  }
+
+  if (!userInfo.value.teacher) {
+    router.replace("/student_paper_view");
     return;
   }
 

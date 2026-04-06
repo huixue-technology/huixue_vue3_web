@@ -1,4 +1,14 @@
-const { defineConfig } = require('@vue/cli-service')
+const { defineConfig } = require("@vue/cli-service");
+const path = require("path");
+
+const LOCAL_API_TARGET = "http://127.0.0.1:5000";
+const REMOTE_API_TARGET = "http://111.228.38.111:5000";
+const isLocalMachine = process.platform === "win32" || process.platform === "darwin";
+const apiProxyTarget =
+  process.env.VUE_APP_API_PROXY_TARGET ||
+  (isLocalMachine ? LOCAL_API_TARGET : REMOTE_API_TARGET);
+
+console.log(`[vue.config] /api proxy target: ${apiProxyTarget}`);
 
 module.exports = defineConfig({
   lintOnSave: false,
@@ -6,23 +16,22 @@ module.exports = defineConfig({
   configureWebpack: {
     resolve: {
       alias: {
-        '@': require('path').resolve(__dirname, 'src')
-      }
-    }
+        "@": path.resolve(__dirname, "src"),
+      },
+    },
   },
   devServer: {
     proxy: {
-      '/api': {
-        target: 'http://111.228.38.111:5000',
-        //target: 'http://127.0.0.1:5000',
+      "/api": {
+        target: apiProxyTarget,
         changeOrigin: true,
         pathRewrite: {
-          '^': '' // 去掉前缀 `/api`
-        }
+          "^": "",
+        },
       },
     },
     client: {
-      overlay: false
+      overlay: false,
     },
-  }
-})
+  },
+});
