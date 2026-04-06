@@ -87,7 +87,11 @@
             <a-empty description="请选择一份试卷查看题目" />
           </div>
 
-          <a-spin v-else :spinning="loadingQuestions || loadingQuestionScores" tip="题目加载中...">
+          <a-spin
+            v-else
+            :spinning="loadingQuestions || loadingQuestionScores || loadingClassQuestionStats"
+            tip="题目加载中..."
+          >
             <div class="paper-meta">
               <div>考试：{{ selectedPaper.exam_name || selectedPaper.exam_id }}</div>
               <div>科目：{{ selectedPaper.subject || '-' }}</div>
@@ -135,7 +139,20 @@
                 </template>
 
                 <div class="question-meta">
-                  <span>正确率：{{ question.correct_rate ?? '-' }}</span>
+                  <a-button
+                    v-if="isTeacher"
+                    type="link"
+                    size="small"
+                    class="error-rate-link"
+                    :disabled="!canOpenWrongStudents(question, index)"
+                    @click="openWrongStudentsModal(question, index)"
+                  >
+                    错误率：{{ getQuestionWrongRateDisplay(question, index) }}
+                  </a-button>
+                  <span v-else>正确率：{{ question.correct_rate ?? '-' }}</span>
+                  <span v-if="isTeacher" class="question-meta-text">
+                    错题人数：{{ getQuestionWrongCountDisplay(question, index) }}
+                  </span>
                   <span>{{ scoreLabel }}：{{ getQuestionScoreDisplay(question, index) }}</span>
                 </div>
 
@@ -164,6 +181,95 @@
                 </div>
               </a-card>
             </div>
+
+            <div v-if="false && isTeacher && selectedPaper" class="wrong-search-wrap">
+              <a-divider />
+              <div class="wrong-search-title">错题搜索</div>
+              <a-space wrap class="wrong-search-filters">
+                <a-select
+                  v-model:value="wrongQuestionSearchFilters.class_id"
+                  :options="teacherClassOptions"
+                  placeholder="班级"
+                  style="width: 160px"
+                  allow-clear
+                />
+                <a-select
+                  v-model:value="wrongQuestionSearchFilters.student_id"
+                  :options="wrongSearchStudentOptions"
+                  placeholder="学生(可选)"
+                  style="width: 220px"
+                  allow-clear
+                />
+                <a-select
+                  v-model:value="wrongQuestionSearchFilters.question_type"
+                  :options="wrongQuestionTypeOptions"
+                  placeholder="题型筛选"
+                  style="width: 180px"
+                  allow-clear
+                />
+                <a-input
+                  v-model:value="wrongQuestionSearchFilters.knowledge_keyword"
+                  placeholder="按知识点模糊搜索"
+                  allow-clear
+                  style="width: 240px"
+                  @pressEnter="triggerWrongQuestionSearch"
+                />
+                <a-button type="primary" @click="triggerWrongQuestionSearch">搜索</a-button>
+                <a-button @click="resetWrongQuestionSearchFilters">重置</a-button>
+              </a-space>
+
+              <div v-if="wrongQuestionRecommendKnowledge.length" class="knowledge-recommend">
+                <span class="knowledge-recommend-label">推荐知识点：</span>
+                <a-tag
+                  v-for="item in wrongQuestionRecommendKnowledge"
+                  :key="item.name"
+                  class="recommend-tag"
+                  color="processing"
+                  @click="useRecommendKnowledge(item.name)"
+                >
+                  {{ item.name }} ({{ item.count }})
+                </a-tag>
+              </div>
+
+              <a-table
+                :columns="wrongQuestionSearchColumns"
+                :data-source="wrongQuestionSearchList"
+                :loading="loadingWrongQuestionSearch"
+                :pagination="false"
+                :row-key="(row) => `${row.class_id}-${row.question_key}`"
+                size="small"
+              >
+                <template #bodyCell="{ column, record }">
+                  <template v-if="column.dataIndex === 'knowledge_points'">
+                    {{ formatKnowledgePoints(record.knowledge_points) }}
+                  </template>
+                  <template v-else-if="column.key === 'wrong_rate'">
+                    <a-button
+                      type="link"
+                      class="error-rate-link"
+                      :disabled="Number(record.wrong_count || 0) <= 0"
+                      @click="openWrongStudentsFromSearch(record)"
+                    >
+                      {{ formatPercent(record.wrong_rate) }}
+                    </a-button>
+                  </template>
+                  <template v-else-if="column.key === 'wrong_count'">
+                    {{ Number(record.wrong_count || 0) }}/{{ Number(record.participant_count || 0) }}
+                  </template>
+                </template>
+              </a-table>
+              <div class="pagination-wrap">
+                <a-pagination
+                  :current="wrongQuestionSearchPagination.page"
+                  :page-size="wrongQuestionSearchPagination.size"
+                  :total="wrongQuestionSearchPagination.total"
+                  :show-size-changer="true"
+                  :show-total="(total: number) => `共 ${total} 条`"
+                  @change="handleWrongQuestionSearchPageChange"
+                  @showSizeChange="handleWrongQuestionSearchSizeChange"
+                />
+              </div>
+            </div>
           </a-spin>
         </a-card>
       </a-col>
@@ -178,6 +284,35 @@
     >
       <iframe v-if="pdfPreviewUrl" :src="pdfPreviewUrl" class="pdf-frame"></iframe>
     </a-modal>
+
+    <a-modal
+      v-model:open="wrongStudentsModalOpen"
+      :title="wrongStudentsModalTitle"
+      :footer="null"
+      width="720px"
+      destroy-on-close
+    >
+      <a-spin :spinning="loadingWrongStudents">
+        <a-table
+          :columns="wrongStudentColumns"
+          :data-source="wrongStudentList"
+          :pagination="false"
+          :row-key="(row) => `${row.student_id}-${row.id || ''}`"
+          size="middle"
+        />
+        <div class="pagination-wrap">
+          <a-pagination
+            :current="wrongStudentsPagination.page"
+            :page-size="wrongStudentsPagination.size"
+            :total="wrongStudentsPagination.total"
+            :show-size-changer="true"
+            :show-total="(total: number) => `共 ${total} 条`"
+            @change="handleWrongStudentsPageChange"
+            @showSizeChange="handleWrongStudentsSizeChange"
+          />
+        </div>
+      </a-spin>
+    </a-modal>
   </div>
 </template>
 
@@ -187,7 +322,11 @@ import { message } from "ant-design-vue";
 import router from "@/router";
 import { getExamApi } from "@/servers/api/exam";
 import {
+  getTestPaperClassQuestionStatApi,
+  getTestPaperClassQuestionWrongStudentsApi,
+  getTeacherWrongQuestionRecommendApi,
   getStudentTestPaperApi,
+  searchTeacherWrongQuestionApi,
   getTestPaperApi,
   getTestPaperFileUrl,
   getTestPaperQuestionScoreApi,
@@ -225,6 +364,40 @@ type QuestionScoreRecord = {
   [key: string]: any;
 };
 
+type ClassQuestionStatRecord = {
+  id?: number;
+  question_key?: string;
+  wrong_rate?: number;
+  wrong_count?: number;
+  participant_count?: number;
+  avg_score?: number;
+  [key: string]: any;
+};
+
+type WrongStudentRecord = {
+  id?: number;
+  student_id?: string;
+  student_name?: string;
+  score?: number;
+  full_score?: number;
+  [key: string]: any;
+};
+
+type WrongQuestionSearchRecord = {
+  class_id?: string;
+  question_key?: string;
+  question_id?: number;
+  string_number?: string;
+  question_type?: string;
+  knowledge_points?: string[];
+  wrong_rate?: number;
+  wrong_count?: number;
+  participant_count?: number;
+  answer?: string;
+  full_score?: number;
+  [key: string]: any;
+};
+
 type ScoreMap = Record<string, number | string>;
 
 const userStore = useUserStore();
@@ -243,6 +416,44 @@ const studentQuestionScoreMap = ref<ScoreMap>({});
 const teacherScoreMode = ref<"class_avg" | "student">("class_avg");
 const teacherSelectedClassId = ref<string>();
 const teacherSelectedStudentId = ref<string>();
+const loadingClassQuestionStats = ref(false);
+const classQuestionStatRecords = ref<ClassQuestionStatRecord[]>([]);
+const wrongStudentsModalOpen = ref(false);
+const wrongStudentsModalTitle = ref("错题学生列表");
+const loadingWrongStudents = ref(false);
+const wrongStudentList = ref<WrongStudentRecord[]>([]);
+const wrongStudentsQuery = reactive<{
+  class_id?: string;
+  question_key?: string;
+}>({
+  class_id: undefined,
+  question_key: undefined,
+});
+const wrongStudentsPagination = reactive({
+  page: 1,
+  size: 20,
+  total: 0,
+});
+const loadingWrongQuestionSearch = ref(false);
+const wrongQuestionSearchList = ref<WrongQuestionSearchRecord[]>([]);
+const wrongQuestionSearchPagination = reactive({
+  page: 1,
+  size: 10,
+  total: 0,
+});
+const wrongQuestionSearchFilters = reactive<{
+  question_type?: string;
+  knowledge_keyword?: string;
+  class_id?: string;
+  student_id?: string;
+}>({
+  question_type: undefined,
+  knowledge_keyword: "",
+  class_id: undefined,
+  student_id: undefined,
+});
+const wrongQuestionTypeOptions = ref<{ label: string; value: string }[]>([]);
+const wrongQuestionRecommendKnowledge = ref<{ name: string; count: number }[]>([]);
 
 const filters = reactive<{
   exam_id?: number;
@@ -291,6 +502,23 @@ const paperColumns = [
   { title: "操作", key: "action", width: 90 },
 ];
 
+const wrongStudentColumns = [
+  { title: "学号", dataIndex: "student_id", width: 150 },
+  { title: "姓名", dataIndex: "student_name", width: 150 },
+  { title: "得分", dataIndex: "score", width: 100 },
+  { title: "题目满分", dataIndex: "full_score", width: 120 },
+];
+
+const wrongQuestionSearchColumns = [
+  { title: "班级", dataIndex: "class_id", width: 120 },
+  { title: "题号", dataIndex: "string_number", width: 100 },
+  { title: "题型", dataIndex: "question_type", width: 140 },
+  { title: "知识点", dataIndex: "knowledge_points", ellipsis: true },
+  { title: "错误率", dataIndex: "wrong_rate", key: "wrong_rate", width: 120 },
+  { title: "错题人数", dataIndex: "wrong_count", key: "wrong_count", width: 120 },
+  { title: "满分", dataIndex: "full_score", width: 90 },
+];
+
 const studentUid = computed(() => String(userInfo.value?.role || ""));
 
 const teacherClassOptions = computed(() => {
@@ -326,9 +554,49 @@ const teacherStudentOptions = computed(() => {
     .sort((a, b) => a.value.localeCompare(b.value));
 });
 
+const wrongSearchStudentOptions = computed(() => {
+  const classId = String(wrongQuestionSearchFilters.class_id ?? "").trim();
+  const students = classId
+    ? questionScoreRecords.value.filter(
+        (item) => String(item.class_id ?? "").trim() === classId
+      )
+    : questionScoreRecords.value;
+  const studentMap = new Map<string, string>();
+  for (const item of students) {
+    const studentId = String(item.student_id ?? "").trim();
+    if (!studentId) continue;
+    const studentName = String(item.student_name ?? "").trim();
+    const label = studentName ? `${studentName}(${studentId})` : studentId;
+    studentMap.set(studentId, label);
+  }
+  return Array.from(studentMap.entries())
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.value.localeCompare(b.value));
+});
+
 const scoreLabel = computed(() => {
   if (!isTeacher.value) return "小题分";
   return teacherScoreMode.value === "student" ? "小题分(学生)" : "小题分(班均)";
+});
+
+const classQuestionStatMap = computed<Record<string, ClassQuestionStatRecord>>(() => {
+  const map: Record<string, ClassQuestionStatRecord> = {};
+  for (const item of classQuestionStatRecords.value) {
+    const key = normalizeQuestionKey(item.question_key);
+    if (!key) continue;
+    map[key] = item;
+  }
+  return map;
+});
+
+const classAverageScoreMap = computed<ScoreMap>(() => {
+  const scoreMap: ScoreMap = {};
+  for (const [questionKey, item] of Object.entries(classQuestionStatMap.value)) {
+    if (typeof item.avg_score === "number" && Number.isFinite(item.avg_score)) {
+      scoreMap[questionKey] = Number(item.avg_score.toFixed(2));
+    }
+  }
+  return scoreMap;
 });
 
 const normalizeStringArray = (value: any): string[] => {
@@ -465,6 +733,10 @@ const displayedQuestionScoreMap = computed<ScoreMap>(() => {
     return studentRecord ? normalizeScoreDetail(studentRecord.score_detail) : {};
   }
 
+  if (Object.keys(classAverageScoreMap.value).length) {
+    return classAverageScoreMap.value;
+  }
+
   return buildAverageScoreMap(classRecords);
 });
 
@@ -487,11 +759,307 @@ const getQuestionScoreDisplay = (question: QuestionItem, index: number) => {
   return formatScore(displayedQuestionScoreMap.value[key]);
 };
 
+const getQuestionClassStat = (question: QuestionItem, index: number) => {
+  const key = getQuestionDisplayKey(question, index);
+  if (!key) return undefined;
+  return classQuestionStatMap.value[key];
+};
+
+const getQuestionWrongRateDisplay = (question: QuestionItem, index: number) => {
+  const stat = getQuestionClassStat(question, index);
+  const wrongRate = Number(stat?.wrong_rate);
+  if (Number.isFinite(wrongRate)) {
+    return `${(wrongRate * 100).toFixed(1)}%`;
+  }
+  return "-";
+};
+
+const getQuestionWrongCountDisplay = (question: QuestionItem, index: number) => {
+  const stat = getQuestionClassStat(question, index);
+  const wrongCount = Number(stat?.wrong_count);
+  const participantCount = Number(stat?.participant_count);
+  if (Number.isFinite(wrongCount) && Number.isFinite(participantCount)) {
+    return `${wrongCount}/${participantCount}`;
+  }
+  return "-";
+};
+
+const formatPercent = (value: any) => {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) return "-";
+  return `${(numberValue * 100).toFixed(1)}%`;
+};
+
+const formatKnowledgePoints = (value: any) => {
+  const list = normalizeStringArray(value);
+  if (!list.length) return "-";
+  return list.join("、");
+};
+
+const canOpenWrongStudents = (question: QuestionItem, index: number) => {
+  if (!isTeacher.value) return false;
+  if (!selectedPaper.value?.id || !selectedPaper.value?.exam_id) return false;
+  const classId = String(teacherSelectedClassId.value ?? "").trim();
+  if (!classId) return false;
+  const key = getQuestionDisplayKey(question, index);
+  if (!key) return false;
+  const stat = getQuestionClassStat(question, index);
+  return Number(stat?.wrong_count) > 0;
+};
+
+const loadClassQuestionStats = async (refresh = false) => {
+  classQuestionStatRecords.value = [];
+  if (!isTeacher.value) return;
+  if (!selectedPaper.value?.id || !selectedPaper.value?.exam_id) return;
+  const classId = String(teacherSelectedClassId.value ?? "").trim();
+  if (!classId) return;
+
+  loadingClassQuestionStats.value = true;
+  try {
+    const res = await getTestPaperClassQuestionStatApi({
+      exam_id: Number(selectedPaper.value.exam_id),
+      test_paper_id: Number(selectedPaper.value.id),
+      class_id: classId,
+      refresh: refresh ? "1" : undefined,
+    });
+    if (res.code !== 200) {
+      message.error("班级题目统计加载失败");
+      return;
+    }
+    classQuestionStatRecords.value = Array.isArray(res.data) ? res.data : [];
+  } catch (error) {
+    message.error("班级题目统计加载失败");
+  } finally {
+    loadingClassQuestionStats.value = false;
+  }
+};
+
+const loadWrongStudents = async () => {
+  if (!selectedPaper.value?.id || !selectedPaper.value?.exam_id) return;
+  const classId = String(
+    wrongStudentsQuery.class_id ?? teacherSelectedClassId.value ?? ""
+  ).trim();
+  const questionKey = String(wrongStudentsQuery.question_key ?? "").trim();
+  if (!classId || !questionKey) return;
+
+  loadingWrongStudents.value = true;
+  try {
+    const res = await getTestPaperClassQuestionWrongStudentsApi({
+      page: wrongStudentsPagination.page,
+      size: wrongStudentsPagination.size,
+      exam_id: Number(selectedPaper.value.exam_id),
+      test_paper_id: Number(selectedPaper.value.id),
+      class_id: classId,
+      question_key: questionKey,
+    });
+    if (res.code !== 200) {
+      message.error("错题学生列表加载失败");
+      return;
+    }
+    wrongStudentList.value = Array.isArray(res.data) ? res.data : [];
+    wrongStudentsPagination.total = Number(res.total || 0);
+  } catch (error) {
+    message.error("错题学生列表加载失败");
+  } finally {
+    loadingWrongStudents.value = false;
+  }
+};
+
+const openWrongStudentsModalByKey = async (
+  questionKey: string,
+  classId: string,
+  title: string
+) => {
+  const normalizedQuestionKey = normalizeQuestionKey(questionKey);
+  const classIdText = String(classId || "").trim();
+  if (!normalizedQuestionKey || !classIdText) return;
+  wrongStudentsQuery.question_key = normalizedQuestionKey;
+  wrongStudentsQuery.class_id = classIdText;
+  wrongStudentsPagination.page = 1;
+  wrongStudentsModalTitle.value = title;
+  wrongStudentsModalOpen.value = true;
+  await loadWrongStudents();
+};
+
+const openWrongStudentsModal = async (question: QuestionItem, index: number) => {
+  if (!canOpenWrongStudents(question, index)) return;
+  const questionKey = getQuestionDisplayKey(question, index);
+  const classId = String(teacherSelectedClassId.value ?? "").trim();
+  await openWrongStudentsModalByKey(
+    questionKey,
+    classId,
+    `第${question.string_number || index + 1}题 错题学生`
+  );
+};
+
+const handleWrongStudentsPageChange = async (page: number) => {
+  wrongStudentsPagination.page = page;
+  await loadWrongStudents();
+};
+
+const handleWrongStudentsSizeChange = async (_current: number, size: number) => {
+  wrongStudentsPagination.size = size;
+  wrongStudentsPagination.page = 1;
+  await loadWrongStudents();
+};
+
+const loadWrongQuestionRecommend = async () => {
+  wrongQuestionRecommendKnowledge.value = [];
+  if (!selectedPaper.value?.id || !selectedPaper.value?.exam_id) return;
+
+  const classId = String(
+    wrongQuestionSearchFilters.class_id ?? teacherSelectedClassId.value ?? ""
+  ).trim();
+  const studentId = String(wrongQuestionSearchFilters.student_id ?? "").trim();
+  if (!classId && !studentId) return;
+
+  try {
+    const res = await getTeacherWrongQuestionRecommendApi({
+      exam_id: Number(selectedPaper.value.exam_id),
+      test_paper_id: Number(selectedPaper.value.id),
+      class_id: classId || undefined,
+      student_id: studentId || undefined,
+      question_type: String(wrongQuestionSearchFilters.question_type || "").trim() || undefined,
+      knowledge_keyword:
+        String(wrongQuestionSearchFilters.knowledge_keyword || "").trim() || undefined,
+      limit: 12,
+    });
+    if (res.code !== 200) return;
+    const data = res.data || {};
+    const knowledgeList = Array.isArray(data.knowledge_points) ? data.knowledge_points : [];
+    const questionTypeList = Array.isArray(data.question_types) ? data.question_types : [];
+    wrongQuestionRecommendKnowledge.value = knowledgeList;
+    wrongQuestionTypeOptions.value = questionTypeList
+      .map((item: any) => {
+        const name = String(item?.name || "").trim();
+        if (!name) return null;
+        return { label: name, value: name };
+      })
+      .filter(Boolean) as { label: string; value: string }[];
+  } catch (error) {
+    // do nothing, recommendation failure should not block search
+  }
+};
+
+const loadWrongQuestionSearch = async (resetPage = false) => {
+  if (resetPage) {
+    wrongQuestionSearchPagination.page = 1;
+  }
+  wrongQuestionSearchList.value = [];
+  if (!selectedPaper.value?.id || !selectedPaper.value?.exam_id) return;
+
+  const classId = String(
+    wrongQuestionSearchFilters.class_id ?? teacherSelectedClassId.value ?? ""
+  ).trim();
+  const studentId = String(wrongQuestionSearchFilters.student_id ?? "").trim();
+  if (!classId && !studentId) return;
+
+  loadingWrongQuestionSearch.value = true;
+  try {
+    const res = await searchTeacherWrongQuestionApi({
+      page: wrongQuestionSearchPagination.page,
+      size: wrongQuestionSearchPagination.size,
+      exam_id: Number(selectedPaper.value.exam_id),
+      test_paper_id: Number(selectedPaper.value.id),
+      class_id: classId || undefined,
+      student_id: studentId || undefined,
+      question_type: String(wrongQuestionSearchFilters.question_type || "").trim() || undefined,
+      knowledge_keyword:
+        String(wrongQuestionSearchFilters.knowledge_keyword || "").trim() || undefined,
+    });
+    if (res.code !== 200) {
+      message.error("错题搜索失败");
+      return;
+    }
+    wrongQuestionSearchList.value = Array.isArray(res.data) ? res.data : [];
+    wrongQuestionSearchPagination.total = Number(res.total || 0);
+
+    const typeMap = new Map<string, string>();
+    for (const item of wrongQuestionSearchList.value) {
+      const questionType = String(item.question_type || "").trim();
+      if (questionType) {
+        typeMap.set(questionType, questionType);
+      }
+    }
+    if (typeMap.size) {
+      const fromResult = Array.from(typeMap.keys()).map((item) => ({
+        label: item,
+        value: item,
+      }));
+      const merged = new Map<string, { label: string; value: string }>();
+      for (const option of [...wrongQuestionTypeOptions.value, ...fromResult]) {
+        merged.set(option.value, option);
+      }
+      wrongQuestionTypeOptions.value = Array.from(merged.values());
+    }
+  } catch (error) {
+    message.error("错题搜索失败");
+  } finally {
+    loadingWrongQuestionSearch.value = false;
+  }
+};
+
+const handleWrongQuestionSearchPageChange = async (page: number) => {
+  wrongQuestionSearchPagination.page = page;
+  await loadWrongQuestionSearch(false);
+};
+
+const handleWrongQuestionSearchSizeChange = async (_current: number, size: number) => {
+  wrongQuestionSearchPagination.size = size;
+  wrongQuestionSearchPagination.page = 1;
+  await loadWrongQuestionSearch(false);
+};
+
+const triggerWrongQuestionSearch = async () => {
+  await loadWrongQuestionSearch(true);
+  await loadWrongQuestionRecommend();
+};
+
+const useRecommendKnowledge = async (name: string) => {
+  wrongQuestionSearchFilters.knowledge_keyword = name;
+  await triggerWrongQuestionSearch();
+};
+
+const resetWrongQuestionSearchFilters = async () => {
+  wrongQuestionSearchFilters.question_type = undefined;
+  wrongQuestionSearchFilters.knowledge_keyword = "";
+  wrongQuestionSearchFilters.student_id = undefined;
+  wrongQuestionSearchPagination.page = 1;
+  await triggerWrongQuestionSearch();
+};
+
+const openWrongStudentsFromSearch = async (record: WrongQuestionSearchRecord) => {
+  const questionKey = normalizeQuestionKey(record.question_key || record.string_number);
+  const classId = String(record.class_id || "").trim();
+  if (!questionKey || !classId) return;
+  await openWrongStudentsModalByKey(
+    questionKey,
+    classId,
+    `第${record.string_number || questionKey}题 错题学生`
+  );
+};
+
 const resetQuestionScoreState = () => {
   questionScoreRecords.value = [];
   studentQuestionScoreMap.value = {};
+  classQuestionStatRecords.value = [];
+  wrongQuestionSearchList.value = [];
+  wrongQuestionTypeOptions.value = [];
+  wrongQuestionRecommendKnowledge.value = [];
   teacherSelectedClassId.value = undefined;
   teacherSelectedStudentId.value = undefined;
+  wrongQuestionSearchFilters.class_id = undefined;
+  wrongQuestionSearchFilters.student_id = undefined;
+  wrongQuestionSearchFilters.question_type = undefined;
+  wrongQuestionSearchFilters.knowledge_keyword = "";
+  wrongQuestionSearchPagination.page = 1;
+  wrongQuestionSearchPagination.total = 0;
+  wrongStudentsModalOpen.value = false;
+  wrongStudentList.value = [];
+  wrongStudentsQuery.class_id = undefined;
+  wrongStudentsQuery.question_key = undefined;
+  wrongStudentsPagination.page = 1;
+  wrongStudentsPagination.total = 0;
 };
 
 const loadQuestionScores = async (paper: PaperItem) => {
@@ -545,12 +1113,19 @@ watch(
     if (!options.length) {
       teacherSelectedClassId.value = undefined;
       teacherSelectedStudentId.value = undefined;
+      wrongQuestionSearchFilters.class_id = undefined;
+      wrongQuestionSearchFilters.student_id = undefined;
       return;
     }
 
     const currentClass = String(teacherSelectedClassId.value ?? "");
     if (!options.some((item) => item.value === currentClass)) {
       teacherSelectedClassId.value = options[0].value;
+    }
+    const searchClass = String(wrongQuestionSearchFilters.class_id ?? "");
+    if (!options.some((item) => item.value === searchClass)) {
+      wrongQuestionSearchFilters.class_id = options[0].value;
+      wrongQuestionSearchFilters.student_id = undefined;
     }
   },
   { immediate: true }
@@ -574,6 +1149,22 @@ watch(
   { immediate: true }
 );
 
+watch(
+  wrongSearchStudentOptions,
+  (options) => {
+    if (!isTeacher.value) return;
+    const currentStudent = String(wrongQuestionSearchFilters.student_id ?? "");
+    if (!options.length) {
+      wrongQuestionSearchFilters.student_id = undefined;
+      return;
+    }
+    if (currentStudent && !options.some((item) => item.value === currentStudent)) {
+      wrongQuestionSearchFilters.student_id = undefined;
+    }
+  },
+  { immediate: true }
+);
+
 watch(teacherScoreMode, (mode) => {
   if (mode !== "student") return;
   if (!teacherStudentOptions.value.length) {
@@ -585,6 +1176,31 @@ watch(teacherScoreMode, (mode) => {
     teacherSelectedStudentId.value = teacherStudentOptions.value[0].value;
   }
 });
+
+watch(
+  () => wrongQuestionSearchFilters.class_id,
+  () => {
+    wrongQuestionSearchFilters.student_id = undefined;
+  }
+);
+
+watch(
+  [
+    () => selectedPaper.value?.id,
+    () => selectedPaper.value?.exam_id,
+    teacherSelectedClassId,
+  ],
+  async () => {
+    if (!isTeacher.value) return;
+    await loadClassQuestionStats(false);
+    wrongQuestionSearchFilters.class_id = String(teacherSelectedClassId.value ?? "").trim() || undefined;
+    if (!selectedPaper.value?.id || !selectedPaper.value?.exam_id) {
+      wrongQuestionSearchList.value = [];
+      wrongQuestionRecommendKnowledge.value = [];
+      return;
+    }
+  }
+);
 
 const loadExamOptions = async () => {
   if (isTeacher.value) {
@@ -817,7 +1433,17 @@ onMounted(async () => {
   margin-bottom: 8px;
   display: flex;
   gap: 12px;
+  align-items: center;
   flex-wrap: wrap;
+  color: #5b667a;
+}
+
+.error-rate-link {
+  padding: 0;
+  height: auto;
+}
+
+.question-meta-text {
   color: #5b667a;
 }
 
@@ -833,6 +1459,35 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.wrong-search-wrap {
+  margin-top: 12px;
+}
+
+.wrong-search-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #223b63;
+  margin-bottom: 10px;
+}
+
+.wrong-search-filters {
+  margin-bottom: 10px;
+}
+
+.knowledge-recommend {
+  margin-bottom: 10px;
+  color: #5b667a;
+}
+
+.knowledge-recommend-label {
+  margin-right: 8px;
+}
+
+.recommend-tag {
+  cursor: pointer;
+  user-select: none;
 }
 
 .empty-wrap {

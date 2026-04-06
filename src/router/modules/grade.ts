@@ -30,6 +30,11 @@ export default [
         component: () => import('@/views/paper/StudentPaperView.vue')
     },
     {
+        path: '/student_wrong_question',
+        name: 'student_wrong_question',
+        component: () => import('@/views/wrongquestion/StudentWrongQuestion.vue')
+    },
+    {
         path: '/elevate-analytics',
         name: 'elevateAnalytics',
         component: () => import('@/views/gradeanalysis/ElevateAnalyticsPage.vue')

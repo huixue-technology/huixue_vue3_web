@@ -34,4 +34,9 @@ export default [
         path: '/class_analysis_simple',
         component: () => import('@/views/teacher/ComAnalysisSimple.vue'),
     },
+    {
+        name: '/wrong_question',
+        path: '/wrong_question',
+        component: () => import('@/views/wrongquestion/TeacherWrongQuestion.vue'),
+    },
 ]

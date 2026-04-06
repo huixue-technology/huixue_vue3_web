@@ -159,6 +159,74 @@
             </section>
           </article>
         </div>
+
+        <div v-if="false && selectedPaper" class="wrong-search-wrap">
+          <a-divider />
+          <div class="wrong-search-title">我的错题搜索</div>
+          <a-space wrap class="wrong-search-filters">
+            <a-select
+              v-model:value="wrongQuestionSearchFilters.question_type"
+              :options="wrongQuestionTypeOptions"
+              placeholder="题型筛选"
+              style="width: 180px"
+              allow-clear
+            />
+            <a-input
+              v-model:value="wrongQuestionSearchFilters.knowledge_keyword"
+              placeholder="按知识点模糊搜索"
+              style="width: 260px"
+              allow-clear
+              @pressEnter="triggerWrongQuestionSearch"
+            />
+            <a-button type="primary" @click="triggerWrongQuestionSearch">搜索</a-button>
+            <a-button @click="resetWrongQuestionSearchFilters">重置</a-button>
+          </a-space>
+
+          <div v-if="wrongQuestionRecommendKnowledge.length" class="knowledge-recommend">
+            <span class="knowledge-recommend-label">推荐知识点：</span>
+            <a-tag
+              v-for="item in wrongQuestionRecommendKnowledge"
+              :key="item.name"
+              class="recommend-tag"
+              color="processing"
+              @click="useRecommendKnowledge(item.name)"
+            >
+              {{ item.name }} ({{ item.count }})
+            </a-tag>
+          </div>
+
+          <a-table
+            :columns="wrongQuestionSearchColumns"
+            :data-source="wrongQuestionSearchList"
+            :loading="loadingWrongQuestionSearch"
+            :pagination="false"
+            :row-key="(row) => `${row.class_id}-${row.question_key}`"
+            size="small"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.dataIndex === 'knowledge_points'">
+                {{ formatKnowledgePoints(record.knowledge_points) }}
+              </template>
+              <template v-else-if="column.dataIndex === 'wrong_rate'">
+                {{ formatPercent(record.wrong_rate) }}
+              </template>
+              <template v-else-if="column.key === 'wrong_count'">
+                {{ Number(record.wrong_count || 0) }}/{{ Number(record.participant_count || 0) }}
+              </template>
+            </template>
+          </a-table>
+          <div class="pager-wrap">
+            <a-pagination
+              :current="wrongQuestionSearchPagination.page"
+              :page-size="wrongQuestionSearchPagination.size"
+              :total="wrongQuestionSearchPagination.total"
+              :show-size-changer="true"
+              :show-total="(total: number) => `共 ${total} 条`"
+              @change="handleWrongQuestionSearchPageChange"
+              @showSizeChange="handleWrongQuestionSearchSizeChange"
+            />
+          </div>
+        </div>
       </a-spin>
     </a-card>
 
@@ -178,10 +246,12 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import {
+  getStudentWrongQuestionRecommendApi,
   getStudentTestPaperApi,
   getTestPaperFileUrl,
   getTestPaperQuestionScoreApi,
   getTestPaperQuestionsApi,
+  searchStudentWrongQuestionApi,
 } from "@/servers/api/testPaper";
 import { useUserStore } from "@/store";
 import router from "@/router";
@@ -215,6 +285,21 @@ type QuestionScoreRecord = {
   [key: string]: any;
 };
 
+type WrongQuestionSearchRecord = {
+  class_id?: string;
+  question_key?: string;
+  question_id?: number;
+  string_number?: string;
+  question_type?: string;
+  knowledge_points?: string[];
+  student_score?: number;
+  full_score?: number;
+  wrong_rate?: number;
+  wrong_count?: number;
+  participant_count?: number;
+  [key: string]: any;
+};
+
 type ScoreMap = Record<string, number | string>;
 
 const userStore = useUserStore();
@@ -230,6 +315,22 @@ const examOptions = ref<{ label: string; value: number }[]>([]);
 const showOnlyWrong = ref(false);
 const pdfPreviewOpen = ref(false);
 const pdfPreviewUrl = ref("");
+const loadingWrongQuestionSearch = ref(false);
+const wrongQuestionSearchList = ref<WrongQuestionSearchRecord[]>([]);
+const wrongQuestionSearchPagination = reactive({
+  page: 1,
+  size: 8,
+  total: 0,
+});
+const wrongQuestionSearchFilters = reactive<{
+  question_type?: string;
+  knowledge_keyword?: string;
+}>({
+  question_type: undefined,
+  knowledge_keyword: "",
+});
+const wrongQuestionTypeOptions = ref<{ label: string; value: string }[]>([]);
+const wrongQuestionRecommendKnowledge = ref<{ name: string; count: number }[]>([]);
 
 const filters = reactive<{
   exam_id?: number;
@@ -257,6 +358,16 @@ const subjectOptions = [
   { label: "政治", value: "政治" },
   { label: "历史", value: "历史" },
   { label: "地理", value: "地理" },
+];
+
+const wrongQuestionSearchColumns = [
+  { title: "题号", dataIndex: "string_number", width: 90 },
+  { title: "题型", dataIndex: "question_type", width: 130 },
+  { title: "知识点", dataIndex: "knowledge_points", ellipsis: true },
+  { title: "我的得分", dataIndex: "student_score", width: 100 },
+  { title: "题目满分", dataIndex: "full_score", width: 100 },
+  { title: "班级错误率", dataIndex: "wrong_rate", width: 120 },
+  { title: "班级错题人数", dataIndex: "wrong_count", key: "wrong_count", width: 120 },
 ];
 
 const studentUid = computed(() => {
@@ -374,6 +485,18 @@ const formatScore = (value: number | string | null | undefined) => {
     return String(Number(value.toFixed(2)));
   }
   return String(value);
+};
+
+const formatPercent = (value: any) => {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) return "-";
+  return `${(numberValue * 100).toFixed(1)}%`;
+};
+
+const formatKnowledgePoints = (value: any) => {
+  const list = normalizeStringArray(value);
+  if (!list.length) return "-";
+  return list.join("、");
 };
 
 const getQuestionOwnScore = (question: QuestionItem, index: number) => {
@@ -517,6 +640,108 @@ const loadQuestions = async (paperId: number) => {
   }
 };
 
+const loadWrongQuestionRecommend = async () => {
+  wrongQuestionRecommendKnowledge.value = [];
+  wrongQuestionTypeOptions.value = [];
+  if (!studentUid.value || !selectedPaper.value?.id || !selectedPaper.value?.exam_id) return;
+
+  try {
+    const response = await getStudentWrongQuestionRecommendApi(studentUid.value, {
+      exam_id: Number(selectedPaper.value.exam_id),
+      test_paper_id: Number(selectedPaper.value.id),
+      question_type: String(wrongQuestionSearchFilters.question_type || "").trim() || undefined,
+      knowledge_keyword:
+        String(wrongQuestionSearchFilters.knowledge_keyword || "").trim() || undefined,
+      limit: 12,
+    });
+    if (response.code !== 200) return;
+    const data = response.data || {};
+    const knowledgeList = Array.isArray(data.knowledge_points) ? data.knowledge_points : [];
+    const typeList = Array.isArray(data.question_types) ? data.question_types : [];
+    wrongQuestionRecommendKnowledge.value = knowledgeList;
+    wrongQuestionTypeOptions.value = typeList
+      .map((item: any) => {
+        const name = String(item?.name || "").trim();
+        if (!name) return null;
+        return { label: name, value: name };
+      })
+      .filter(Boolean) as { label: string; value: string }[];
+  } catch (_error) {
+    // ignore recommend failures
+  }
+};
+
+const loadWrongQuestionSearch = async (resetPage = false) => {
+  if (resetPage) {
+    wrongQuestionSearchPagination.page = 1;
+  }
+  wrongQuestionSearchList.value = [];
+  if (!studentUid.value || !selectedPaper.value?.id || !selectedPaper.value?.exam_id) return;
+
+  loadingWrongQuestionSearch.value = true;
+  try {
+    const response = await searchStudentWrongQuestionApi(studentUid.value, {
+      page: wrongQuestionSearchPagination.page,
+      size: wrongQuestionSearchPagination.size,
+      exam_id: Number(selectedPaper.value.exam_id),
+      test_paper_id: Number(selectedPaper.value.id),
+      question_type: String(wrongQuestionSearchFilters.question_type || "").trim() || undefined,
+      knowledge_keyword:
+        String(wrongQuestionSearchFilters.knowledge_keyword || "").trim() || undefined,
+    });
+    if (response.code !== 200) {
+      message.error("错题搜索失败");
+      return;
+    }
+    wrongQuestionSearchList.value = Array.isArray(response.data) ? response.data : [];
+    wrongQuestionSearchPagination.total = Number(response.total || 0);
+
+    const merged = new Map<string, { label: string; value: string }>();
+    for (const option of wrongQuestionTypeOptions.value) {
+      merged.set(option.value, option);
+    }
+    for (const item of wrongQuestionSearchList.value) {
+      const typeValue = String(item.question_type || "").trim();
+      if (typeValue && !merged.has(typeValue)) {
+        merged.set(typeValue, { label: typeValue, value: typeValue });
+      }
+    }
+    wrongQuestionTypeOptions.value = Array.from(merged.values());
+  } catch (_error) {
+    message.error("错题搜索失败");
+  } finally {
+    loadingWrongQuestionSearch.value = false;
+  }
+};
+
+const triggerWrongQuestionSearch = async () => {
+  await loadWrongQuestionSearch(true);
+  await loadWrongQuestionRecommend();
+};
+
+const useRecommendKnowledge = async (name: string) => {
+  wrongQuestionSearchFilters.knowledge_keyword = name;
+  await triggerWrongQuestionSearch();
+};
+
+const resetWrongQuestionSearchFilters = async () => {
+  wrongQuestionSearchFilters.question_type = undefined;
+  wrongQuestionSearchFilters.knowledge_keyword = "";
+  wrongQuestionSearchPagination.page = 1;
+  await triggerWrongQuestionSearch();
+};
+
+const handleWrongQuestionSearchPageChange = async (page: number) => {
+  wrongQuestionSearchPagination.page = page;
+  await loadWrongQuestionSearch(false);
+};
+
+const handleWrongQuestionSearchSizeChange = async (_current: number, size: number) => {
+  wrongQuestionSearchPagination.size = size;
+  wrongQuestionSearchPagination.page = 1;
+  await loadWrongQuestionSearch(false);
+};
+
 const loadPaperDetail = async (paper: PaperItem) => {
   await Promise.all([loadQuestions(Number(paper.id)), loadQuestionScores(paper)]);
 };
@@ -549,6 +774,10 @@ const loadPapers = async (resetPage = false) => {
       selectedPaper.value = null;
       questionList.value = [];
       studentQuestionScoreMap.value = {};
+      wrongQuestionSearchList.value = [];
+      wrongQuestionRecommendKnowledge.value = [];
+      wrongQuestionTypeOptions.value = [];
+      wrongQuestionSearchPagination.total = 0;
       return;
     }
 
@@ -702,6 +931,35 @@ onMounted(async () => {
 .pager-wrap {
   margin-top: 14px;
   text-align: right;
+}
+
+.wrong-search-wrap {
+  margin-top: 14px;
+}
+
+.wrong-search-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #133862;
+  margin-bottom: 10px;
+}
+
+.wrong-search-filters {
+  margin-bottom: 10px;
+}
+
+.knowledge-recommend {
+  margin-bottom: 10px;
+  color: #4f6484;
+}
+
+.knowledge-recommend-label {
+  margin-right: 8px;
+}
+
+.recommend-tag {
+  cursor: pointer;
+  user-select: none;
 }
 
 .paper-brief {
