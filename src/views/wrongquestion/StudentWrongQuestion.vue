@@ -7,7 +7,7 @@
       <p>固定当前学生，查看全部错题并直接预览题图与 Markdown 答案。</p>
     </div>
 
-    <a-card class="filter-card glass-card">
+    <a-card class="filter-card">
       <a-space wrap>
         <a-input
           v-model:value="filters.question_type"
@@ -28,7 +28,7 @@
       </a-space>
     </a-card>
 
-    <a-card title="推荐结果" class="recommend-card glass-card">
+    <a-card title="推荐结果" class="recommend-card">
       <div v-if="recommendText" class="recommend-summary">{{ recommendText }}</div>
       <div v-if="recommendKnowledge.length" class="recommend-row">
         <span class="recommend-label">高频知识点：</span>
@@ -44,14 +44,20 @@
       </div>
       <div v-if="recommendTypes.length" class="recommend-row">
         <span class="recommend-label">高频题型：</span>
-        <a-tag v-for="item in recommendTypes" :key="item.name" color="blue">
+        <a-tag 
+          v-for="item in recommendTypes" 
+          :key="item.name" 
+          color="blue"
+          class="recommend-tag"
+          @click="useRecommendType(item.name)"
+        >
           {{ item.name }} ({{ item.count }})
         </a-tag>
       </div>
       <a-empty v-if="!recommendKnowledge.length && !recommendTypes.length" description="暂无推荐结果" />
     </a-card>
 
-    <a-card class="glass-card list-card">
+    <a-card class="list-card">
       <template #title>
         <div class="list-title">
           <span>错题列表</span>
@@ -60,16 +66,12 @@
       </template>
 
       <a-spin :spinning="loading">
-        <a-empty
-          v-if="!rows.length"
-          description="暂无错题数据"
-        />
-
-        <div v-else class="question-list">
+        <div v-if="rows.length" class="question-list">
           <div
             v-for="record in rows"
             :key="`${record.exam_id || ''}-${record.test_paper_id || ''}-${record.class_id || ''}-${record.question_key || record.question_id || ''}`"
             class="question-card"
+            :class="{ 'loading-state': loading, 'loaded-state': loaded && !loading }"
           >
             <div class="question-card-head">
               <div class="left-info">
@@ -115,11 +117,13 @@
                   class="markdown-body"
                   v-html="renderMarkdownLite(record.answer)"
                 ></div>
-                <a-empty v-else description="暂无答案" :image="null" />
+                <div v-else class="markdown-body" style="color:#999;">暂无答案</div>
               </div>
             </div>
           </div>
         </div>
+
+        <a-empty v-else description="暂无错题数据" />
       </a-spin>
 
       <div class="pagination-wrap">
@@ -210,9 +214,7 @@ const normalizeStringArray = (value: unknown): string[] => {
           .map((item) => normalizeText(item))
           .filter(Boolean);
       }
-    } catch (_error) {
-      // ignore parse error and fallback to raw text
-    }
+    } catch (_error) {}
     return [text];
   }
   return [];
@@ -245,7 +247,7 @@ const escapeHtml = (text: string) =>
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
 const renderInlineMarkdown = (raw: string) => {
@@ -254,7 +256,7 @@ const renderInlineMarkdown = (raw: string) => {
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
   html = html.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    /\[([^\]]+)\](https?:\/\/[^\s]+)/g,
     '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
   );
   return html;
@@ -343,6 +345,8 @@ const buildSearchParams = () => ({
   knowledge_keyword: normalizeText(filters.knowledge_keyword) || undefined,
 });
 
+const loaded = ref(false);
+
 const searchWrongQuestions = async (resetPage = false) => {
   if (!studentUid.value) {
     message.warning("未识别学生身份");
@@ -351,6 +355,7 @@ const searchWrongQuestions = async (resetPage = false) => {
   if (resetPage) pagination.page = 1;
 
   loading.value = true;
+  loaded.value = false; // 重置加载状态
   try {
     const res = await searchStudentWrongQuestionApi(studentUid.value, buildSearchParams());
     if (res.code !== 200) {
@@ -363,6 +368,7 @@ const searchWrongQuestions = async (resetPage = false) => {
     message.error("查询错题失败");
   } finally {
     loading.value = false;
+    loaded.value = true;
   }
 };
 
@@ -417,6 +423,11 @@ const useRecommendKnowledge = async (knowledge: string) => {
   await searchWrongQuestions(true);
 };
 
+const useRecommendType = async (type: string) => {
+  filters.question_type = type;
+  await searchWrongQuestions(true);
+};
+
 const resetFilters = () => {
   filters.question_type = "";
   filters.knowledge_keyword = "";
@@ -447,45 +458,39 @@ onMounted(async () => {
 
 <style scoped lang="less">
 .wrong-question-page {
-  position: relative;
-  padding: 20px;
   min-height: 100vh;
-  background: linear-gradient(180deg, #f1f8ff 0%, #f7fbff 40%, #f2f9ff 100%);
-}
-
-.page-decoration {
-  position: absolute;
-  top: -120px;
-  right: -80px;
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle at 30% 30%, rgba(43, 157, 178, 0.25), rgba(43, 157, 178, 0));
-  pointer-events: none;
+  padding: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(22, 119, 255, 0.12), transparent 36%),
+    radial-gradient(circle at left 20%, rgba(64, 158, 255, 0.08), transparent 32%),
+    #f4f7fd;
 }
 
 .page-header {
-  margin-bottom: 14px;
-}
+  margin-bottom: 16px;
 
-.page-header h2 {
-  margin-bottom: 6px;
-  color: #0f4d5a;
-}
+  h2 {
+    margin: 0 0 6px;
+    font-size: 30px;
+    font-weight: 700;
+    color: #183a6b;
+  }
 
-.page-header p {
-  margin: 0;
-  color: #3f6870;
-}
-
-.glass-card {
-  border-radius: 14px;
-  border: 1px solid #dcf1f7;
-  box-shadow: 0 10px 24px rgba(20, 94, 112, 0.08);
+  p {
+    margin: 0;
+    color: #4f6484;
+    font-size: 14px;
+  }
 }
 
 .filter-card,
-.recommend-card {
-  margin-bottom: 14px;
+.recommend-card,
+.list-card {
+  background: #ffffff;
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(17, 58, 109, 0.08);
+  margin-bottom: 16px;
 }
 
 .recommend-summary {
@@ -507,18 +512,17 @@ onMounted(async () => {
   user-select: none;
 }
 
-.list-card {
-  overflow: hidden;
-}
-
 .list-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
+  position: relative;
 }
 
 .list-total {
+  position: absolute;
+  right: 0;
   color: #4b6d77;
   font-size: 13px;
   font-weight: 400;
@@ -526,14 +530,30 @@ onMounted(async () => {
 
 .question-list {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .question-card {
-  border: 1px solid #dff0f4;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #f5fcff 100%);
-  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #d8e6f9;
+  background: #f6fbff; /* 加载中默认淡蓝色 */
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(15, 69, 133, 0.08);
+  transition: all 0.3s ease;
+}
+
+.question-card.loaded-state {
+  background: #ffffff !important;
+}
+
+.question-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(22, 119, 255, 0.16);
+}
+
+.question-card.selected {
+  border-color: #1677ff;
+  box-shadow: 0 10px 24px rgba(22, 119, 255, 0.2);
 }
 
 .question-card-head {
@@ -570,15 +590,15 @@ onMounted(async () => {
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 44%) 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
 .image-panel,
 .answer-panel {
-  border-radius: 10px;
-  border: 1px solid #dff1f5;
-  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #d7e8ff;
+  background: #f6fbff;
   padding: 12px;
 }
 
@@ -589,13 +609,14 @@ onMounted(async () => {
 }
 
 .image-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 :deep(.question-image) {
-  width: 100%;
+  max-width: 100%;
+  width: 460px;
   border-radius: 8px;
   overflow: hidden;
   background: #effbff;
@@ -604,7 +625,7 @@ onMounted(async () => {
 
 :deep(.question-image img) {
   width: 100%;
-  height: 240px;
+  height: auto;
   object-fit: contain;
   background: #f6fdff;
 }
@@ -614,7 +635,7 @@ onMounted(async () => {
   overflow: auto;
   padding: 10px 12px;
   border-radius: 8px;
-  background: #f5fcff;
+  background: #f8fbff;
   border: 1px solid #e6f5f9;
   color: #21444c;
   line-height: 1.7;
@@ -676,9 +697,8 @@ onMounted(async () => {
   .content-grid {
     grid-template-columns: 1fr;
   }
-
-  :deep(.question-image img) {
-    height: 260px;
+  :deep(.question-image) {
+    width: 100%;
   }
 }
 </style>

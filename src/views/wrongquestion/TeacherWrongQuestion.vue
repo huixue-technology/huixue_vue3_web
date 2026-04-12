@@ -1,13 +1,11 @@
 ﻿<template>
   <div class="wrong-question-page">
-    <div class="page-decoration"></div>
-
     <div class="page-header">
       <h2>老师端错题模块</h2>
       <p>查看全量错题，支持直接预览题目图片与 Markdown 答案。</p>
     </div>
 
-    <a-card class="filter-card glass-card">
+    <a-card class="filter-card">
       <a-space wrap>
         <a-input
           v-model:value="filters.class_id"
@@ -40,7 +38,7 @@
       </a-space>
     </a-card>
 
-    <a-card title="推荐结果" class="recommend-card glass-card">
+    <a-card title="推荐结果" class="recommend-card">
       <div v-if="recommendText" class="recommend-summary">{{ recommendText }}</div>
       <div v-if="recommendKnowledge.length" class="recommend-row">
         <span class="recommend-label">高频知识点：</span>
@@ -56,14 +54,19 @@
       </div>
       <div v-if="recommendTypes.length" class="recommend-row">
         <span class="recommend-label">高频题型：</span>
-        <a-tag v-for="item in recommendTypes" :key="item.name" color="blue">
+        <a-tag
+          v-for="item in recommendTypes"
+          :key="item.name"
+          color="blue"
+          class="recommend-tag"
+        >
           {{ item.name }} ({{ item.count }})
         </a-tag>
       </div>
       <a-empty v-if="!recommendKnowledge.length && !recommendTypes.length" description="暂无推荐结果" />
     </a-card>
 
-    <a-card class="glass-card list-card">
+    <a-card class="list-card">
       <template #title>
         <div class="list-title">
           <span>错题列表</span>
@@ -228,9 +231,7 @@ const normalizeStringArray = (value: unknown): string[] => {
           .map((item) => normalizeText(item))
           .filter(Boolean);
       }
-    } catch (_error) {
-      // ignore parse error and fallback to raw text
-    }
+    } catch (_error) {}
     return [text];
   }
   return [];
@@ -263,7 +264,7 @@ const escapeHtml = (text: string) =>
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
 const renderInlineMarkdown = (raw: string) => {
@@ -457,50 +458,62 @@ onMounted(async () => {
 
 <style scoped lang="less">
 .wrong-question-page {
-  position: relative;
-  padding: 20px;
   min-height: 100vh;
-  background: linear-gradient(180deg, #f2f7ff 0%, #f8fbff 40%, #f3f7ff 100%);
+  padding: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(22, 119, 255, 0.12), transparent 36%),
+    radial-gradient(circle at left 20%, rgba(64, 158, 255, 0.08), transparent 32%),
+    #f4f7fd;
+  position: relative;
 }
 
-.page-decoration {
-  position: absolute;
-  top: -120px;
-  right: -80px;
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle at 30% 30%, rgba(71, 140, 255, 0.25), rgba(71, 140, 255, 0));
+.wrong-question-page::before {
+  content: '';
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(#f7fafc, 0.7);
+  opacity: 0;
+  z-index: 9;
+  transition: opacity 0.3s ease;
   pointer-events: none;
+}
+.wrong-question-page.loading::before {
+  opacity: 1;
 }
 
 .page-header {
-  margin-bottom: 14px;
-}
+  margin-bottom: 16px;
 
-.page-header h2 {
-  margin-bottom: 6px;
-  color: #143a68;
-}
+  h2 {
+    margin: 0 0 6px;
+    font-size: 30px;
+    font-weight: 700;
+    color: #183a6b;
+  }
 
-.page-header p {
-  margin: 0;
-  color: #4f6480;
-}
-
-.glass-card {
-  border-radius: 14px;
-  border: 1px solid #e9f1ff;
-  box-shadow: 0 10px 24px rgba(25, 65, 125, 0.08);
+  p {
+    margin: 0;
+    color: #4f6484;
+    font-size: 14px;
+  }
 }
 
 .filter-card,
-.recommend-card {
-  margin-bottom: 14px;
+.recommend-card,
+.list-card {
+  background: #ffffff;
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(17, 58, 109, 0.08);
+  margin-bottom: 16px;
 }
 
 .recommend-summary {
   margin-bottom: 10px;
-  color: #1d3f6e;
+  color: #0f5365;
 }
 
 .recommend-row {
@@ -509,7 +522,7 @@ onMounted(async () => {
 
 .recommend-label {
   margin-right: 8px;
-  color: #5b667a;
+  color: #4b6d77;
 }
 
 .recommend-tag {
@@ -517,33 +530,44 @@ onMounted(async () => {
   user-select: none;
 }
 
-.list-card {
-  overflow: hidden;
-}
-
 .list-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
+  position: relative;
 }
 
 .list-total {
-  color: #4f6480;
+  position: absolute;
+  right: 0;
+  color: #4b6d77;
   font-size: 13px;
   font-weight: 400;
 }
 
 .question-list {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .question-card {
-  border: 1px solid #e6eefc;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #d8e6f9;
+  background: #fff;
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(15, 69, 133, 0.08);
+  transition: all 0.3s ease;
+}
+
+.question-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(22, 119, 255, 0.16);
+}
+
+.question-card.selected {
+  border-color: #1677ff;
+  box-shadow: 0 10px 24px rgba(22, 119, 255, 0.2);
 }
 
 .question-card-head {
@@ -563,14 +587,14 @@ onMounted(async () => {
 
 .question-number {
   font-weight: 600;
-  color: #17375f;
+  color: #0f4d5a;
 }
 
 .right-metrics {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  color: #335079;
+  color: #2a5f6a;
   font-size: 13px;
 }
 
@@ -580,43 +604,44 @@ onMounted(async () => {
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 44%) 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
 .image-panel,
 .answer-panel {
-  border-radius: 10px;
-  border: 1px solid #e8effb;
-  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #d7e8ff;
+  background: #f6fbff;
   padding: 12px;
 }
 
 .panel-title {
   margin-bottom: 8px;
   font-weight: 600;
-  color: #1f426f;
+  color: #135463;
 }
 
 .image-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 :deep(.question-image) {
-  width: 100%;
+  max-width: 100%;
+  width: 460px;
   border-radius: 8px;
   overflow: hidden;
-  background: #f3f7ff;
-  border: 1px solid #e8effb;
+  background: #effbff;
+  border: 1px solid #e1f3f7;
 }
 
 :deep(.question-image img) {
   width: 100%;
-  height: 240px;
+  height: auto;
   object-fit: contain;
-  background: #f8fbff;
+  background: #f6fdff;
 }
 
 .markdown-body {
@@ -625,8 +650,8 @@ onMounted(async () => {
   padding: 10px 12px;
   border-radius: 8px;
   background: #f8fbff;
-  border: 1px solid #ebf1ff;
-  color: #24364f;
+  border: 1px solid #e6f5f9;
+  color: #21444c;
   line-height: 1.7;
 }
 
@@ -637,7 +662,7 @@ onMounted(async () => {
 .markdown-body :deep(h5),
 .markdown-body :deep(h6) {
   margin: 8px 0;
-  color: #143a68;
+  color: #0f4d5a;
 }
 
 .markdown-body :deep(p) {
@@ -652,24 +677,24 @@ onMounted(async () => {
 .markdown-body :deep(blockquote) {
   margin: 0 0 8px;
   padding: 6px 10px;
-  border-left: 3px solid #81a7e6;
-  background: #eef5ff;
-  color: #294f83;
+  border-left: 3px solid #6bbcca;
+  background: #ebf9fd;
+  color: #226573;
 }
 
 .markdown-body :deep(code) {
   padding: 2px 6px;
   border-radius: 4px;
-  background: #e9f2ff;
-  color: #255088;
+  background: #e6f7fb;
+  color: #1f6170;
 }
 
 .markdown-body :deep(.md-code) {
   margin: 0 0 8px;
   padding: 10px;
   border-radius: 8px;
-  background: #10233d;
-  color: #d8e9ff;
+  background: #12343d;
+  color: #d6f5fb;
   overflow: auto;
 }
 
@@ -686,9 +711,8 @@ onMounted(async () => {
   .content-grid {
     grid-template-columns: 1fr;
   }
-
-  :deep(.question-image img) {
-    height: 260px;
+  :deep(.question-image) {
+    width: 100%;
   }
 }
 </style>
