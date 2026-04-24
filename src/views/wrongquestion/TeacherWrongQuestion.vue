@@ -7,15 +7,20 @@
 
     <a-card class="filter-card">
       <a-space wrap>
-        <a-input
+        <a-select
           v-model:value="filters.class_id"
           placeholder="班级ID（可选）"
           allow-clear
           style="width: 180px"
+          :options="classOptions"
+          show-search
+          :filter-option="filterOption"
+          :loading="loadingClasses"
+          :default-value="undefined"
         />
         <a-input
           v-model:value="filters.student_id"
-          placeholder="学生ID（可选）"
+          placeholder="学生ID"
           allow-clear
           style="width: 180px"
         />
@@ -38,6 +43,7 @@
       </a-space>
     </a-card>
 
+    <!-- 其他部分完全不变 -->
     <a-card title="推荐结果" class="recommend-card">
       <div v-if="recommendText" class="recommend-summary">{{ recommendText }}</div>
       <div v-if="recommendKnowledge.length" class="recommend-row">
@@ -161,6 +167,7 @@ import {
   getTestPaperFileUrl,
   searchTeacherWrongQuestionApi,
 } from "@/servers/api/testPaper";
+import { getClassesApi } from "@/servers/api/classes";
 import router from "@/router";
 import { useUserStore } from "@/store";
 
@@ -195,13 +202,16 @@ const recommendKnowledge = ref<RecommendItem[]>([]);
 const recommendTypes = ref<RecommendItem[]>([]);
 const recommendText = ref("");
 
+const classOptions = ref<Array<{ label: string; value: string | number }>>([]);
+const loadingClasses = ref(false);
+
 const filters = reactive<{
   class_id?: string;
   student_id?: string;
   question_type?: string;
   knowledge_keyword?: string;
 }>({
-  class_id: "",
+  class_id: undefined, // 改为 undefined
   student_id: "",
   question_type: "",
   knowledge_keyword: "",
@@ -386,13 +396,7 @@ const searchWrongQuestions = async (resetPage = false) => {
 const loadRecommend = async () => {
   recommendLoading.value = true;
   try {
-    const res = await getTeacherWrongQuestionRecommendApi({
-      class_id: normalizeText(filters.class_id) || undefined,
-      student_id: normalizeText(filters.student_id) || undefined,
-      question_type: normalizeText(filters.question_type) || undefined,
-      knowledge_keyword: normalizeText(filters.knowledge_keyword) || undefined,
-      limit: 12,
-    });
+    const res = await getTeacherWrongQuestionRecommendApi(buildSearchParams());
     if (res.code !== 200) {
       message.error(res.msg || "获取推荐失败");
       return;
@@ -405,6 +409,50 @@ const loadRecommend = async () => {
     message.error("获取推荐失败");
   } finally {
     recommendLoading.value = false;
+  }
+};
+
+const filterOption = (input: string, option: any) => {
+  return option.label.toLowerCase().includes(input.toLowerCase());
+};
+
+const fetchClassList = async () => {
+  const userInfo = userStore.getUserInfo();
+  if (!userInfo?.teacher) return;
+  const schoolId = userInfo.teacher.school_id || userInfo.teacher.school || "";
+  if (!schoolId) return;
+
+  loadingClasses.value = true;
+  try {
+    const res = await getClassesApi({ school_id: schoolId, size: 1000 });
+    if (res.code === 200 && res.data) {
+      type ClassOption = { label: string; value: string | number };
+
+      let list: ClassOption[] = res.data.map((item: any) => ({
+        label: item.name || `班级${item.id}`,
+        value: item.id,
+      }));
+
+      list.sort((a: ClassOption, b: ClassOption) => {
+        const numA = a.label.match(/\d{4}/)?.[0] || "0";
+        const numB = b.label.match(/\d{4}/)?.[0] || "0";
+
+        const gradeA = numA.slice(0, 2);
+        const gradeB = numB.slice(0, 2);
+
+        if (gradeB !== gradeA) {
+          return Number(gradeB) - Number(gradeA);
+        }
+
+        return Number(numA) - Number(numB);
+      });
+
+      classOptions.value = list;
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    loadingClasses.value = false;
   }
 };
 
@@ -433,7 +481,7 @@ const useRecommendKnowledge = async (knowledge: string) => {
 };
 
 const resetFilters = () => {
-  filters.class_id = "";
+  filters.class_id = undefined; // 重置为 undefined
   filters.student_id = "";
   filters.question_type = "";
   filters.knowledge_keyword = "";
@@ -452,6 +500,7 @@ onMounted(async () => {
     router.replace("/student_wrong_question");
     return;
   }
+  await fetchClassList();
   await Promise.all([searchWrongQuestions(true), loadRecommend()]);
 });
 </script>
