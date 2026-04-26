@@ -69,6 +69,7 @@
           :key="item.name"
           color="blue"
           class="recommend-tag"
+          @click="useRecommendType(item.name)"
         >
           {{ item.name }} ({{ item.count }})
         </a-tag>
@@ -482,6 +483,11 @@ const handleSizeChange = async (_: number, s: number) => {
 
 const useRecommendKnowledge = async (k: string) => {
   filters.knowledge_keyword = k;
+  await searchWrongQuestions(true);
+};
+
+const useRecommendType = async (type: string) => {
+  filters.question_type = type;
   await searchWrongQuestions(true);
 };
 
