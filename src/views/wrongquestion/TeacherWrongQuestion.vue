@@ -20,13 +20,14 @@
         />
         <a-select
           v-model:value="filters.student_id"
-          placeholder="学生ID（可选）"
+          :placeholder="filters.class_id ? '学生ID（可选）' : '请先选择班级'"
           allow-clear
           style="width: 180px"
           :options="studentOptions"
           show-search
           :filter-option="filterOption"
           :loading="loadingStudents"
+          :disabled="!filters.class_id"
         />
 
         <a-input
@@ -210,7 +211,6 @@ const recommendText = ref("");
 
 const classOptions = ref<Array<{ label: string; value: string }>>([]);
 const studentOptions = ref<Array<{ label: string; value: string }>>([]);
-const allStudentList = ref<any[]>([]);
 const loadingClasses = ref(false);
 const loadingStudents = ref(false);
 
@@ -261,15 +261,26 @@ const fetchClassList = async () => {
   }
 };
 
-// 预加载全部学生并缓存
-const fetchAllStudent = async () => {
+// 按班级加载学生
+const fetchStudentsByClass = async (classId: string) => {
+  loadingStudents.value = true;
+  studentOptions.value = [];
   try {
-    const res = await getStudentApi({ size: 9999 });
+    const res = await getStudentApi({
+      class_id: Number(classId),
+      page: 1,
+      size: 1000,
+    });
     if (res.code === 200 && Array.isArray(res.data)) {
-      allStudentList.value = res.data;
+      studentOptions.value = res.data.map((item: any) => ({
+        label: `${item.name}（${maskStudentId(item.uid)}）`,
+        value: String(item.uid),
+      }));
     }
   } catch (err) {
     console.error("学生列表加载失败：", err);
+  } finally {
+    loadingStudents.value = false;
   }
 };
 
@@ -280,26 +291,12 @@ const maskStudentId = (uid: string | number) => {
   return `**${str.slice(-4)}`;
 };
 
-// 切换班级 → 过滤本班学生
-const handleClassChange = (classId?: string) => {
+// 切换班级 → 按班级请求学生
+const handleClassChange = async (classId?: string) => {
   filters.student_id = undefined;
   studentOptions.value = [];
   if (!classId) return;
-
-  loadingStudents.value = true;
-  // 根据班级ID精准过滤
-  const filterStudents = allStudentList.value.filter(
-    item => String(item.class_id) === String(classId)
-  );
-
-  studentOptions.value = filterStudents.map(item => ({
-    label: `${item.name}（${maskStudentId(item.uid)}）`,
-    value: String(item.uid),
-  }));
-
-  console.log("选中班级ID：", classId);
-  console.log("过滤出学生数量：", filterStudents.length);
-  loadingStudents.value = false;
+  await fetchStudentsByClass(classId);
 };
 
 const normalizeText = (value: unknown) => String(value ?? "").trim();
@@ -505,7 +502,7 @@ const resetFilters = () => {
   recommendText.value = "";
 };
 
-// 页面初始化：先班级→再全量学生→再请求数据
+// 页面初始化：先班级→再请求数据
 onMounted(async () => {
   const userInfo = userStore.getUserInfo();
   if (!userInfo?.teacher) {
@@ -514,7 +511,6 @@ onMounted(async () => {
     return;
   }
   await fetchClassList();
-  await fetchAllStudent();
   await Promise.all([searchWrongQuestions(true), loadRecommend()]);
 });
 </script>
