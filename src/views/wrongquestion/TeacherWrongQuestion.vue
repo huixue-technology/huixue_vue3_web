@@ -16,14 +16,19 @@
           show-search
           :filter-option="filterOption"
           :loading="loadingClasses"
-          :default-value="undefined"
+          @change="handleClassChange"
         />
-        <a-input
+        <a-select
           v-model:value="filters.student_id"
-          placeholder="学生ID"
+          placeholder="学生ID（可选）"
           allow-clear
           style="width: 180px"
+          :options="studentOptions"
+          show-search
+          :filter-option="filterOption"
+          :loading="loadingStudents"
         />
+
         <a-input
           v-model:value="filters.question_type"
           placeholder="题型（可选）"
@@ -43,7 +48,6 @@
       </a-space>
     </a-card>
 
-    <!-- 其他部分完全不变 -->
     <a-card title="推荐结果" class="recommend-card">
       <div v-if="recommendText" class="recommend-summary">{{ recommendText }}</div>
       <div v-if="recommendKnowledge.length" class="recommend-row">
@@ -168,6 +172,7 @@ import {
   searchTeacherWrongQuestionApi,
 } from "@/servers/api/testPaper";
 import { getClassesApi } from "@/servers/api/classes";
+import { getStudentApi } from "@/servers/api/student";
 import router from "@/router";
 import { useUserStore } from "@/store";
 
@@ -202,17 +207,15 @@ const recommendKnowledge = ref<RecommendItem[]>([]);
 const recommendTypes = ref<RecommendItem[]>([]);
 const recommendText = ref("");
 
-const classOptions = ref<Array<{ label: string; value: string | number }>>([]);
+const classOptions = ref<Array<{ label: string; value: string }>>([]);
+const studentOptions = ref<Array<{ label: string; value: string }>>([]);
+const allStudentList = ref<any[]>([]);
 const loadingClasses = ref(false);
+const loadingStudents = ref(false);
 
-const filters = reactive<{
-  class_id?: string;
-  student_id?: string;
-  question_type?: string;
-  knowledge_keyword?: string;
-}>({
-  class_id: undefined, // 改为 undefined
-  student_id: "",
+const filters = reactive({
+  class_id: undefined as string | undefined,
+  student_id: undefined as string | undefined,
   question_type: "",
   knowledge_keyword: "",
 });
@@ -223,13 +226,86 @@ const pagination = reactive({
   total: 0,
 });
 
+// 获取班级列表
+const fetchClassList = async () => {
+  const userInfo = userStore.getUserInfo();
+  if (!userInfo?.teacher) return;
+  const schoolId = userInfo.teacher.school_id || "";
+  if (!schoolId) return;
+
+  loadingClasses.value = true;
+  try {
+    const res = await getClassesApi({ school_id: schoolId, size: 1000 });
+    if (res.code === 200 && res.data) {
+      let list = res.data.map((item: any) => ({
+        label: item.name || `班级${item.class_id}`,
+        value: String(item.class_id || item.id),
+      }));
+
+      list.sort((a, b) => {
+        const na = a.label.match(/\d{4}/)?.[0] || "0";
+        const nb = b.label.match(/\d{4}/)?.[0] || "0";
+        const ga = na.slice(0, 2);
+        const gb = nb.slice(0, 2);
+        if (ga !== gb) return Number(gb) - Number(ga);
+        return Number(na) - Number(nb);
+      });
+
+      classOptions.value = list;
+    }
+  } catch (err) {
+    console.error("班级加载失败：", err);
+  } finally {
+    loadingClasses.value = false;
+  }
+};
+
+// 预加载全部学生并缓存
+const fetchAllStudent = async () => {
+  try {
+    const res = await getStudentApi({ size: 9999 });
+    if (res.code === 200 && Array.isArray(res.data)) {
+      allStudentList.value = res.data;
+    }
+  } catch (err) {
+    console.error("学生列表加载失败：", err);
+  }
+};
+
+// 只保留后四位
+const maskStudentId = (uid: string | number) => {
+  const str = String(uid);
+  if (str.length <= 4) return str;
+  return `**${str.slice(-4)}`;
+};
+
+// 切换班级 → 过滤本班学生
+const handleClassChange = (classId?: string) => {
+  filters.student_id = undefined;
+  studentOptions.value = [];
+  if (!classId) return;
+
+  loadingStudents.value = true;
+  // 根据班级ID精准过滤
+  const filterStudents = allStudentList.value.filter(
+    item => String(item.class_id) === String(classId)
+  );
+
+  studentOptions.value = filterStudents.map(item => ({
+    label: `${item.name}（${maskStudentId(item.uid)}）`,
+    value: String(item.uid),
+  }));
+
+  console.log("选中班级ID：", classId);
+  console.log("过滤出学生数量：", filterStudents.length);
+  loadingStudents.value = false;
+};
+
 const normalizeText = (value: unknown) => String(value ?? "").trim();
 
 const normalizeStringArray = (value: unknown): string[] => {
   if (Array.isArray(value)) {
-    return value
-      .map((item) => normalizeText(item))
-      .filter(Boolean);
+    return value.map((item) => normalizeText(item)).filter(Boolean);
   }
   if (typeof value === "string") {
     const text = value.trim();
@@ -237,11 +313,9 @@ const normalizeStringArray = (value: unknown): string[] => {
     try {
       const parsed = JSON.parse(text);
       if (Array.isArray(parsed)) {
-        return parsed
-          .map((item) => normalizeText(item))
-          .filter(Boolean);
+        return parsed.map((item) => normalizeText(item)).filter(Boolean);
       }
-    } catch (_error) {}
+    } catch {}
     return [text];
   }
   return [];
@@ -249,23 +323,19 @@ const normalizeStringArray = (value: unknown): string[] => {
 
 const formatPercent = (value: unknown) => {
   const num = Number(value);
-  if (!Number.isFinite(num)) return "-";
-  return `${(num * 100).toFixed(1)}%`;
+  return Number.isFinite(num) ? `${(num * 100).toFixed(1)}%` : "-";
 };
 
 const formatScore = (value: unknown) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return "-";
-  if (Number.isInteger(num)) return String(num);
-  return num.toFixed(2);
+  return Number.isInteger(num) ? String(num) : num.toFixed(2);
 };
 
 const getImageUrl = (path: unknown) => {
   const text = normalizeText(path);
   if (!text) return "";
-  if (/^(https?:)?\/\//i.test(text) || text.startsWith("data:")) {
-    return text;
-  }
+  if (/^(https?:)?\/\//i.test(text) || text.startsWith("data:")) return text;
   return getTestPaperFileUrl(text);
 };
 
@@ -282,30 +352,26 @@ const renderInlineMarkdown = (raw: string) => {
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  html = html.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-  );
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
   return html;
 };
 
 const renderMarkdownLite = (value: unknown) => {
   const source = normalizeText(value);
   if (!source) return "";
-
   const markdown = source.replace(/\r\n/g, "\n");
   const codeBlocks: string[] = [];
-  const withTokens = markdown.replace(/```([\s\S]*?)```/g, (_all, code) => {
-    const token = `__CODE_BLOCK_${codeBlocks.length}__`;
-    codeBlocks.push(`<pre class="md-code"><code>${escapeHtml(String(code || "").trim())}</code></pre>`);
-    return token;
+  let withTokens = markdown.replace(/```([\s\S]*?)```/g, (_all, code) => {
+    const t = `__CODE_BLOCK_${codeBlocks.length}__`;
+    codeBlocks.push(`<pre class="md-code"><code>${escapeHtml(String(code).trim())}</code></pre>`);
+    return t;
   });
 
   const lines = withTokens.split("\n");
   const htmlLines: string[] = [];
   let inList = false;
 
-  const closeListIfNeeded = () => {
+  const closeList = () => {
     if (inList) {
       htmlLines.push("</ul>");
       inList = false;
@@ -313,81 +379,68 @@ const renderMarkdownLite = (value: unknown) => {
   };
 
   for (const line of lines) {
-    const text = String(line || "");
-    const trimmed = text.trim();
-
-    if (!trimmed) {
-      closeListIfNeeded();
+    const trim = line.trim();
+    if (!trim) {
+      closeList();
       htmlLines.push('<div class="md-gap"></div>');
       continue;
     }
-
-    if (/^__CODE_BLOCK_\d+__$/.test(trimmed)) {
-      closeListIfNeeded();
-      htmlLines.push(trimmed);
+    if (/^__CODE_BLOCK_\d+__$/.test(trim)) {
+      closeList();
+      htmlLines.push(trim);
       continue;
     }
-
-    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
-    if (heading) {
-      closeListIfNeeded();
-      const level = heading[1].length;
-      htmlLines.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+    const h = trim.match(/^(#{1,6})\s+(.+)$/);
+    if (h) {
+      closeList();
+      htmlLines.push(`<h${h[1].length}>${renderInlineMarkdown(h[2])}</h${h[1].length}>`);
       continue;
     }
-
-    const listItem = trimmed.match(/^[-*+]\s+(.+)$/);
-    if (listItem) {
+    const li = trim.match(/^[-*+]\s+(.+)$/);
+    if (li) {
       if (!inList) {
         htmlLines.push("<ul>");
         inList = true;
       }
-      htmlLines.push(`<li>${renderInlineMarkdown(listItem[1])}</li>`);
+      htmlLines.push(`<li>${renderInlineMarkdown(li[1])}</li>`);
       continue;
     }
-
-    if (trimmed.startsWith(">")) {
-      closeListIfNeeded();
-      htmlLines.push(`<blockquote>${renderInlineMarkdown(trimmed.replace(/^>\s?/, ""))}</blockquote>`);
+    if (trim.startsWith(">")) {
+      closeList();
+      htmlLines.push(`<blockquote>${renderInlineMarkdown(trim.replace(/^>\s?/, ""))}</blockquote>`);
       continue;
     }
-
-    closeListIfNeeded();
-    htmlLines.push(`<p>${renderInlineMarkdown(trimmed)}</p>`);
+    closeList();
+    htmlLines.push(`<p>${renderInlineMarkdown(trim)}</p>`);
   }
-
-  closeListIfNeeded();
-
+  closeList();
   let html = htmlLines.join("");
-  codeBlocks.forEach((block, index) => {
-    html = html.replace(`__CODE_BLOCK_${index}__`, block);
-  });
+  codeBlocks.forEach((b, i) => (html = html.replace(`__CODE_BLOCK_${i}__`, b)));
   return html;
 };
 
 const buildSearchParams = () => ({
   page: pagination.page,
   size: pagination.size,
-  class_id: normalizeText(filters.class_id) || undefined,
-  student_id: normalizeText(filters.student_id) || undefined,
+  class_id: filters.class_id || undefined,
+  student_id: filters.student_id || undefined,
   question_type: normalizeText(filters.question_type) || undefined,
   knowledge_keyword: normalizeText(filters.knowledge_keyword) || undefined,
 });
 
 const searchWrongQuestions = async (resetPage = false) => {
   if (resetPage) pagination.page = 1;
-
   loading.value = true;
   try {
     const res = await searchTeacherWrongQuestionApi(buildSearchParams());
     if (res.code !== 200) {
-      message.error(res.msg || "查询错题失败");
+      message.error(res.msg || "查询失败");
       return;
     }
-    rows.value = Array.isArray(res.data) ? res.data : [];
+    rows.value = res.data || [];
     pagination.total = Number(res.total || 0);
-  } catch (_error) {
-    message.error("查询错题失败");
+  } catch {
+    message.error("查询失败");
   } finally {
     loading.value = false;
   }
@@ -397,94 +450,47 @@ const loadRecommend = async () => {
   recommendLoading.value = true;
   try {
     const res = await getTeacherWrongQuestionRecommendApi(buildSearchParams());
-    if (res.code !== 200) {
-      message.error(res.msg || "获取推荐失败");
-      return;
+    if (res.code === 200) {
+      const d = res.data || {};
+      recommendKnowledge.value = d.knowledge_points || [];
+      recommendTypes.value = d.question_types || [];
+      recommendText.value = `匹配题量：${d.matched_total || 0}`;
     }
-    const data = res.data || {};
-    recommendKnowledge.value = Array.isArray(data.knowledge_points) ? data.knowledge_points : [];
-    recommendTypes.value = Array.isArray(data.question_types) ? data.question_types : [];
-    recommendText.value = `匹配题量：${Number(data.matched_total || 0)}`;
-  } catch (_error) {
+  } catch {
     message.error("获取推荐失败");
   } finally {
     recommendLoading.value = false;
   }
 };
 
-const filterOption = (input: string, option: any) => {
-  return option.label.toLowerCase().includes(input.toLowerCase());
-};
+const filterOption = (input: string, option: any) =>
+  option.label.toLowerCase().includes(input.toLowerCase());
 
-const fetchClassList = async () => {
-  const userInfo = userStore.getUserInfo();
-  if (!userInfo?.teacher) return;
-  const schoolId = userInfo.teacher.school_id || userInfo.teacher.school || "";
-  if (!schoolId) return;
+const handleSearch = async () => await searchWrongQuestions(true);
+const handleRecommend = async () => await loadRecommend();
 
-  loadingClasses.value = true;
-  try {
-    const res = await getClassesApi({ school_id: schoolId, size: 1000 });
-    if (res.code === 200 && res.data) {
-      type ClassOption = { label: string; value: string | number };
-
-      let list: ClassOption[] = res.data.map((item: any) => ({
-        label: item.name || `班级${item.id}`,
-        value: item.id,
-      }));
-
-      list.sort((a: ClassOption, b: ClassOption) => {
-        const numA = a.label.match(/\d{4}/)?.[0] || "0";
-        const numB = b.label.match(/\d{4}/)?.[0] || "0";
-
-        const gradeA = numA.slice(0, 2);
-        const gradeB = numB.slice(0, 2);
-
-        if (gradeB !== gradeA) {
-          return Number(gradeB) - Number(gradeA);
-        }
-
-        return Number(numA) - Number(numB);
-      });
-
-      classOptions.value = list;
-    }
-  } catch (err) {
-    console.error(err);
-  } finally {
-    loadingClasses.value = false;
-  }
-};
-
-const handleSearch = async () => {
-  await searchWrongQuestions(true);
-};
-
-const handleRecommend = async () => {
-  await loadRecommend();
-};
-
-const handlePageChange = async (page: number) => {
-  pagination.page = page;
+const handlePageChange = async (p: number) => {
+  pagination.page = p;
   await searchWrongQuestions(false);
 };
 
-const handleSizeChange = async (_current: number, size: number) => {
-  pagination.size = size;
+const handleSizeChange = async (_: number, s: number) => {
+  pagination.size = s;
   pagination.page = 1;
   await searchWrongQuestions(false);
 };
 
-const useRecommendKnowledge = async (knowledge: string) => {
-  filters.knowledge_keyword = knowledge;
+const useRecommendKnowledge = async (k: string) => {
+  filters.knowledge_keyword = k;
   await searchWrongQuestions(true);
 };
 
 const resetFilters = () => {
-  filters.class_id = undefined; // 重置为 undefined
-  filters.student_id = "";
+  filters.class_id = undefined;
+  filters.student_id = undefined;
   filters.question_type = "";
   filters.knowledge_keyword = "";
+  studentOptions.value = [];
   rows.value = [];
   pagination.page = 1;
   pagination.total = 0;
@@ -493,14 +499,16 @@ const resetFilters = () => {
   recommendText.value = "";
 };
 
+// 页面初始化：先班级→再全量学生→再请求数据
 onMounted(async () => {
   const userInfo = userStore.getUserInfo();
   if (!userInfo?.teacher) {
-    message.warning("当前账号不是老师，无法访问老师端错题模块");
+    message.warning("非教师账号，无法访问");
     router.replace("/student_wrong_question");
     return;
   }
   await fetchClassList();
+  await fetchAllStudent();
   await Promise.all([searchWrongQuestions(true), loadRecommend()]);
 });
 </script>
