@@ -1,129 +1,118 @@
-﻿<template>
+<template>
   <div class="wrong-question-page">
-    <div class="page-decoration"></div>
-
-    <div class="page-header">
-      <h2>学生端错题模块</h2>
-      <p>固定当前学生，查看全部错题并直接预览题图与 Markdown 答案。</p>
-    </div>
-
-    <a-card class="filter-card">
-      <a-space wrap>
-        <a-input
-          v-model:value="filters.question_type"
-          placeholder="题型（可选）"
-          allow-clear
-          style="width: 180px"
-        />
-        <a-input
-          v-model:value="filters.knowledge_keyword"
-          placeholder="知识点关键词（可选）"
-          allow-clear
-          style="width: 240px"
-          @pressEnter="handleSearch"
-        />
-        <a-button type="primary" :loading="loading" @click="handleSearch">查询错题</a-button>
-        <a-button :loading="recommendLoading" @click="handleRecommend">获取推荐</a-button>
-        <a-button @click="resetFilters">重置</a-button>
-      </a-space>
-    </a-card>
-
-    <a-card title="推荐结果" class="recommend-card">
-      <div v-if="recommendText" class="recommend-summary">{{ recommendText }}</div>
-      <div v-if="recommendKnowledge.length" class="recommend-row">
-        <span class="recommend-label">高频知识点：</span>
-        <a-tag
-          v-for="item in recommendKnowledge"
-          :key="item.name"
-          class="recommend-tag"
-          color="processing"
-          @click="useRecommendKnowledge(item.name)"
-        >
-          {{ item.name }} ({{ item.count }})
-        </a-tag>
+    <header class="page-header">
+      <div>
+        <h2>我的错题</h2>
+        <p>只展示当前账号的小题得分低于满分的题目。</p>
       </div>
-      <div v-if="recommendTypes.length" class="recommend-row">
-        <span class="recommend-label">高频题型：</span>
-        <a-tag 
-          v-for="item in recommendTypes" 
-          :key="item.name" 
-          color="blue"
-          class="recommend-tag"
-          @click="useRecommendType(item.name)"
-        >
-          {{ item.name }} ({{ item.count }})
-        </a-tag>
-      </div>
-      <a-empty v-if="!recommendKnowledge.length && !recommendTypes.length" description="暂无推荐结果" />
-    </a-card>
+      <div class="student-badge">{{ studentName || studentUid || "学生" }}</div>
+    </header>
 
-    <a-card class="list-card">
-      <template #title>
-        <div class="list-title">
-          <span>错题列表</span>
-          <span class="list-total">共 {{ Number(pagination.total || 0) }} 题</span>
-        </div>
-      </template>
+    <section class="filter-panel">
+      <a-input v-model:value="filters.year" placeholder="年份" allow-clear @pressEnter="handleSearch" />
+      <a-select
+        v-model:value="filters.question_type"
+        placeholder="题型"
+        :options="questionTypeOptions"
+        allow-clear
+        show-search
+        :filter-option="filterOption"
+        @change="handleSearch"
+      />
+      <a-input v-model:value="filters.knowledge_keyword" placeholder="关键词" allow-clear @pressEnter="handleSearch" />
+      <a-select
+        v-model:value="filters.is_reviewed"
+        placeholder="复习状态"
+        :options="reviewStatusOptions"
+        allow-clear
+        @change="handleSearch"
+      />
+      <a-button type="primary" :loading="loading" @click="handleSearch">查询</a-button>
+      <a-button :loading="recommendLoading" @click="loadRecommend">推荐筛选</a-button>
+      <a-button @click="resetFilters">重置</a-button>
+    </section>
+
+    <section v-if="recommendText || recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
+      <span class="recommend-summary">{{ recommendText }}</span>
+      <a-tag
+        v-for="item in recommendKnowledge"
+        :key="`k-${item.name}`"
+        color="processing"
+        class="click-tag"
+        @click="useKnowledge(item.name)"
+      >
+        {{ item.name }} {{ item.count }}
+      </a-tag>
+      <a-tag
+        v-for="item in recommendTypes"
+        :key="`t-${item.name}`"
+        color="blue"
+        class="click-tag"
+        @click="useType(item.name)"
+      >
+        {{ item.name }} {{ item.count }}
+      </a-tag>
+    </section>
+
+    <section class="result-panel">
+      <div class="result-head">
+        <h3>错题列表</h3>
+        <span>共 {{ pagination.total }} 题</span>
+      </div>
 
       <a-spin :spinning="loading">
-        <div v-if="rows.length" class="question-list">
-          <div
-            v-for="record in rows"
-            :key="`${record.exam_id || ''}-${record.test_paper_id || ''}-${record.class_id || ''}-${record.question_key || record.question_id || ''}`"
-            class="question-card"
-            :class="{ 'loading-state': loading, 'loaded-state': loaded && !loading }"
-          >
-            <div class="question-card-head">
-              <div class="left-info">
-                <span class="question-number">第 {{ record.string_number || record.question_key || '-' }} 题</span>
-                <a-tag color="gold" v-if="record.question_type">{{ record.question_type }}</a-tag>
-                <a-tag color="cyan" v-if="record.class_id">班级 {{ record.class_id }}</a-tag>
+        <a-empty v-if="!rows.length" description="暂无错题数据" />
+        <div v-else class="question-list">
+          <article v-for="record in rows" :key="recordKey(record)" class="question-card">
+            <div class="question-main">
+              <div class="question-title">
+                <strong>第 {{ record.string_number || record.question_key || "-" }} 题</strong>
+                <a-tag v-if="record.subject" color="blue">{{ record.subject }}</a-tag>
+                <a-tag v-if="record.question_type" color="gold">{{ record.question_type }}</a-tag>
+                <a-tag v-if="record.year" color="green">{{ record.year }}</a-tag>
+                <a-tag :color="record.is_reviewed ? 'green' : 'default'">
+                  {{ record.is_reviewed ? "已复习" : "未复习" }}
+                </a-tag>
               </div>
-              <div class="right-metrics">
+              <div class="metric-row">
                 <span>我的得分 {{ formatScore(record.student_score) }}/{{ formatScore(record.full_score) }}</span>
-                <span>班级错率 {{ formatPercent(record.wrong_rate) }}</span>
+                <span v-if="record.exam_name">{{ record.exam_name }}</span>
+                <a-button
+                  size="small"
+                  :type="record.is_reviewed ? 'default' : 'primary'"
+                  :loading="reviewUpdatingKey === recordKey(record)"
+                  @click="toggleReviewed(record)"
+                >
+                  {{ record.is_reviewed ? "标记未复习" : "确认已复习" }}
+                </a-button>
               </div>
             </div>
 
-            <div class="knowledge-wrap" v-if="normalizeStringArray(record.knowledge_points).length">
-              <a-tag
-                v-for="point in normalizeStringArray(record.knowledge_points)"
-                :key="point"
-                color="geekblue"
-              >
-                {{ point }}
-              </a-tag>
+            <div v-if="stringList(record.knowledge_points).length" class="tag-row">
+              <a-tag v-for="point in stringList(record.knowledge_points)" :key="point" color="geekblue">{{ point }}</a-tag>
             </div>
 
             <div class="content-grid">
-              <div class="image-panel">
-                <div class="panel-title">题目图片</div>
-                <div v-if="normalizeStringArray(record.images).length" class="image-list">
+              <div class="media-box">
+                <div class="box-title">题目图片</div>
+                <div v-if="stringList(record.images).length" class="image-row">
                   <a-image
-                    v-for="(img, imgIndex) in normalizeStringArray(record.images)"
-                    :key="`${record.question_id || record.question_key || 'q'}-${imgIndex}`"
-                    :src="getImageUrl(img)"
-                    :preview="true"
+                    v-for="(image, index) in stringList(record.images)"
+                    :key="`${recordKey(record)}-${index}`"
+                    :src="fileUrl(image)"
                     class="question-image"
                   />
                 </div>
-                <a-empty v-else description="暂无题图" :image="null" />
+                <a-empty v-else description="暂无题图" />
               </div>
-
-              <div class="answer-panel">
-                <div class="panel-title">答案（Markdown）</div>
-                <div
-                  v-if="normalizeText(record.answer)"
-                  class="markdown-body"
-                  v-html="renderMarkdownLite(record.answer)"
-                ></div>
-                <div v-else class="markdown-body" style="color:#999;">暂无答案</div>
+              <div class="answer-box">
+                <div class="box-title">答案</div>
+                <div v-if="text(record.answer)" class="markdown-body" v-html="renderMarkdown(record.answer)"></div>
+                <a-empty v-else description="暂无答案" />
               </div>
             </div>
-          </div>
+          </article>
         </div>
-
-        <a-empty v-else description="暂无错题数据" />
       </a-spin>
 
       <div class="pagination-wrap">
@@ -131,561 +120,421 @@
           :current="pagination.page"
           :page-size="pagination.size"
           :total="pagination.total"
-          :show-size-changer="true"
+          show-size-changer
           :show-total="(total: number) => `共 ${total} 条`"
           @change="handlePageChange"
           @showSizeChange="handleSizeChange"
         />
       </div>
-    </a-card>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
-import {
-  getStudentWrongQuestionRecommendApi,
-  getTestPaperFileUrl,
-  searchStudentWrongQuestionApi,
-} from "@/servers/api/testPaper";
 import router from "@/router";
 import { useUserStore } from "@/store";
+import {
+  getStudentWrongQuestionRecommend as getStudentWrongQuestionRecommendApi,
+  getStudentWrongQuestionSearch as searchStudentWrongQuestionApi,
+  putStudentWrongQuestionReview,
+} from "@/servers/api/wrongQuestion";
 
+type CountItem = { name: string; count: number };
+type Option = { label: string; value: string };
 type WrongQuestionRecord = {
-  exam_id?: number;
-  test_paper_id?: number;
-  class_id?: string;
+  exam_id?: number | string;
+  exam_name?: string;
+  test_paper_id?: number | string;
   question_key?: string;
-  question_id?: number;
   string_number?: string;
+  subject?: string;
   question_type?: string;
   knowledge_points?: string[] | string;
-  answer?: string;
   images?: string[] | string;
-  student_score?: number;
-  full_score?: number;
-  wrong_rate?: number;
-};
-
-type RecommendItem = {
-  name: string;
-  count: number;
+  answer?: string;
+  student_score?: number | string;
+  full_score?: number | string;
+  class_id?: string;
+  is_reviewed?: boolean;
+  year?: string;
 };
 
 const userStore = useUserStore();
 const rows = ref<WrongQuestionRecord[]>([]);
 const loading = ref(false);
 const recommendLoading = ref(false);
-const recommendKnowledge = ref<RecommendItem[]>([]);
-const recommendTypes = ref<RecommendItem[]>([]);
+const recommendKnowledge = ref<CountItem[]>([]);
+const recommendTypes = ref<CountItem[]>([]);
+const questionTypeOptions = ref<Option[]>([]);
 const recommendText = ref("");
 const studentUid = ref("");
+const studentName = ref("");
+const reviewUpdatingKey = ref("");
 
-const filters = reactive<{
-  question_type?: string;
-  knowledge_keyword?: string;
-}>({
+const filters = reactive({
+  year: "",
   question_type: "",
   knowledge_keyword: "",
+  is_reviewed: undefined as string | undefined,
 });
 
-const pagination = reactive({
-  page: 1,
-  size: 10,
-  total: 0,
-});
+const pagination = reactive({ page: 1, size: 10, total: 0 });
+const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
+const reviewStatusOptions: Option[] = [
+  { label: "未复习", value: "false" },
+  { label: "已复习", value: "true" },
+];
 
-const normalizeText = (value: unknown) => String(value ?? "").trim();
-
-const normalizeStringArray = (value: unknown): string[] => {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => normalizeText(item))
-      .filter(Boolean);
-  }
-  if (typeof value === "string") {
-    const text = value.trim();
-    if (!text) return [];
-    try {
-      const parsed = JSON.parse(text);
-      if (Array.isArray(parsed)) {
-        return parsed
-          .map((item) => normalizeText(item))
-          .filter(Boolean);
-      }
-    } catch (_error) {}
-    return [text];
-  }
-  return [];
-};
-
-const formatPercent = (value: unknown) => {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return "-";
-  return `${(num * 100).toFixed(1)}%`;
-};
-
-const formatScore = (value: unknown) => {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return "-";
-  if (Number.isInteger(num)) return String(num);
-  return num.toFixed(2);
-};
-
-const getImageUrl = (path: unknown) => {
-  const text = normalizeText(path);
-  if (!text) return "";
-  if (/^(https?:)?\/\//i.test(text) || text.startsWith("data:")) {
-    return text;
-  }
-  return getTestPaperFileUrl(text);
-};
-
-const escapeHtml = (text: string) =>
-  text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-const renderInlineMarkdown = (raw: string) => {
-  let html = escapeHtml(raw);
-  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
-  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  html = html.replace(
-    /\[([^\]]+)\](https?:\/\/[^\s]+)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-  );
-  return html;
-};
-
-const renderMarkdownLite = (value: unknown) => {
-  const source = normalizeText(value);
-  if (!source) return "";
-
-  const markdown = source.replace(/\r\n/g, "\n");
-  const codeBlocks: string[] = [];
-  const withTokens = markdown.replace(/```([\s\S]*?)```/g, (_all, code) => {
-    const token = `__CODE_BLOCK_${codeBlocks.length}__`;
-    codeBlocks.push(`<pre class="md-code"><code>${escapeHtml(String(code || "").trim())}</code></pre>`);
-    return token;
-  });
-
-  const lines = withTokens.split("\n");
-  const htmlLines: string[] = [];
-  let inList = false;
-
-  const closeListIfNeeded = () => {
-    if (inList) {
-      htmlLines.push("</ul>");
-      inList = false;
-    }
-  };
-
-  for (const line of lines) {
-    const text = String(line || "");
-    const trimmed = text.trim();
-
-    if (!trimmed) {
-      closeListIfNeeded();
-      htmlLines.push('<div class="md-gap"></div>');
-      continue;
-    }
-
-    if (/^__CODE_BLOCK_\d+__$/.test(trimmed)) {
-      closeListIfNeeded();
-      htmlLines.push(trimmed);
-      continue;
-    }
-
-    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
-    if (heading) {
-      closeListIfNeeded();
-      const level = heading[1].length;
-      htmlLines.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
-      continue;
-    }
-
-    const listItem = trimmed.match(/^[-*+]\s+(.+)$/);
-    if (listItem) {
-      if (!inList) {
-        htmlLines.push("<ul>");
-        inList = true;
-      }
-      htmlLines.push(`<li>${renderInlineMarkdown(listItem[1])}</li>`);
-      continue;
-    }
-
-    if (trimmed.startsWith(">")) {
-      closeListIfNeeded();
-      htmlLines.push(`<blockquote>${renderInlineMarkdown(trimmed.replace(/^>\s?/, ""))}</blockquote>`);
-      continue;
-    }
-
-    closeListIfNeeded();
-    htmlLines.push(`<p>${renderInlineMarkdown(trimmed)}</p>`);
-  }
-
-  closeListIfNeeded();
-
-  let html = htmlLines.join("");
-  codeBlocks.forEach((block, index) => {
-    html = html.replace(`__CODE_BLOCK_${index}__`, block);
-  });
-  return html;
-};
-
-const buildSearchParams = () => ({
+const text = (value: unknown) => String(value ?? "").trim();
+const filterOption = (input: string, option: any) => text(option?.label).toLowerCase().includes(input.toLowerCase());
+const buildParams = () => ({
   page: pagination.page,
   size: pagination.size,
-  question_type: normalizeText(filters.question_type) || undefined,
-  knowledge_keyword: normalizeText(filters.knowledge_keyword) || undefined,
+  year: text(filters.year) || undefined,
+  question_type: text(filters.question_type) || undefined,
+  knowledge_keyword: text(filters.knowledge_keyword) || undefined,
+  is_reviewed: filters.is_reviewed,
 });
 
-const loaded = ref(false);
-
-const searchWrongQuestions = async (resetPage = false) => {
+const search = async (resetPage = false) => {
   if (!studentUid.value) {
     message.warning("未识别学生身份");
     return;
   }
   if (resetPage) pagination.page = 1;
-
   loading.value = true;
-  loaded.value = false; // 重置加载状态
   try {
-    const res = await searchStudentWrongQuestionApi(studentUid.value, buildSearchParams());
-    if (res.code !== 200) {
-      message.error(res.msg || "查询错题失败");
-      return;
-    }
-    rows.value = Array.isArray(res.data) ? res.data : [];
-    pagination.total = Number(res.total || 0);
-  } catch (_error) {
-    message.error("查询错题失败");
+    const res = await searchStudentWrongQuestionApi({ student_uid: studentUid.value, ...buildParams() });
+    if (Number(res?.code) !== 200) throw new Error(res?.msg || "查询失败");
+    rows.value = Array.isArray(res?.data) ? res.data : [];
+    pagination.total = Number(res?.total || rows.value.length || 0);
+  } catch (error: any) {
+    rows.value = [];
+    pagination.total = 0;
+    message.error(error?.message || "查询错题失败");
   } finally {
     loading.value = false;
-    loaded.value = true;
   }
 };
 
 const loadRecommend = async () => {
-  if (!studentUid.value) {
-    message.warning("未识别学生身份");
-    return;
-  }
+  if (!studentUid.value) return;
   recommendLoading.value = true;
   try {
-    const res = await getStudentWrongQuestionRecommendApi(studentUid.value, {
-      question_type: normalizeText(filters.question_type) || undefined,
-      knowledge_keyword: normalizeText(filters.knowledge_keyword) || undefined,
+    const res = await getStudentWrongQuestionRecommendApi({
+      student_uid: studentUid.value,
+      ...buildParams(),
       limit: 12,
     });
-    if (res.code !== 200) {
-      message.error(res.msg || "获取推荐失败");
-      return;
-    }
-    const data = res.data || {};
-    recommendKnowledge.value = Array.isArray(data.knowledge_points) ? data.knowledge_points : [];
-    recommendTypes.value = Array.isArray(data.question_types) ? data.question_types : [];
-    recommendText.value = `匹配题量：${Number(data.matched_total || 0)}`;
-  } catch (_error) {
-    message.error("获取推荐失败");
+    if (Number(res?.code) !== 200) throw new Error(res?.msg || "推荐失败");
+    recommendKnowledge.value = Array.isArray(res?.data?.knowledge_points) ? res.data.knowledge_points : [];
+    recommendTypes.value = Array.isArray(res?.data?.question_types) ? res.data.question_types : [];
+    questionTypeOptions.value = recommendTypes.value.map((item) => ({ label: item.name, value: item.name }));
+    recommendText.value = `匹配题量 ${Number(res?.data?.matched_total || 0)}`;
+  } catch (error: any) {
+    message.error(error?.message || "推荐加载失败");
   } finally {
     recommendLoading.value = false;
   }
 };
 
-const handleSearch = async () => {
-  await searchWrongQuestions(true);
-};
-
-const handleRecommend = async () => {
-  await loadRecommend();
-};
-
+const handleSearch = () => search(true);
 const handlePageChange = async (page: number) => {
   pagination.page = page;
-  await searchWrongQuestions(false);
+  await search(false);
 };
-
-const handleSizeChange = async (_current: number, size: number) => {
+const handleSizeChange = async (_page: number, size: number) => {
   pagination.size = size;
-  pagination.page = 1;
-  await searchWrongQuestions(false);
+  await search(true);
 };
-
-const useRecommendKnowledge = async (knowledge: string) => {
-  filters.knowledge_keyword = knowledge;
-  await searchWrongQuestions(true);
-};
-
-const useRecommendType = async (type: string) => {
-  filters.question_type = type;
-  await searchWrongQuestions(true);
-};
-
 const resetFilters = () => {
+  filters.year = "";
   filters.question_type = "";
   filters.knowledge_keyword = "";
-  rows.value = [];
-  pagination.page = 1;
-  pagination.total = 0;
+  filters.is_reviewed = undefined;
   recommendKnowledge.value = [];
   recommendTypes.value = [];
   recommendText.value = "";
+  search(true);
+};
+const useKnowledge = async (name: string) => {
+  filters.knowledge_keyword = name;
+  await search(true);
+};
+const useType = async (name: string) => {
+  filters.question_type = name;
+  await search(true);
+};
+
+const stringList = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(text).filter(Boolean);
+  const raw = text(value);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(text).filter(Boolean);
+  } catch {}
+  return [raw];
+};
+const fileUrl = (path: unknown) => {
+  const value = text(path);
+  if (!value) return "";
+  if (/^(https?:)?\/\//i.test(value) || value.startsWith("data:")) return value;
+  return getTestPaperFileUrl(value);
+};
+const formatScore = (value: unknown) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "-";
+  return Number.isInteger(num) ? String(num) : num.toFixed(2);
+};
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const renderMarkdown = (value: unknown) =>
+  text(value)
+    .split(/\r?\n/)
+    .map((line) => `<p>${escapeHtml(line)}</p>`)
+    .join("");
+const recordKey = (record: WrongQuestionRecord) =>
+  [record.exam_id, record.test_paper_id, record.question_key || record.string_number].map(text).join("-");
+
+const toggleReviewed = async (record: WrongQuestionRecord) => {
+  if (!studentUid.value) return;
+  const currentKey = recordKey(record);
+  const questionKey = text(record.question_key || record.string_number);
+  if (!record.test_paper_id || !questionKey) {
+    message.warning("缺少试卷或题号信息");
+    return;
+  }
+
+  reviewUpdatingKey.value = currentKey;
+  try {
+    const nextValue = !record.is_reviewed;
+    const res = await putStudentWrongQuestionReview(
+      { student_uid: studentUid.value },
+      {
+        test_paper_id: record.test_paper_id,
+        question_key: questionKey,
+        class_id: record.class_id,
+        is_reviewed: nextValue,
+      }
+    );
+    if (Number(res?.code) !== 200) throw new Error(res?.msg || "更新复习状态失败");
+    record.is_reviewed = nextValue;
+    if (filters.is_reviewed && filters.is_reviewed !== String(nextValue)) {
+      rows.value = rows.value.filter((item) => recordKey(item) !== currentKey);
+      pagination.total = Math.max(0, pagination.total - 1);
+    }
+    message.success(nextValue ? "已标记为已复习" : "已取消复习标记");
+  } catch (error: any) {
+    message.error(error?.message || "更新复习状态失败");
+  } finally {
+    reviewUpdatingKey.value = "";
+  }
 };
 
 onMounted(async () => {
-  const userInfo = userStore.getUserInfo();
-  if (userInfo?.teacher) {
+  const user = userStore.getUserInfo();
+  if (user?.teacher) {
     message.warning("当前账号是老师，请使用老师端错题模块");
     router.replace("/wrong_question");
     return;
   }
-
-  studentUid.value = normalizeText(userInfo?.student?.uid || userInfo?.role);
-  if (!studentUid.value) {
-    message.error("未识别学生身份");
-    return;
-  }
-  await Promise.all([searchWrongQuestions(true), loadRecommend()]);
+  studentUid.value = text(user?.student?.uid || user?.role);
+  studentName.value = text(user?.student?.name || user?.nickname || user?.username);
+  await Promise.all([search(true), loadRecommend()]);
 });
 </script>
 
 <style scoped lang="less">
 .wrong-question-page {
   min-height: 100vh;
-  padding: 20px;
-  background:
-    radial-gradient(circle at top right, rgba(22, 119, 255, 0.12), transparent 36%),
-    radial-gradient(circle at left 20%, rgba(64, 158, 255, 0.08), transparent 32%),
-    #f4f7fd;
+  padding: 22px;
+  background: #f5f7fb;
+}
+
+.page-header,
+.filter-panel,
+.recommend-panel,
+.result-panel {
+  max-width: 1200px;
+  margin: 0 auto 16px;
 }
 
 .page-header {
-  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 
   h2 {
-    margin: 0 0 6px;
-    font-size: 30px;
+    margin: 0;
+    color: #1f2f46;
+    font-size: 26px;
     font-weight: 700;
-    color: #183a6b;
   }
 
   p {
-    margin: 0;
-    color: #4f6484;
-    font-size: 14px;
+    margin: 6px 0 0;
+    color: #65758b;
   }
 }
 
-.filter-card,
-.recommend-card,
-.list-card {
-  background: #ffffff;
-  border: none;
-  border-radius: 14px;
-  box-shadow: 0 10px 28px rgba(17, 58, 109, 0.08);
-  margin-bottom: 16px;
+.student-badge {
+  border: 1px solid #d5e1ef;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  color: #40566f;
+  font-weight: 600;
+}
+
+.filter-panel,
+.recommend-panel,
+.result-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.filter-panel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr)) repeat(3, auto);
+  gap: 10px;
+  align-items: center;
+  padding: 16px;
+}
+
+.recommend-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
 }
 
 .recommend-summary {
-  margin-bottom: 10px;
-  color: #0f5365;
+  color: #40566f;
+  font-weight: 600;
 }
 
-.recommend-row {
-  margin-bottom: 8px;
-}
-
-.recommend-label {
-  margin-right: 8px;
-  color: #4b6d77;
-}
-
-.recommend-tag {
+.click-tag {
   cursor: pointer;
-  user-select: none;
 }
 
-.list-title {
+.result-panel {
+  padding: 16px;
+}
+
+.result-head {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  position: relative;
-}
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #edf1f6;
+  margin-bottom: 14px;
 
-.list-total {
-  position: absolute;
-  right: 0;
-  color: #4b6d77;
-  font-size: 13px;
-  font-weight: 400;
+  h3 {
+    margin: 0;
+    color: #24364d;
+    font-size: 18px;
+  }
+
+  span {
+    color: #65758b;
+  }
 }
 
 .question-list {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .question-card {
-  border-radius: 14px;
-  border: 1px solid #d8e6f9;
-  background: #f6fbff; /* 加载中默认淡蓝色 */
-  padding: 18px;
-  box-shadow: 0 6px 18px rgba(15, 69, 133, 0.08);
-  transition: all 0.3s ease;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff;
 }
 
-.question-card.loaded-state {
-  background: #ffffff !important;
-}
-
-.question-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(22, 119, 255, 0.16);
-}
-
-.question-card.selected {
-  border-color: #1677ff;
-  box-shadow: 0 10px 24px rgba(22, 119, 255, 0.2);
-}
-
-.question-card-head {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.left-info {
+.question-main,
+.question-title,
+.metric-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.question-number {
-  font-weight: 600;
-  color: #0f4d5a;
+.question-main {
+  justify-content: space-between;
 }
 
-.right-metrics {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  color: #2a5f6a;
+.metric-row {
+  color: #4c6078;
   font-size: 13px;
 }
 
-.knowledge-wrap {
-  margin-bottom: 10px;
+.tag-row {
+  margin-top: 10px;
 }
 
 .content-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
   gap: 12px;
+  margin-top: 12px;
 }
 
-.image-panel,
-.answer-panel {
-  border-radius: 12px;
-  border: 1px solid #d7e8ff;
-  background: #f6fbff;
+.media-box,
+.answer-box {
+  min-width: 0;
+  border: 1px solid #e4ebf3;
+  border-radius: 8px;
   padding: 12px;
+  background: #f8fafc;
 }
 
-.panel-title {
+.box-title {
   margin-bottom: 8px;
+  color: #334963;
   font-weight: 600;
-  color: #135463;
 }
 
-.image-list {
+.image-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
 :deep(.question-image) {
+  width: 420px;
   max-width: 100%;
-  width: 460px;
-  border-radius: 8px;
+  border: 1px solid #dce6f1;
+  border-radius: 6px;
   overflow: hidden;
-  background: #effbff;
-  border: 1px solid #e1f3f7;
+  background: #fff;
 }
 
 :deep(.question-image img) {
   width: 100%;
   height: auto;
   object-fit: contain;
-  background: #f6fdff;
 }
 
 .markdown-body {
-  max-height: 440px;
+  max-height: 420px;
   overflow: auto;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #f8fbff;
-  border: 1px solid #e6f5f9;
-  color: #21444c;
+  padding: 10px;
+  border-radius: 6px;
+  background: #fff;
+  color: #26384c;
   line-height: 1.7;
-}
-
-.markdown-body :deep(h1),
-.markdown-body :deep(h2),
-.markdown-body :deep(h3),
-.markdown-body :deep(h4),
-.markdown-body :deep(h5),
-.markdown-body :deep(h6) {
-  margin: 8px 0;
-  color: #0f4d5a;
 }
 
 .markdown-body :deep(p) {
   margin: 0 0 8px;
-}
-
-.markdown-body :deep(ul) {
-  margin: 0 0 8px;
-  padding-left: 18px;
-}
-
-.markdown-body :deep(blockquote) {
-  margin: 0 0 8px;
-  padding: 6px 10px;
-  border-left: 3px solid #6bbcca;
-  background: #ebf9fd;
-  color: #226573;
-}
-
-.markdown-body :deep(code) {
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: #e6f7fb;
-  color: #1f6170;
-}
-
-.markdown-body :deep(.md-code) {
-  margin: 0 0 8px;
-  padding: 10px;
-  border-radius: 8px;
-  background: #12343d;
-  color: #d6f5fb;
-  overflow: auto;
-}
-
-.markdown-body :deep(.md-gap) {
-  height: 8px;
 }
 
 .pagination-wrap {
@@ -693,12 +542,16 @@ onMounted(async () => {
   text-align: right;
 }
 
-@media (max-width: 992px) {
+@media (max-width: 900px) {
+  .page-header,
+  .question-main {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .filter-panel,
   .content-grid {
     grid-template-columns: 1fr;
-  }
-  :deep(.question-image) {
-    width: 100%;
   }
 }
 </style>

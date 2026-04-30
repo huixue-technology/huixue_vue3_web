@@ -403,7 +403,7 @@ const allSubjectMap: Record<string, string> = {
 // 状态管理
 const userStore = useUserStore();
 const classId = ref<number>(0);
-const teacherId = ref<number>(0);
+const teacherId = ref<string>('');
 const loading = ref(false);
 const searchKeyword = ref('');
 
@@ -411,8 +411,8 @@ const searchKeyword = ref('');
 interface ClassInfo {
   id: number;
   name: string;
-  header: number;
-  school_id: number;
+  header: string | null;
+  school_id: string | null;
   subject_selection: string;
 }
 const classInfo = ref<ClassInfo | null>(null);
@@ -1092,21 +1092,37 @@ onMounted(async () => {
   try {
     loading.value = true;
     const userInfo = userStore.getUserInfo();
-    const header = userInfo?.teacher?.uid;
+    const header = String(userInfo?.role || userInfo?.teacher?.uid || '').trim();
     
     if (!header) {
       message.error('未获取到教师信息');
       return;
     }
 
-    const classRes = await getClassesApi({ header: header });
-    if (classRes.code !== 200 || !classRes.data.length) {
+    let classes: ClassInfo[] = [];
+    const classRes = await getClassesApi({ header });
+    if (classRes.code === 200 && classRes.data.length > 0) {
+      classes = classRes.data;
+    }
+
+    // 兼容非班主任教师：回退全班级（可按学校过滤）
+    if (classes.length === 0) {
+      const allClassRes = await getClassesApi({});
+      if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
+        classes = allClassRes.data;
+      }
+      if (classes.length > 0) {
+        message.warning('未找到班主任绑定班级，已切换为全班级');
+      }
+    }
+
+    if (classes.length === 0) {
       message.error('未查询到教师关联的班级信息');
       return;
     }
 
-    teacherId.value = classRes.data[0].header;
-    classId.value = classRes.data[0].id;
+    teacherId.value = String(classes[0].header || '');
+    classId.value = classes[0].id;
     
     // 获取班级详细信息(包含选科信息)
     await fetchClassInfo(classId.value);

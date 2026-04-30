@@ -57,7 +57,7 @@ const hasData = computed(() => {
 // 获取教师ID
 const getTeacherId = () => {
   const userInfo = userStore.getUserInfo();
-  return userInfo?.teacher?.uid;
+  return String(userInfo?.role || userInfo?.teacher?.uid || '').trim();
 };
 
 // 初始化班级信息
@@ -70,14 +70,30 @@ const initClassInfo = async () => {
       return;
     }
 
+    let classData: any[] = [];
     const classRes = await getClassesApi({ header: teacherId });
     if (classRes.code === 200 && classRes.data.length > 0) {
+      classData = classRes.data;
+    }
+
+    // 兼容非班主任教师：回退全班级（可按学校过滤）
+    if (classData.length === 0) {
+      const allClassRes = await getClassesApi({});
+      if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
+        classData = allClassRes.data;
+      }
+      if (classData.length > 0) {
+        message.warning("未找到班主任绑定班级，已切换为全班级");
+      }
+    }
+
+    if (classData.length > 0) {
       classInfo.value = {
-        header: classRes.data[0].header,
-        class_id: classRes.data[0].id,
-        name: classRes.data[0].name,
-        subject_selection: classRes.data[0].subject_selection,
-        school_id: classRes.data[0].school_id
+        header: classData[0].header,
+        class_id: classData[0].id,
+        name: classData[0].name,
+        subject_selection: classData[0].subject_selection,
+        school_id: classData[0].school_id
       };
       // 获取班级数据分析
       await fetchClassAnalysisData();

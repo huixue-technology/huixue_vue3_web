@@ -268,8 +268,8 @@ import { Row, Col, Card, Button, Empty, Alert, Select, Spin, Radio, Table } from
 interface ClassInfo {
   id: number;
   name: string;
-  header: number;
-  school_id: number;
+  header: string | null;
+  school_id: string | null;
   subject_selection: string; // 新增：科目选择
 }
 
@@ -335,7 +335,7 @@ const selectedClass2 = ref<number>();
 const selectedExamId = ref<number>(0);
 const displayMode = ref<'table' | 'chart'>('table');
 const comparisonData = ref<ComparisonResult | null>(null);
-const currentClass = ref<ClassInfo>({ id: 0, name: '', header: 0, school_id: 0, subject_selection: '' });
+const currentClass = ref<ClassInfo>({ id: 0, name: '', header: null, school_id: null, subject_selection: '' });
 // 科目名称映射
 const subjectMap = {
   'yuwen': '语文',
@@ -671,7 +671,7 @@ const isCompareBtnDisabled = computed(() => {
 const init = async () => {
   try {
     const userInfo = userStore.getUserInfo();
-    const teacherId = userInfo?.teacher?.uid;
+    const teacherId = String(userInfo?.role || userInfo?.teacher?.uid || '').trim();
     
     if (!teacherId) {
       message.error('未获取到教师信息');
@@ -679,32 +679,44 @@ const init = async () => {
     }
     
     loading.value = true;
-    const classRes = await getClassesApi({ 
-    });
+    const classRes = await getClassesApi({});
     
     if (classRes.code === 200 && classRes.data.length > 0) {
-      allClassList.value = classRes.data; 
-      const myClass = allClassList.value.find(cls => cls.header === teacherId);
-      if (!myClass) {
-        message.warning('未找到您作为班主任的班级');
+      allClassList.value = classRes.data;
+
+      if (allClassList.value.length === 0) {
+        message.warning('未找到可用班级');
         loading.value = false;
         return;
       }
-      currentClass.value = myClass;
-      selectedClass1.value = myClass.id;
-      const myClassIdPrefix = myClass.id.toString().slice(0, 2); 
-      const myClassSubject = myClass.subject_selection || ''; 
-      classList.value = allClassList.value.filter(cls => {
-        const isNotMyClass = cls.id !== myClass.id;
-        const isSameIdPrefix = cls.id.toString().slice(0, 2) === myClassIdPrefix;
-        const isSameSubject = (cls.subject_selection || '') === myClassSubject;
-        return isNotMyClass && isSameIdPrefix && isSameSubject;
-      });
-      if (classList.value.length > 0) {
-        selectedClass2.value = classList.value[0].id;
+
+      const myClass = allClassList.value.find(cls => String(cls.header || '').trim() === teacherId);
+      if (!myClass) {
+        // 兼容非班主任教师：回退到全班级模式
+        currentClass.value = allClassList.value[0];
+        selectedClass1.value = currentClass.value.id;
+        classList.value = allClassList.value.filter(cls => cls.id !== currentClass.value.id);
+        if (classList.value.length > 0) {
+          selectedClass2.value = classList.value[0].id;
+        }
+        message.warning('未找到班主任绑定班级，已切换为全班级对比');
       } else {
-        selectedClass2.value = undefined;
-        message.warning(`暂无符合条件的挑战班级（需满足：ID前两位为"${myClassIdPrefix}"且科目选择为"${myClassSubject}"）`);
+        currentClass.value = myClass;
+        selectedClass1.value = myClass.id;
+        const myClassIdPrefix = myClass.id.toString().slice(0, 2); 
+        const myClassSubject = myClass.subject_selection || ''; 
+        classList.value = allClassList.value.filter(cls => {
+          const isNotMyClass = cls.id !== myClass.id;
+          const isSameIdPrefix = cls.id.toString().slice(0, 2) === myClassIdPrefix;
+          const isSameSubject = (cls.subject_selection || '') === myClassSubject;
+          return isNotMyClass && isSameIdPrefix && isSameSubject;
+        });
+        if (classList.value.length > 0) {
+          selectedClass2.value = classList.value[0].id;
+        } else {
+          selectedClass2.value = undefined;
+          message.warning(`暂无符合条件的挑战班级（需满足：ID前两位为"${myClassIdPrefix}"且科目选择为"${myClassSubject}"）`);
+        }
       }
     } else {
       message.error(classRes.msg || '获取班级列表失败');

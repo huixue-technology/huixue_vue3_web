@@ -277,8 +277,8 @@ import { useUserStore } from '@/store';
 interface ClassInfo {
   id: number;
   name: string;
-  header: number;
-  school_id: number;
+  header: string | null;
+  school_id: string | null;
   subject_selection: string;
 }
 
@@ -675,19 +675,36 @@ const isCompareBtnDisabled = computed(() => {
 const init = async () => {
   try {
     const userInfo = userStore.getUserInfo();
-    const teacherId = userInfo?.teacher?.uid;
+    const teacherId = String(userInfo?.role || userInfo?.teacher?.uid || '').trim();
     if (!teacherId) {
       message.error('未获取到教师信息');
       return;
     }
     loading.value = true;
+
+    let classes: ClassInfo[] = [];
     const classRes = await getClassesApi({ header: teacherId });
     if (classRes.code === 200 && classRes.data.length > 0) {
-      classList.value = classRes.data;
+      classes = classRes.data;
+    }
+
+    // 兼容非班主任教师：回退全班级（可按学校过滤）
+    if (classes.length === 0) {
+      const allClassRes = await getClassesApi({});
+      if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
+        classes = allClassRes.data;
+      }
+      if (classes.length > 0) {
+        message.warning('未找到班主任绑定班级，已切换为全班级');
+      }
+    }
+
+    if (classes.length > 0) {
+      classList.value = classes;
       selectedClassId.value = classList.value[0].id;
       await fetchStudentListAndExams();
     } else {
-      message.warning(classRes.msg || '未找到您管理的班级');
+      message.warning(classRes.msg || '未找到可用班级');
     }
   } catch (err) {
     message.error('初始化失败');

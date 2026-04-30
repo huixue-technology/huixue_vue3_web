@@ -1,152 +1,184 @@
-﻿<template>
+<template>
   <div class="wrong-question-page">
-    <div class="page-header">
-      <h2>老师端错题模块</h2>
-      <p>查看全量错题，支持直接预览题目图片与 Markdown 答案。</p>
-    </div>
+    <header class="page-header">
+      <div>
+        <h2>错题模块</h2>
+        <p>按班级或学生查看未得满分的小题，支持题型和关键词继续筛选。</p>
+      </div>
+      <a-radio-group v-model:value="mode" button-style="solid" @change="handleModeChange">
+        <a-radio-button value="class">班级错题</a-radio-button>
+        <a-radio-button value="student">学生错题</a-radio-button>
+      </a-radio-group>
+    </header>
 
-    <a-card class="filter-card">
-      <a-space wrap>
+    <section class="filter-panel">
+      <div class="filter-grid">
         <a-select
-          v-model:value="filters.class_id"
-          placeholder="班级ID（可选）"
+          v-model:value="filters.subject"
+          class="filter-control"
+          placeholder="科目"
+          :options="subjectOptions"
           allow-clear
-          style="width: 180px"
-          :options="classOptions"
+          @change="handleBaseChange"
+        />
+        <a-input
+          v-model:value="filters.school_id"
+          class="filter-control"
+          placeholder="学校 ID"
+          allow-clear
+          @change="handleSchoolChange"
+          @pressEnter="handleSearch"
+        />
+        <a-select
+          v-model:value="filters.grade"
+          class="filter-control"
+          placeholder="年级"
+          :options="gradeOptions"
+          :loading="optionLoading"
+          allow-clear
           show-search
           :filter-option="filterOption"
-          :loading="loadingClasses"
+          @change="handleGradeChange"
+        />
+        <a-select
+          v-model:value="filters.class_id"
+          class="filter-control"
+          :placeholder="canChooseClass ? '班级' : '先选科目、学校和年级'"
+          :disabled="!canChooseClass"
+          :options="classOptions"
+          :loading="optionLoading"
+          allow-clear
+          show-search
+          :filter-option="filterOption"
           @change="handleClassChange"
         />
         <a-select
-          v-model:value="filters.student_id"
-          :placeholder="filters.class_id ? '学生ID（可选）' : '请先选择班级'"
+          v-model:value="filters.test_paper_id"
+          class="filter-control"
+          :placeholder="canChoosePaper ? '试卷' : '先选科目、学校和年级'"
+          :disabled="!canChoosePaper"
+          :options="paperOptions"
+          :loading="paperLoading"
           allow-clear
-          style="width: 180px"
-          :options="studentOptions"
           show-search
           :filter-option="filterOption"
-          :loading="loadingStudents"
-          :disabled="!filters.class_id"
+          @change="handlePaperChange"
         />
-
-        <a-input
-          v-model:value="filters.question_type"
-          placeholder="题型（可选）"
+        <a-select
+          v-if="mode === 'student'"
+          v-model:value="filters.student_id"
+          class="filter-control"
+          :placeholder="filters.class_id ? '学生' : '先选班级'"
+          :disabled="!filters.class_id"
+          :options="studentOptions"
+          :loading="studentLoading"
           allow-clear
-          style="width: 170px"
+          show-search
+          :filter-option="filterOption"
+          @change="handleSearch"
+        />
+        <a-select
+          v-model:value="filters.question_type"
+          class="filter-control"
+          placeholder="题型"
+          :options="questionTypeOptions"
+          allow-clear
+          show-search
+          :filter-option="filterOption"
+          @change="handleSearch"
         />
         <a-input
           v-model:value="filters.knowledge_keyword"
-          placeholder="知识点关键词（可选）"
+          class="filter-control keyword-control"
+          placeholder="关键词"
           allow-clear
-          style="width: 240px"
           @pressEnter="handleSearch"
         />
-        <a-button type="primary" :loading="loading" @click="handleSearch">查询错题</a-button>
-        <a-button :loading="recommendLoading" @click="handleRecommend">获取推荐</a-button>
-        <a-button @click="resetFilters">重置</a-button>
-      </a-space>
-    </a-card>
-
-    <a-card title="推荐结果" class="recommend-card">
-      <div v-if="recommendText" class="recommend-summary">{{ recommendText }}</div>
-      <div v-if="recommendKnowledge.length" class="recommend-row">
-        <span class="recommend-label">高频知识点：</span>
-        <a-tag
-          v-for="item in recommendKnowledge"
-          :key="item.name"
-          class="recommend-tag"
-          color="processing"
-          @click="useRecommendKnowledge(item.name)"
-        >
-          {{ item.name }} ({{ item.count }})
-        </a-tag>
       </div>
-      <div v-if="recommendTypes.length" class="recommend-row">
-        <span class="recommend-label">高频题型：</span>
-        <a-tag
-          v-for="item in recommendTypes"
-          :key="item.name"
-          color="blue"
-          class="recommend-tag"
-          @click="useRecommendType(item.name)"
-        >
-          {{ item.name }} ({{ item.count }})
-        </a-tag>
-      </div>
-      <a-empty v-if="!recommendKnowledge.length && !recommendTypes.length" description="暂无推荐结果" />
-    </a-card>
 
-    <a-card class="list-card">
-      <template #title>
-        <div class="list-title">
-          <span>错题列表</span>
-          <span class="list-total">共 {{ Number(pagination.total || 0) }} 题</span>
+      <div class="filter-actions">
+        <span class="rule-text">{{ ruleText }}</span>
+        <div class="button-row">
+          <a-button type="primary" :loading="loading" @click="handleSearch">查询</a-button>
+          <a-button :loading="recommendLoading" @click="loadRecommend">推荐筛选</a-button>
+          <a-button @click="resetFilters">重置</a-button>
         </div>
-      </template>
+      </div>
+    </section>
+
+    <section v-if="recommendText || recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
+      <span class="recommend-summary">{{ recommendText }}</span>
+      <a-tag
+        v-for="item in recommendKnowledge"
+        :key="`k-${item.name}`"
+        color="processing"
+        class="click-tag"
+        @click="useKnowledge(item.name)"
+      >
+        {{ item.name }} {{ item.count }}
+      </a-tag>
+      <a-tag
+        v-for="item in recommendTypes"
+        :key="`t-${item.name}`"
+        color="blue"
+        class="click-tag"
+        @click="useType(item.name)"
+      >
+        {{ item.name }} {{ item.count }}
+      </a-tag>
+    </section>
+
+    <section class="result-panel">
+      <div class="result-head">
+        <h3>{{ mode === "class" ? "班级错题" : "学生错题" }}</h3>
+        <span>共 {{ pagination.total }} 题</span>
+      </div>
+
+      <a-alert v-if="errorText" type="warning" show-icon :message="errorText" class="state-alert" />
 
       <a-spin :spinning="loading">
-        <a-empty
-          v-if="!rows.length"
-          description="暂无错题数据"
-        />
-
+        <a-empty v-if="!rows.length" description="暂无错题数据" />
         <div v-else class="question-list">
-          <div
-            v-for="record in rows"
-            :key="`${record.exam_id || ''}-${record.test_paper_id || ''}-${record.class_id || ''}-${record.question_key || record.question_id || ''}`"
-            class="question-card"
-          >
-            <div class="question-card-head">
-              <div class="left-info">
-                <span class="question-number">第 {{ record.string_number || record.question_key || '-' }} 题</span>
-                <a-tag color="gold" v-if="record.question_type">{{ record.question_type }}</a-tag>
-                <a-tag color="cyan" v-if="record.class_id">班级 {{ record.class_id }}</a-tag>
+          <article v-for="record in rows" :key="recordKey(record)" class="question-card">
+            <div class="question-main">
+              <div class="question-title">
+                <strong>第 {{ record.string_number || record.question_key || "-" }} 题</strong>
+                <a-tag v-if="record.subject" color="blue">{{ record.subject }}</a-tag>
+                <a-tag v-if="record.question_type" color="gold">{{ record.question_type }}</a-tag>
+                <a-tag v-if="record.class_id" color="cyan">班级 {{ record.class_id }}</a-tag>
               </div>
-              <div class="right-metrics">
-                <span>错率 {{ formatPercent(record.wrong_rate) }}</span>
-                <span>错题人数 {{ Number(record.wrong_count || 0) }}/{{ Number(record.participant_count || 0) }}</span>
-                <span>均分 {{ formatScore(record.avg_score) }}/{{ formatScore(record.full_score) }}</span>
+              <div class="metric-row">
+                <span v-if="mode === 'student'">得分 {{ formatScore(record.student_score) }}/{{ formatScore(record.full_score) }}</span>
+                <span v-else>错题人数 {{ record.wrong_count ?? "-" }}</span>
+                <span v-if="record.participant_count">参与 {{ record.participant_count }}</span>
+                <span v-if="record.wrong_rate !== undefined && record.wrong_rate !== null">错率 {{ formatPercent(record.wrong_rate) }}</span>
               </div>
             </div>
 
-            <div class="knowledge-wrap" v-if="normalizeStringArray(record.knowledge_points).length">
-              <a-tag
-                v-for="point in normalizeStringArray(record.knowledge_points)"
-                :key="point"
-                color="geekblue"
-              >
-                {{ point }}
-              </a-tag>
+            <div v-if="stringList(record.knowledge_points).length" class="tag-row">
+              <a-tag v-for="point in stringList(record.knowledge_points)" :key="point" color="geekblue">{{ point }}</a-tag>
             </div>
 
             <div class="content-grid">
-              <div class="image-panel">
-                <div class="panel-title">题目图片</div>
-                <div v-if="normalizeStringArray(record.images).length" class="image-list">
+              <div class="media-box">
+                <div class="box-title">题目图片</div>
+                <div v-if="stringList(record.images).length" class="image-row">
                   <a-image
-                    v-for="(img, imgIndex) in normalizeStringArray(record.images)"
-                    :key="`${record.question_id || record.question_key || 'q'}-${imgIndex}`"
-                    :src="getImageUrl(img)"
-                    :preview="true"
+                    v-for="(image, index) in stringList(record.images)"
+                    :key="`${recordKey(record)}-${index}`"
+                    :src="fileUrl(image)"
                     class="question-image"
                   />
                 </div>
-                <a-empty v-else description="暂无题图" :image="null" />
+                <a-empty v-else description="暂无题图" />
               </div>
-
-              <div class="answer-panel">
-                <div class="panel-title">答案（Markdown）</div>
-                <div
-                  v-if="normalizeText(record.answer)"
-                  class="markdown-body"
-                  v-html="renderMarkdownLite(record.answer)"
-                ></div>
-                <a-empty v-else description="暂无答案" :image="null" />
+              <div class="answer-box">
+                <div class="box-title">答案</div>
+                <div v-if="text(record.answer)" class="markdown-body" v-html="renderMarkdown(record.answer)"></div>
+                <a-empty v-else description="暂无答案" />
               </div>
             </div>
-          </div>
+          </article>
         </div>
       </a-spin>
 
@@ -155,610 +187,604 @@
           :current="pagination.page"
           :page-size="pagination.size"
           :total="pagination.total"
-          :show-size-changer="true"
+          show-size-changer
           :show-total="(total: number) => `共 ${total} 条`"
           @change="handlePageChange"
           @showSizeChange="handleSizeChange"
         />
       </div>
-    </a-card>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
-import {
-  getTeacherWrongQuestionRecommendApi,
-  getTestPaperFileUrl,
-  searchTeacherWrongQuestionApi,
-} from "@/servers/api/testPaper";
 import { getClassesApi } from "@/servers/api/classes";
 import { getStudentApi } from "@/servers/api/student";
-import router from "@/router";
+import { getTestPaper as getTestPaperApi } from "@/servers/api/tp";
+import {
+  getTeacherWrongQuestionRecommend as getTeacherWrongQuestionRecommendApi,
+  getTeacherWrongQuestionSearch as searchTeacherWrongQuestionApi,
+} from "@/servers/api/wrongQuestion";
 import { useUserStore } from "@/store";
 
+type Option = { label: string; value: string | number };
+type CountItem = { name: string; count: number };
 type WrongQuestionRecord = {
-  exam_id?: number;
-  test_paper_id?: number;
+  exam_id?: number | string;
+  exam_name?: string;
+  test_paper_id?: number | string;
   class_id?: string;
+  student_id?: string;
+  student_name?: string;
   question_key?: string;
-  question_id?: number;
   string_number?: string;
+  subject?: string;
   question_type?: string;
   knowledge_points?: string[] | string;
-  answer?: string;
   images?: string[] | string;
-  wrong_rate?: number;
-  wrong_count?: number;
-  participant_count?: number;
-  avg_score?: number;
-  full_score?: number;
-};
-
-type RecommendItem = {
-  name: string;
-  count: number;
+  answer?: string;
+  student_score?: number | string;
+  full_score?: number | string;
+  wrong_count?: number | string;
+  participant_count?: number | string;
+  wrong_rate?: number | string;
 };
 
 const userStore = useUserStore();
+const mode = ref<"class" | "student">("class");
 const rows = ref<WrongQuestionRecord[]>([]);
 const loading = ref(false);
+const optionLoading = ref(false);
+const paperLoading = ref(false);
+const studentLoading = ref(false);
 const recommendLoading = ref(false);
-const recommendKnowledge = ref<RecommendItem[]>([]);
-const recommendTypes = ref<RecommendItem[]>([]);
+const errorText = ref("");
+const allClasses = ref<Array<Option & { grade: string }>>([]);
+const gradeOptions = ref<Option[]>([]);
+const classOptions = ref<Option[]>([]);
+const paperOptions = ref<Option[]>([]);
+const studentOptions = ref<Option[]>([]);
+const recommendKnowledge = ref<CountItem[]>([]);
+const recommendTypes = ref<CountItem[]>([]);
 const recommendText = ref("");
 
-const classOptions = ref<Array<{ label: string; value: string }>>([]);
-const studentOptions = ref<Array<{ label: string; value: string }>>([]);
-const loadingClasses = ref(false);
-const loadingStudents = ref(false);
-
 const filters = reactive({
+  subject: undefined as string | undefined,
+  school_id: "",
+  grade: undefined as string | undefined,
   class_id: undefined as string | undefined,
+  test_paper_id: undefined as number | undefined,
   student_id: undefined as string | undefined,
   question_type: "",
   knowledge_keyword: "",
 });
 
-const pagination = reactive({
-  page: 1,
-  size: 10,
-  total: 0,
-});
+const pagination = reactive({ page: 1, size: 10, total: 0 });
 
-// 获取班级列表
-const fetchClassList = async () => {
-  const userInfo = userStore.getUserInfo();
-  if (!userInfo?.teacher) return;
-  const schoolId = userInfo.teacher.school_id || "";
-  if (!schoolId) return;
+const subjectOptions: Option[] = ["语文", "数学", "英语", "物理", "化学", "生物", "政治", "历史", "地理"].map((item) => ({
+  label: item,
+  value: item,
+}));
 
-  loadingClasses.value = true;
-  try {
-    const res = await getClassesApi({ school_id: schoolId, size: 1000 });
-    if (res.code === 200 && res.data) {
-      let list = res.data.map((item: any) => ({
-        label: item.name || `班级${item.class_id}`,
-        value: String(item.class_id || item.id),
-      }));
+const questionTypeOptions: Option[] = ["单选题", "多选题", "填空题", "解答题", "实验题", "计算题"].map((item) => ({
+  label: item,
+  value: item,
+}));
 
-      list.sort((a, b) => {
-        const na = a.label.match(/\d{4}/)?.[0] || "0";
-        const nb = b.label.match(/\d{4}/)?.[0] || "0";
-        const ga = na.slice(0, 2);
-        const gb = nb.slice(0, 2);
-        if (ga !== gb) return Number(gb) - Number(ga);
-        return Number(na) - Number(nb);
-      });
+const canChooseClass = computed(() => Boolean(filters.subject && filters.school_id && filters.grade));
+const canChoosePaper = computed(() => Boolean(filters.subject && filters.school_id && filters.grade));
+const ruleText = computed(() =>
+  mode.value === "class"
+    ? "筛选班级错题前，需要先确定科目、学校、年级和班级；试卷可作为进一步筛选。"
+    : "先用学校、年级、班级定位学生，再选择科目和试卷查看个人错题。"
+);
 
-      classOptions.value = list;
-    }
-  } catch (err) {
-    console.error("班级加载失败：", err);
-  } finally {
-    loadingClasses.value = false;
-  }
+const text = (value: unknown) => String(value ?? "").trim();
+const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
+const filterOption = (input: string, option: any) => text(option?.label).toLowerCase().includes(input.toLowerCase());
+const sortOptions = (a: Option, b: Option) => String(a.label).localeCompare(String(b.label), "zh-Hans-CN", { numeric: true });
+
+const getLocalSchoolId = () => {
+  const user = userStore.getUserInfo();
+  return text(user?.teacher?.school_id || user?.school_id || user?.teacher?.school);
 };
 
-// 按班级加载学生
-const fetchStudentsByClass = async (classId: string) => {
-  loadingStudents.value = true;
-  studentOptions.value = [];
-  try {
-    const res = await getStudentApi({
-      class_id: Number(classId),
-      page: 1,
-      size: 1000,
-    });
-    if (res.code === 200 && Array.isArray(res.data)) {
-      studentOptions.value = res.data.map((item: any) => ({
-        label: `${item.name}（${maskStudentId(item.uid)}）`,
-        value: String(item.uid),
-      }));
-    }
-  } catch (err) {
-    console.error("学生列表加载失败：", err);
-  } finally {
-    loadingStudents.value = false;
-  }
-};
-
-// 只保留后四位
-const maskStudentId = (uid: string | number) => {
-  const str = String(uid);
-  if (str.length <= 4) return str;
-  return `**${str.slice(-4)}`;
-};
-
-// 切换班级 → 按班级请求学生
-const handleClassChange = async (classId?: string) => {
-  filters.student_id = undefined;
-  studentOptions.value = [];
-  if (!classId) return;
-  await fetchStudentsByClass(classId);
-};
-
-const normalizeText = (value: unknown) => String(value ?? "").trim();
-
-const normalizeStringArray = (value: unknown): string[] => {
-  if (Array.isArray(value)) {
-    return value.map((item) => normalizeText(item)).filter(Boolean);
-  }
-  if (typeof value === "string") {
-    const text = value.trim();
-    if (!text) return [];
-    try {
-      const parsed = JSON.parse(text);
-      if (Array.isArray(parsed)) {
-        return parsed.map((item) => normalizeText(item)).filter(Boolean);
-      }
-    } catch {}
-    return [text];
-  }
-  return [];
-};
-
-const formatPercent = (value: unknown) => {
-  const num = Number(value);
-  return Number.isFinite(num) ? `${(num * 100).toFixed(1)}%` : "-";
-};
-
-const formatScore = (value: unknown) => {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return "-";
-  return Number.isInteger(num) ? String(num) : num.toFixed(2);
-};
-
-const getImageUrl = (path: unknown) => {
-  const text = normalizeText(path);
-  if (!text) return "";
-  if (/^(https?:)?\/\//i.test(text) || text.startsWith("data:")) return text;
-  return getTestPaperFileUrl(text);
-};
-
-const escapeHtml = (text: string) =>
-  text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-const renderInlineMarkdown = (raw: string) => {
-  let html = escapeHtml(raw);
-  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
-  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-  return html;
-};
-
-const renderMarkdownLite = (value: unknown) => {
-  const source = normalizeText(value);
-  if (!source) return "";
-  const markdown = source.replace(/\r\n/g, "\n");
-  const codeBlocks: string[] = [];
-  let withTokens = markdown.replace(/```([\s\S]*?)```/g, (_all, code) => {
-    const t = `__CODE_BLOCK_${codeBlocks.length}__`;
-    codeBlocks.push(`<pre class="md-code"><code>${escapeHtml(String(code).trim())}</code></pre>`);
-    return t;
-  });
-
-  const lines = withTokens.split("\n");
-  const htmlLines: string[] = [];
-  let inList = false;
-
-  const closeList = () => {
-    if (inList) {
-      htmlLines.push("</ul>");
-      inList = false;
-    }
-  };
-
-  for (const line of lines) {
-    const trim = line.trim();
-    if (!trim) {
-      closeList();
-      htmlLines.push('<div class="md-gap"></div>');
-      continue;
-    }
-    if (/^__CODE_BLOCK_\d+__$/.test(trim)) {
-      closeList();
-      htmlLines.push(trim);
-      continue;
-    }
-    const h = trim.match(/^(#{1,6})\s+(.+)$/);
-    if (h) {
-      closeList();
-      htmlLines.push(`<h${h[1].length}>${renderInlineMarkdown(h[2])}</h${h[1].length}>`);
-      continue;
-    }
-    const li = trim.match(/^[-*+]\s+(.+)$/);
-    if (li) {
-      if (!inList) {
-        htmlLines.push("<ul>");
-        inList = true;
-      }
-      htmlLines.push(`<li>${renderInlineMarkdown(li[1])}</li>`);
-      continue;
-    }
-    if (trim.startsWith(">")) {
-      closeList();
-      htmlLines.push(`<blockquote>${renderInlineMarkdown(trim.replace(/^>\s?/, ""))}</blockquote>`);
-      continue;
-    }
-    closeList();
-    htmlLines.push(`<p>${renderInlineMarkdown(trim)}</p>`);
-  }
-  closeList();
-  let html = htmlLines.join("");
-  codeBlocks.forEach((b, i) => (html = html.replace(`__CODE_BLOCK_${i}__`, b)));
-  return html;
-};
-
-const buildSearchParams = () => ({
+const buildParams = () => ({
   page: pagination.page,
   size: pagination.size,
-  class_id: filters.class_id || undefined,
-  student_id: filters.student_id || undefined,
-  question_type: normalizeText(filters.question_type) || undefined,
-  knowledge_keyword: normalizeText(filters.knowledge_keyword) || undefined,
+  subject: filters.subject,
+  school_id: text(filters.school_id) || undefined,
+  grade: filters.grade,
+  class_id: filters.class_id,
+  test_paper_id: filters.test_paper_id,
+  student_id: mode.value === "student" ? filters.student_id : undefined,
+  question_type: text(filters.question_type) || undefined,
+  knowledge_keyword: text(filters.knowledge_keyword) || undefined,
 });
 
-const searchWrongQuestions = async (resetPage = false) => {
+const refreshClassOptions = () => {
+  const grade = text(filters.grade);
+  classOptions.value = allClasses.value
+    .filter((item) => !grade || item.grade === grade)
+    .map(({ label, value }) => ({ label, value }))
+    .sort(sortOptions);
+};
+
+const loadClasses = async () => {
+  if (!text(filters.school_id)) return;
+  optionLoading.value = true;
+  try {
+    const res = await getClassesApi({ school_id: filters.school_id, page: 1, size: 1000 } as any);
+    const data = Array.isArray(res?.data) ? res.data : [];
+    allClasses.value = data
+      .map((item: any) => {
+        const value = text(item.id || item.class_id);
+        return {
+          label: text(item.name) || `班级 ${value}`,
+          value,
+          grade: text(item.grade),
+        };
+      })
+      .filter((item: any) => item.value);
+    const gradeMap = new Map<string, string>();
+    allClasses.value.forEach((item) => {
+      if (item.grade) gradeMap.set(item.grade, item.grade);
+    });
+    gradeOptions.value = Array.from(gradeMap.entries()).map(([value, label]) => ({ label, value })).sort(sortOptions);
+    refreshClassOptions();
+  } catch {
+    message.error("班级列表加载失败");
+  } finally {
+    optionLoading.value = false;
+  }
+};
+
+const loadPapers = async () => {
+  if (!canChoosePaper.value) return;
+  paperLoading.value = true;
+  try {
+    const res = await getTestPaperApi({
+      page: 1,
+      size: 1000,
+      school_id: text(filters.school_id),
+      grade: filters.grade,
+      subject: filters.subject,
+    } as any);
+    const data = Array.isArray(res?.data) ? res.data : [];
+    paperOptions.value = data
+      .map((item: any) => ({
+        label: text(item.name) || text(item.paper_name) || `试卷 ${item.id || item.paper_id}`,
+        value: Number(item.id || item.paper_id),
+      }))
+      .filter((item: Option) => Number.isFinite(Number(item.value)))
+      .sort(sortOptions);
+  } catch {
+    message.error("试卷列表加载失败");
+  } finally {
+    paperLoading.value = false;
+  }
+};
+
+const loadStudents = async () => {
+  if (!filters.class_id) return;
+  studentLoading.value = true;
+  try {
+    const res = await getStudentApi({ school: filters.school_id, grade: filters.grade, class_id: filters.class_id, page: 1, size: 1000 } as any);
+    const data = Array.isArray(res?.data) ? res.data : [];
+    studentOptions.value = data
+      .map((item: any) => ({
+        label: `${text(item.name) || "学生"} ${text(item.uid)}`,
+        value: text(item.uid),
+      }))
+      .filter((item: Option) => item.value)
+      .sort(sortOptions);
+  } catch {
+    message.error("学生列表加载失败");
+  } finally {
+    studentLoading.value = false;
+  }
+};
+
+const validateSearch = () => {
+  if (!filters.subject || !text(filters.school_id) || !filters.grade) {
+    errorText.value = "请先选择科目、学校 ID 和年级。";
+    return false;
+  }
+  if (mode.value === "student" && !filters.student_id) {
+    errorText.value = "学生错题模式需要先选择班级和学生。";
+    return false;
+  }
+  if (mode.value === "class" && !filters.class_id && !filters.test_paper_id) {
+    errorText.value = "班级错题模式请至少选择班级；试卷可选。";
+    return false;
+  }
+  if (mode.value === "student" && !filters.test_paper_id) {
+    errorText.value = "学生错题模式请选择试卷。";
+    return false;
+  }
+  errorText.value = "";
+  return true;
+};
+
+const search = async (resetPage = false) => {
   if (resetPage) pagination.page = 1;
+  if (!validateSearch()) {
+    rows.value = [];
+    pagination.total = 0;
+    return;
+  }
   loading.value = true;
   try {
-    const res = await searchTeacherWrongQuestionApi(buildSearchParams());
-    if (res.code !== 200) {
-      message.error(res.msg || "查询失败");
-      return;
-    }
-    rows.value = res.data || [];
-    pagination.total = Number(res.total || 0);
-  } catch {
-    message.error("查询失败");
+    const res = await searchTeacherWrongQuestionApi(buildParams());
+    if (Number(res?.code) !== 200) throw new Error(res?.msg || "查询失败");
+    rows.value = Array.isArray(res?.data) ? res.data : [];
+    pagination.total = Number(res?.total || rows.value.length || 0);
+  } catch (error: any) {
+    rows.value = [];
+    pagination.total = 0;
+    errorText.value = error?.message || "查询错题失败";
   } finally {
     loading.value = false;
   }
 };
 
 const loadRecommend = async () => {
+  if (!validateSearch()) return;
   recommendLoading.value = true;
   try {
-    const res = await getTeacherWrongQuestionRecommendApi(buildSearchParams());
-    if (res.code === 200) {
-      const d = res.data || {};
-      recommendKnowledge.value = d.knowledge_points || [];
-      recommendTypes.value = d.question_types || [];
-      recommendText.value = `匹配题量：${d.matched_total || 0}`;
-    }
-  } catch {
-    message.error("获取推荐失败");
+    const res = await getTeacherWrongQuestionRecommendApi({ ...buildParams(), limit: 12 });
+    if (Number(res?.code) !== 200) throw new Error(res?.msg || "推荐失败");
+    recommendKnowledge.value = Array.isArray(res?.data?.knowledge_points) ? res.data.knowledge_points : [];
+    recommendTypes.value = Array.isArray(res?.data?.question_types) ? res.data.question_types : [];
+    recommendText.value = `匹配题量 ${Number(res?.data?.matched_total || 0)}`;
+  } catch (error: any) {
+    message.error(error?.message || "推荐加载失败");
   } finally {
     recommendLoading.value = false;
   }
 };
 
-const filterOption = (input: string, option: any) =>
-  option.label.toLowerCase().includes(input.toLowerCase());
-
-const handleSearch = async () => await searchWrongQuestions(true);
-const handleRecommend = async () => await loadRecommend();
-
-const handlePageChange = async (p: number) => {
-  pagination.page = p;
-  await searchWrongQuestions(false);
+const handleSearch = () => search(true);
+const handleModeChange = () => {
+  filters.student_id = undefined;
+  rows.value = [];
+  pagination.total = 0;
+  if (mode.value === "student" && filters.class_id) {
+    loadStudents();
+  }
 };
-
-const handleSizeChange = async (_: number, s: number) => {
-  pagination.size = s;
-  pagination.page = 1;
-  await searchWrongQuestions(false);
-};
-
-const useRecommendKnowledge = async (k: string) => {
-  filters.knowledge_keyword = k;
-  await searchWrongQuestions(true);
-};
-
-const useRecommendType = async (type: string) => {
-  filters.question_type = type;
-  await searchWrongQuestions(true);
-};
-
-const resetFilters = () => {
+const handleBaseChange = async () => {
   filters.class_id = undefined;
+  filters.test_paper_id = undefined;
+  filters.student_id = undefined;
+  filters.question_type = "";
+  classOptions.value = [];
+  paperOptions.value = [];
+  studentOptions.value = [];
+  refreshClassOptions();
+  await loadPapers();
+};
+const handleSchoolChange = async () => {
+  filters.grade = undefined;
+  filters.class_id = undefined;
+  filters.test_paper_id = undefined;
+  filters.student_id = undefined;
+  filters.question_type = "";
+  gradeOptions.value = [];
+  classOptions.value = [];
+  paperOptions.value = [];
+  await loadClasses();
+};
+const handleGradeChange = async () => {
+  filters.class_id = undefined;
+  filters.test_paper_id = undefined;
+  filters.student_id = undefined;
+  filters.question_type = "";
+  studentOptions.value = [];
+  paperOptions.value = [];
+  refreshClassOptions();
+  await loadPapers();
+};
+const handlePaperChange = async () => {
+  filters.question_type = "";
+  await search(true);
+};
+const handleClassChange = async () => {
+  filters.student_id = undefined;
+  studentOptions.value = [];
+  if (mode.value === "student") await loadStudents();
+  else await search(true);
+};
+const handlePageChange = async (page: number) => {
+  pagination.page = page;
+  await search(false);
+};
+const handleSizeChange = async (_page: number, size: number) => {
+  pagination.size = size;
+  await search(true);
+};
+const resetFilters = async () => {
+  filters.subject = undefined;
+  filters.school_id = getLocalSchoolId();
+  filters.grade = undefined;
+  filters.class_id = undefined;
+  filters.test_paper_id = undefined;
   filters.student_id = undefined;
   filters.question_type = "";
   filters.knowledge_keyword = "";
-  studentOptions.value = [];
   rows.value = [];
   pagination.page = 1;
   pagination.total = 0;
   recommendKnowledge.value = [];
   recommendTypes.value = [];
   recommendText.value = "";
+  paperOptions.value = [];
+  await loadClasses();
+};
+const useKnowledge = async (name: string) => {
+  filters.knowledge_keyword = name;
+  await search(true);
+};
+const useType = async (name: string) => {
+  filters.question_type = name;
+  await search(true);
 };
 
-// 页面初始化：先班级→再请求数据
+const stringList = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(text).filter(Boolean);
+  const raw = text(value);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(text).filter(Boolean);
+  } catch {}
+  return [raw];
+};
+const fileUrl = (path: unknown) => {
+  const value = text(path);
+  if (!value) return "";
+  if (/^(https?:)?\/\//i.test(value) || value.startsWith("data:")) return value;
+  return getTestPaperFileUrl(value);
+};
+const formatScore = (value: unknown) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "-";
+  return Number.isInteger(num) ? String(num) : num.toFixed(2);
+};
+const formatPercent = (value: unknown) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "-";
+  return `${(num * 100).toFixed(1)}%`;
+};
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const renderMarkdown = (value: unknown) =>
+  text(value)
+    .split(/\r?\n/)
+    .map((line) => `<p>${escapeHtml(line)}</p>`)
+    .join("");
+const recordKey = (record: WrongQuestionRecord) =>
+  [record.exam_id, record.test_paper_id, record.class_id, record.student_id, record.question_key || record.string_number].map(text).join("-");
+
 onMounted(async () => {
-  const userInfo = userStore.getUserInfo();
-  if (!userInfo?.teacher) {
-    message.warning("非教师账号，无法访问");
-    router.replace("/student_wrong_question");
-    return;
-  }
-  await fetchClassList();
-  await Promise.all([searchWrongQuestions(true), loadRecommend()]);
+  filters.school_id = getLocalSchoolId();
+  if (filters.school_id) await loadClasses();
 });
 </script>
 
 <style scoped lang="less">
 .wrong-question-page {
   min-height: 100vh;
-  padding: 20px;
-  background:
-    radial-gradient(circle at top right, rgba(22, 119, 255, 0.12), transparent 36%),
-    radial-gradient(circle at left 20%, rgba(64, 158, 255, 0.08), transparent 32%),
-    #f4f7fd;
-  position: relative;
+  padding: 22px;
+  background: #f5f7fb;
 }
 
-.wrong-question-page::before {
-  content: '';
-  position: fixed;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(#f7fafc, 0.7);
-  opacity: 0;
-  z-index: 9;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-.wrong-question-page.loading::before {
-  opacity: 1;
+.page-header,
+.filter-panel,
+.recommend-panel,
+.result-panel {
+  max-width: 1320px;
+  margin: 0 auto 16px;
 }
 
 .page-header {
-  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 
   h2 {
-    margin: 0 0 6px;
-    font-size: 30px;
+    margin: 0;
+    color: #1f2f46;
+    font-size: 26px;
     font-weight: 700;
-    color: #183a6b;
   }
 
   p {
-    margin: 0;
-    color: #4f6484;
-    font-size: 14px;
+    margin: 6px 0 0;
+    color: #65758b;
   }
 }
 
-.filter-card,
-.recommend-card,
-.list-card {
-  background: #ffffff;
-  border: none;
-  border-radius: 14px;
-  box-shadow: 0 10px 28px rgba(17, 58, 109, 0.08);
-  margin-bottom: 16px;
+.filter-panel,
+.recommend-panel,
+.result-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.filter-panel {
+  padding: 16px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.filter-control {
+  width: 100%;
+}
+
+.keyword-control {
+  grid-column: span 2;
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.rule-text {
+  color: #6b778c;
+  font-size: 13px;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+}
+
+.recommend-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
 }
 
 .recommend-summary {
-  margin-bottom: 10px;
-  color: #0f5365;
+  color: #40566f;
+  font-weight: 600;
 }
 
-.recommend-row {
-  margin-bottom: 8px;
-}
-
-.recommend-label {
-  margin-right: 8px;
-  color: #4b6d77;
-}
-
-.recommend-tag {
+.click-tag {
   cursor: pointer;
-  user-select: none;
 }
 
-.list-title {
+.result-panel {
+  padding: 16px;
+}
+
+.result-head {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  position: relative;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #edf1f6;
+  margin-bottom: 14px;
+
+  h3 {
+    margin: 0;
+    color: #24364d;
+    font-size: 18px;
+  }
+
+  span {
+    color: #65758b;
+  }
 }
 
-.list-total {
-  position: absolute;
-  right: 0;
-  color: #4b6d77;
-  font-size: 13px;
-  font-weight: 400;
+.state-alert {
+  margin-bottom: 12px;
 }
 
 .question-list {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .question-card {
-  border-radius: 14px;
-  border: 1px solid #d8e6f9;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  padding: 14px;
   background: #fff;
-  padding: 18px;
-  box-shadow: 0 6px 18px rgba(15, 69, 133, 0.08);
-  transition: all 0.3s ease;
 }
 
-.question-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(22, 119, 255, 0.16);
-}
-
-.question-card.selected {
-  border-color: #1677ff;
-  box-shadow: 0 10px 24px rgba(22, 119, 255, 0.2);
-}
-
-.question-card-head {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.left-info {
+.question-main,
+.question-title,
+.metric-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.question-number {
-  font-weight: 600;
-  color: #0f4d5a;
+.question-main {
+  justify-content: space-between;
 }
 
-.right-metrics {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  color: #2a5f6a;
+.metric-row {
+  color: #4c6078;
   font-size: 13px;
 }
 
-.knowledge-wrap {
-  margin-bottom: 10px;
+.tag-row {
+  margin-top: 10px;
 }
 
 .content-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
   gap: 12px;
+  margin-top: 12px;
 }
 
-.image-panel,
-.answer-panel {
-  border-radius: 12px;
-  border: 1px solid #d7e8ff;
-  background: #f6fbff;
+.media-box,
+.answer-box {
+  min-width: 0;
+  border: 1px solid #e4ebf3;
+  border-radius: 8px;
   padding: 12px;
+  background: #f8fafc;
 }
 
-.panel-title {
+.box-title {
   margin-bottom: 8px;
+  color: #334963;
   font-weight: 600;
-  color: #135463;
 }
 
-.image-list {
+.image-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
 :deep(.question-image) {
+  width: 420px;
   max-width: 100%;
-  width: 460px;
-  border-radius: 8px;
+  border: 1px solid #dce6f1;
+  border-radius: 6px;
   overflow: hidden;
-  background: #effbff;
-  border: 1px solid #e1f3f7;
+  background: #fff;
 }
 
 :deep(.question-image img) {
   width: 100%;
   height: auto;
   object-fit: contain;
-  background: #f6fdff;
 }
 
 .markdown-body {
-  max-height: 440px;
+  max-height: 420px;
   overflow: auto;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #f8fbff;
-  border: 1px solid #e6f5f9;
-  color: #21444c;
+  padding: 10px;
+  border-radius: 6px;
+  background: #fff;
+  color: #26384c;
   line-height: 1.7;
-}
-
-.markdown-body :deep(h1),
-.markdown-body :deep(h2),
-.markdown-body :deep(h3),
-.markdown-body :deep(h4),
-.markdown-body :deep(h5),
-.markdown-body :deep(h6) {
-  margin: 8px 0;
-  color: #0f4d5a;
 }
 
 .markdown-body :deep(p) {
   margin: 0 0 8px;
-}
-
-.markdown-body :deep(ul) {
-  margin: 0 0 8px;
-  padding-left: 18px;
-}
-
-.markdown-body :deep(blockquote) {
-  margin: 0 0 8px;
-  padding: 6px 10px;
-  border-left: 3px solid #6bbcca;
-  background: #ebf9fd;
-  color: #226573;
-}
-
-.markdown-body :deep(code) {
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: #e6f7fb;
-  color: #1f6170;
-}
-
-.markdown-body :deep(.md-code) {
-  margin: 0 0 8px;
-  padding: 10px;
-  border-radius: 8px;
-  background: #12343d;
-  color: #d6f5fb;
-  overflow: auto;
-}
-
-.markdown-body :deep(.md-gap) {
-  height: 8px;
 }
 
 .pagination-wrap {
@@ -766,12 +792,21 @@ onMounted(async () => {
   text-align: right;
 }
 
-@media (max-width: 992px) {
+@media (max-width: 900px) {
+  .page-header,
+  .filter-actions,
+  .question-main {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .filter-grid,
   .content-grid {
     grid-template-columns: 1fr;
   }
-  :deep(.question-image) {
-    width: 100%;
+
+  .keyword-control {
+    grid-column: span 1;
   }
 }
 </style>

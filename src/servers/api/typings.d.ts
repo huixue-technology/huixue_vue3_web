@@ -50,6 +50,8 @@ declare namespace API {
     header: string;
     /** 学校ID */
     school_id: string;
+    /** 入学级，如 2025 */
+    grade?: string;
     /** 选科 */
     subject_selection: string;
   };
@@ -71,6 +73,15 @@ declare namespace API {
     grade_id: number;
   };
 
+  type deletePaperQuestionScoreParams = {
+    /** 学校ID */
+    school_id: string;
+    /** 试卷编号 */
+    paper_id: string;
+    /** 班级ID */
+    class_id?: string;
+  };
+
   type deleteSchoolDetailApiParams = {
     school_id: string;
   };
@@ -78,6 +89,27 @@ declare namespace API {
   type deleteTeacherBindApiParams = {
     /** 班级id */
     class: number;
+  };
+
+  type deleteTestPaperParams = {
+    /** 试卷ID */
+    test_paper_id: number;
+  };
+
+  type deleteTestPaperQuestionParams = {
+    /** 试卷ID */
+    test_paper_id?: number;
+    /** 试卷ID别名，兼容旧参数 */
+    paper_id?: number;
+    /** 题目ID */
+    question_id: number;
+  };
+
+  type deleteTestPaperQuestionScoreParams = {
+    /** 考试ID */
+    exam_id: number;
+    /** 试卷ID */
+    test_paper_id: number;
   };
 
   type deleteUserDetailApiParams = {
@@ -98,6 +130,8 @@ declare namespace API {
     year: string;
     /** 考试类型：1代表高三的文理科，2代表高一、高二的选科 */
     exam_type?: string;
+    /** 学期（兼容字段，映射到 exam_type） */
+    semester?: string;
     /** 考试年级 */
     student_grade?: string;
     /** 考试试卷ID列表，以逗号分隔 */
@@ -118,9 +152,9 @@ declare namespace API {
     /** 反馈内容 */
     content: string;
     /** 联系方式类型：email/phone/wechat */
-    contact_method: string;
+    contact_method?: string;
     /** 联系方式值 */
-    contact_value: string;
+    contact_value?: string;
     /** 优先级：low/normal/high/urgent，默认normal */
     priority?: string;
   };
@@ -164,12 +198,14 @@ declare namespace API {
     size?: number;
     /** 班级id */
     id?: number;
-    /** 班级名称（可选） */
+    /** 班级名称 */
     name?: string;
-    /** 班主任（可选） */
+    /** 班主任 */
     header?: string;
-    /** 学校ID（可选） */
+    /** 学校ID */
     school_id?: string;
+    /** 入学级，如 2025 */
+    grade?: string;
   };
 
   type getClassesDetailApiParams = {
@@ -210,6 +246,40 @@ declare namespace API {
     max_class_rank?: number;
   };
 
+  type getClassQuestionStatParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页数量 */
+    size?: number;
+    /** 考试ID */
+    exam_id: number;
+    /** 试卷ID */
+    test_paper_id: number;
+    /** 班级ID */
+    class_id: string;
+    /** 题号 */
+    question_key?: string;
+    /** 兼容旧前端参数 */
+    refresh?: string;
+  };
+
+  type getClassQuestionWrongStudentsParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页数量 */
+    size?: number;
+    /** 考试ID */
+    exam_id: number;
+    /** 试卷ID */
+    test_paper_id: number;
+    /** 班级ID */
+    class_id: string;
+    /** 题号 */
+    question_key?: string;
+    /** 兼容旧前端参数 */
+    refresh?: string;
+  };
+
   type getClassScoreParams = {
     /** 班级ID */
     class_id: number;
@@ -237,6 +307,8 @@ declare namespace API {
     year?: string;
     /** 考试类型（可选） */
     exam_type?: string;
+    /** 学期（可选，兼容字段） */
+    semester?: string;
     /** 学生年级（可选） */
     student_grade?: string;
   };
@@ -289,9 +361,28 @@ declare namespace API {
     page?: number;
   };
 
+  type getPaperQuestionScoreParams = {
+    /** 页码，从 1 开始 */
+    page?: number;
+    /** 每页数量，最大 1000 */
+    size?: number;
+    /** 学校ID */
+    school_id?: string;
+    /** 试卷编号 */
+    paper_id?: string;
+    /** 班级ID */
+    class_id?: string;
+    /** 考号 */
+    student_id?: string;
+    /** 题号 */
+    question_number?: string;
+  };
+
   type getPassLineParams = {
     /** 考试id */
     exam_id?: number;
+    /** 考试id列表，逗号分隔 */
+    exam_ids?: string;
     /** 页码 */
     page?: number;
     /** 每页记录数 */
@@ -358,11 +449,110 @@ declare namespace API {
 
   type getStudentSelfCompareApiParams = {
     /** 学生ID */
-    student_id?: number;
+    student_id?: string;
     /** 考试ID */
     exam_id?: number;
     /** 对比的考试ID */
     compared_exam_id?: number;
+  };
+
+  type getStudentTestPaperParams = {
+    /** 学生UID */
+    student_uid: string;
+    /** 页码，从 1 开始 */
+    page?: number;
+    /** 每页数量 */
+    size?: number;
+    /** 考试ID */
+    exam_id?: number;
+    /** 学校ID */
+    school_id?: string;
+    /** 考试学生年级 */
+    student_grade?: string;
+    /** 试卷年级 */
+    grade?: string;
+    /** 试卷年份 */
+    year?: string;
+    /** 学期 */
+    semester?: string;
+    /** 科目 */
+    subject?: string;
+    /** 试卷名称，支持精确筛选 */
+    name?: string;
+  };
+
+  type getStudentWrongQuestionRecommendParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页数量 */
+    size?: number;
+    /** 科目 */
+    subject?: string;
+    /** 学校ID */
+    school_id?: string;
+    /** 年级 */
+    grade?: string;
+    /** 年级别名 */
+    student_grade?: string;
+    /** 班级ID */
+    class_id?: string;
+    /** 考试ID */
+    exam_id?: number;
+    /** 试卷ID */
+    test_paper_id?: number;
+    /** 试卷ID别名 */
+    paper_id?: number;
+    /** 学生ID */
+    student_id?: string;
+    /** 题型 */
+    question_type?: string;
+    /** 关键词 */
+    knowledge_keyword?: string;
+    /** 关键词别名 */
+    keyword?: string;
+    /** 年份 */
+    year?: string;
+    /** 是否已复习 */
+    is_reviewed?: string;
+    /** 推荐数量 */
+    limit?: number;
+    student_uid: string;
+  };
+
+  type getStudentWrongQuestionSearchParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页数量 */
+    size?: number;
+    /** 科目 */
+    subject?: string;
+    /** 学校ID */
+    school_id?: string;
+    /** 年级 */
+    grade?: string;
+    /** 年级别名 */
+    student_grade?: string;
+    /** 班级ID */
+    class_id?: string;
+    /** 考试ID */
+    exam_id?: number;
+    /** 试卷ID */
+    test_paper_id?: number;
+    /** 试卷ID别名 */
+    paper_id?: number;
+    /** 学生ID */
+    student_id?: string;
+    /** 题型 */
+    question_type?: string;
+    /** 关键词 */
+    knowledge_keyword?: string;
+    /** 关键词别名 */
+    keyword?: string;
+    /** 年份 */
+    year?: string;
+    /** 是否已复习 */
+    is_reviewed?: string;
+    student_uid: string;
   };
 
   type getTeacherApiParams = {
@@ -382,6 +572,128 @@ declare namespace API {
 
   type getTeacherDetailApiParams = {
     teacher_uid: string;
+  };
+
+  type getTeacherWrongQuestionRecommendParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页数量 */
+    size?: number;
+    /** 科目 */
+    subject?: string;
+    /** 学校ID */
+    school_id?: string;
+    /** 年级 */
+    grade?: string;
+    /** 年级别名 */
+    student_grade?: string;
+    /** 班级ID */
+    class_id?: string;
+    /** 考试ID */
+    exam_id?: number;
+    /** 试卷ID */
+    test_paper_id?: number;
+    /** 试卷ID别名 */
+    paper_id?: number;
+    /** 学生ID */
+    student_id?: string;
+    /** 题型 */
+    question_type?: string;
+    /** 关键词 */
+    knowledge_keyword?: string;
+    /** 关键词别名 */
+    keyword?: string;
+    /** 年份 */
+    year?: string;
+    /** 是否已复习 */
+    is_reviewed?: string;
+    /** 推荐数量 */
+    limit?: number;
+  };
+
+  type getTeacherWrongQuestionSearchParams = {
+    /** 页码 */
+    page?: number;
+    /** 每页数量 */
+    size?: number;
+    /** 科目 */
+    subject?: string;
+    /** 学校ID */
+    school_id?: string;
+    /** 年级 */
+    grade?: string;
+    /** 年级别名 */
+    student_grade?: string;
+    /** 班级ID */
+    class_id?: string;
+    /** 考试ID */
+    exam_id?: number;
+    /** 试卷ID */
+    test_paper_id?: number;
+    /** 试卷ID别名 */
+    paper_id?: number;
+    /** 学生ID */
+    student_id?: string;
+    /** 题型 */
+    question_type?: string;
+    /** 关键词 */
+    knowledge_keyword?: string;
+    /** 关键词别名 */
+    keyword?: string;
+    /** 年份 */
+    year?: string;
+    /** 是否已复习 */
+    is_reviewed?: string;
+  };
+
+  type getTestPaperFileParams = {
+    /** 文件存储路径或 /api/tp/file 访问地址 */
+    path: string;
+  };
+
+  type getTestPaperParams = {
+    /** 页码，从 1 开始 */
+    page?: number;
+    /** 每页数量 */
+    size?: number;
+    /** 考试ID */
+    exam_id?: number;
+    /** 学校ID */
+    school_id?: string;
+    /** 考试学生年级 */
+    student_grade?: string;
+    /** 试卷年级 */
+    grade?: string;
+    /** 试卷年份 */
+    year?: string;
+    /** 学期 */
+    semester?: string;
+    /** 科目 */
+    subject?: string;
+    /** 试卷名称，支持精确筛选 */
+    name?: string;
+  };
+
+  type getTestPaperQuestionParams = {
+    /** 试卷ID */
+    test_paper_id?: number;
+    /** 试卷ID别名，兼容旧参数 */
+    paper_id?: number;
+  };
+
+  type getTestPaperQuestionScoreParams = {
+    /** 页码，从 1 开始 */
+    page?: number;
+    /** 每页数量，默认 100，最大 500 */
+    size?: number;
+    /** 考试ID */
+    exam_id?: number;
+    /** 试卷ID */
+    test_paper_id?: number;
+    /** 学生UID */
+    student_id?: string;
+    /** 是否补充学生姓名和班级，默认 true */
+    include_student?: string;
   };
 
   type getUpDownDetailAnalysisParams = {
@@ -424,7 +736,7 @@ declare namespace API {
     /** 学生id */
     student_id: number;
     /** 学校id */
-    school_id: number;
+    school_id: string;
     /** 考试id */
     exam_id: number;
     /** 考试班级 */
@@ -501,10 +813,12 @@ declare namespace API {
   };
 
   type PassLine = {
+    /** 分数线id */
+    id?: number;
     /** 考试id */
     exam_id: number;
     /** 学校id */
-    school_id: number;
+    school_id: string;
     /** 总分 */
     sum_: number;
     /** 总分排名 */
@@ -559,6 +873,15 @@ declare namespace API {
     exam_ids: number[];
   };
 
+  type postClassQuestionStatRebuildParams = {
+    /** 考试ID */
+    exam_id: number;
+    /** 试卷ID */
+    test_paper_id: number;
+    /** 班级ID */
+    class_id?: string;
+  };
+
   type postCompareRankMultiExamParams = {
     /** 学生id */
     student_id: string;
@@ -568,6 +891,13 @@ declare namespace API {
     compare_exam_ids: string;
   };
 
+  type postPaperQuestionScoreParams = {
+    /** 学校ID */
+    school_id: string;
+    /** 试卷编号 */
+    paper_id: string;
+  };
+
   type postTeacherBindApiParams = {
     /** 教师ID */
     teacher_id: number;
@@ -575,16 +905,45 @@ declare namespace API {
     class_id: number;
   };
 
+  type postTestPaperParams = {
+    /** 学校ID */
+    school_id: string;
+    /** 考试ID，必须已存在 */
+    exam_id: number;
+    /** 科目 */
+    subject: string;
+    /** 年份 */
+    year: string;
+    /** 试卷年级 */
+    grade: string;
+    /** 学期 */
+    semester: string;
+    /** 试卷名称，不传则按年份/年级/学期/科目生成 */
+    name?: string;
+    /** 试卷备注 */
+    description?: string;
+  };
+
   type postUploadParams = {
-    /** 请选择上传类型 */
+    /** 上传类型 */
     type: string;
-    /** 学校ID（grade/student/teacher/exam_pass_line/classes类型建议传入） */
-    school_id?: number;
-    /** 考试编号（grade/exam_pass_line/small_point类型建议传入） */
+    /** 学校ID */
+    school_id?: string;
+    /** 考试ID */
     exam_id?: number;
-    /** 考试名称（grade类型可选，默认从文件名提取） */
+    /** 试卷ID */
+    test_paper_id?: number;
+    /** 考试名称 */
     exam_name?: string;
-    /** 附加信息JSON格式（可选）{"subject": "语文"}（small_point类型必填subject字段） */
+    /** 考试年份（grade 上传可选） */
+    year?: string;
+    /** 学生年级（grade 上传可选） */
+    student_grade?: string;
+    /** 考试类型（grade 上传可选） */
+    exam_type?: string;
+    /** 兼容字段，将映射到 exam_type */
+    semester?: string;
+    /** 附加信息 JSON */
     additional_info?: string;
   };
 
@@ -605,6 +964,10 @@ declare namespace API {
   };
 
   type putStudentDetailApiParams = {
+    student_uid: string;
+  };
+
+  type putStudentWrongQuestionReviewParams = {
     student_uid: string;
   };
 
@@ -672,6 +1035,23 @@ declare namespace API {
   type StudentAverage = {
     /** 学生ID */
     student_id: string[];
+  };
+
+  type StudentWrongQuestionReview = {
+    /** 试卷ID */
+    test_paper_id: Record<string, any>;
+    /** 试卷ID别名 */
+    paper_id?: Record<string, any>;
+    /** 题号 */
+    question_key: string;
+    /** 题号别名 */
+    question_number?: string;
+    /** 题号别名 */
+    string_number?: string;
+    /** 班级ID */
+    class_id?: string;
+    /** 是否已复习 */
+    is_reviewed: boolean;
   };
 
   type TaskStatus = {

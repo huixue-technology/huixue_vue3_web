@@ -49,7 +49,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, computed } from 'vue';
 import { 
-  postClassCompute,
   postClassAnalysis,
   postClassPassLineRate,
   postClassComprehensiveStudentGrades 
@@ -61,27 +60,25 @@ import { getClassesApi } from '@/servers/api/classes';
 import ClassAnalysis from './ClassAnalysis.vue';
 import ExamMetricsChart from './components/ExamMetricsChart.vue';
 import PassLineRate from './components/PassLineRate.vue';
-import StudentCategory from './components/StudentCategory.vue';
 
 interface ClassInfo {
   id: number;
   name: string;
-  header: number;
-  school_id: number;
+  header: string | null;
+  school_id: string | null;
   subject_selection: string; // 新增：科目选择
 }
 
 interface TeacherInfo {
-  uid: number;
+  uid: string;
   name: string;
   email: string;
   phone: string;
-  school_id: number;
+  school_id: string;
 }
 
 const userStore = useUserStore();
 const loading = ref(false);
-const classInfo = ref({name: '', class_id: 0});
 const selectedClass = ref<number>(0);
 const classList = ref<ClassInfo[]>([]);
 const teacherInfo = ref<TeacherInfo>();
@@ -89,19 +86,6 @@ const classAnalysisData = ref<any>({});
 const passLineRateData = ref<any>({});
 const studentGradesData = ref<any[]>([]);
 const classAnalysisRef = ref<any>(null); // 子组件引用
-
-const subjectMap: Record<string, string> = {
-  yuwen: '语文',
-  shuxue: '数学',
-  yingyu: '英语',
-  wuli: '物理',
-  huaxue: '化学',
-  shengwu: '生物',
-  lishi: '历史',
-  zhengzhi: '政治',
-  dili: '地理',
-  sum_: '总分'
-};
 
 const metricLabelMap: Record<string, string> = {
   average: '平均分',
@@ -125,17 +109,24 @@ onMounted(async()=>{
     message.error('未获取到教师信息');
     return;
   }
-  await getClassList(teacherInfo.value.uid);
-  loading.value = true;
-  await batchComputeData();
-  loading.value = false;
+  await getClassList(userInfo);
+  if (selectedClass.value > 0) {
+    loading.value = true;
+    await batchComputeData();
+    loading.value = false;
+  }
 })
 
 watch(selectedClass, async () => {
-  await batchComputeData();
+  if (selectedClass.value > 0) {
+    await batchComputeData();
+  }
 });
 
 const batchComputeData = async () => {
+  if (selectedClass.value <= 0) {
+    return;
+  }
   loading.value = true;
   
   try {
@@ -157,18 +148,40 @@ const batchComputeData = async () => {
   }
 };
 
-const getClassList = async (teacherId: number) => {
-  const classRes = await getClassesApi({ header: teacherId });
-  if (classRes.code === 200 && classRes.data.length > 0) {
-    selectedClass.value = classRes.data[0].id;
-    classList.value = classRes.data;
-  }else {
-    message.error(classRes.msg || '获取班级列表失败');
+const getClassList = async (userInfo: any) => {
+  const teacherHeader = String(userInfo?.role || userInfo?.teacher?.uid || '').trim();
+
+  let classes: ClassInfo[] = [];
+
+  if (teacherHeader) {
+    const classRes = await getClassesApi({ header: teacherHeader });
+    if (classRes.code === 200 && classRes.data.length > 0) {
+      classes = classRes.data;
+    }
+  }
+
+  // 兼容未绑定班主任的老师账号：回退全班级（可按学校过滤）
+  if (classes.length === 0) {
+    const allClassRes = await getClassesApi({});
+    if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
+      classes = allClassRes.data;
+    }
+  }
+
+  if (classes.length > 0) {
+    selectedClass.value = classes[0].id;
+    classList.value = classes;
+  } else {
+    message.error('获取班级列表失败');
+    selectedClass.value = 0;
     classList.value = [];
   }
 }
 
 const getClassAnalysisfunc = async () => {
+  if (selectedClass.value <= 0) {
+    return;
+  }
   // 班级综合分析
   const res = await postClassAnalysis({ class_ids: [selectedClass.value] });
   
@@ -180,6 +193,9 @@ const getClassAnalysisfunc = async () => {
 };
 
 const getClassPassLineRatefunc = async () => {
+  if (selectedClass.value <= 0) {
+    return;
+  }
   // 四条分数线过线率
   const res = await postClassPassLineRate({ class_ids: [selectedClass.value] });
   
@@ -191,6 +207,9 @@ const getClassPassLineRatefunc = async () => {
 };
 
 const getClassComprehensiveStudentGradesfunc = async () => {
+  if (selectedClass.value <= 0) {
+    return;
+  }
   // 根据考试分数线判断优等生、边缘生、差生
   const res = await postClassComprehensiveStudentGrades({ class_ids: [selectedClass.value] });
   

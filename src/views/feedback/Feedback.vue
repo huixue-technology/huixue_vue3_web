@@ -272,7 +272,7 @@ const handleSubmit = async () => {
   submitting.value = true;
   try {
     const user = userStore.getUserInfo();
-    const params: FeedbackSubmitParams = {
+    const params: API.FeedbackSubmit = {
       ...formData,
       role: user.role,
       user_email: user.email,

@@ -1,234 +1,91 @@
 <template>
   <div class="student-paper-page">
-    <section class="hero-section">
-      <h2>我的试卷查看</h2>
-      <p>上方选择试卷，下方直接查看题目、得分和参考答案。</p>
-    </section>
+    <section class="page-shell">
+      <header class="hero-section">
+        <div>
+          <h2>我的试卷</h2>
+          <p>按考试、科目或名称查找试卷，直接打开 PDF 预览。</p>
+        </div>
+        <div class="hero-stat">
+          <span>{{ pagination.total }}</span>
+          <small>份可查看试卷</small>
+        </div>
+      </header>
 
-    <a-card class="paper-list-card" :bordered="false">
-      <template #title>试卷列表</template>
-      <template #extra>
-        <a-space wrap>
+      <a-card class="filter-card" :bordered="false">
+        <a-space wrap class="filter-actions">
           <a-select
-            v-model:value="filters.exam_id"
-            :options="examOptions"
+            v-model:value="filters.student_grade"
+            :options="gradeOptions"
             allow-clear
-            placeholder="按考试筛选"
-            style="width: 200px"
+            placeholder="按年级筛选"
+            class="filter-control"
           />
           <a-select
             v-model:value="filters.subject"
-            :options="subjectOptions"
+            :options="availableSubjectOptions"
             allow-clear
             placeholder="按科目筛选"
-            style="width: 160px"
+            class="filter-control filter-control-sm"
           />
-          <a-input
+          <a-select
             v-model:value="filters.name"
+            :options="paperNameOptions"
             allow-clear
-            placeholder="按试卷名称筛选"
-            style="width: 220px"
-            @pressEnter="loadPapers(true)"
+            show-search
+            option-filter-prop="label"
+            placeholder="按试卷筛选"
+            class="filter-input"
           />
           <a-button type="primary" @click="loadPapers(true)">查询</a-button>
           <a-button @click="resetFilters">重置</a-button>
         </a-space>
-      </template>
+      </a-card>
 
-      <a-spin :spinning="loadingPapers">
-        <div v-if="paperList.length" class="paper-grid">
-          <article
-            v-for="paper in paperList"
-            :key="paper.id"
-            class="paper-card"
-            :class="{ selected: Number(selectedPaper?.id) === Number(paper.id) }"
-            @click="selectPaper(paper)"
-          >
-            <div class="paper-title">{{ paper.name || `试卷${paper.id}` }}</div>
-            <div class="paper-sub">{{ paper.exam_name || `考试${paper.exam_id}` }}</div>
-            <div class="paper-meta-row">
-              <a-tag color="blue">{{ paper.subject || "-" }}</a-tag>
-              <a-tag :color="statusColor(paper.status)">{{ paper.status || "unknown" }}</a-tag>
-            </div>
-            <div class="paper-time">{{ paper.create_time || "-" }}</div>
-            <a-button type="link" size="small" @click.stop="openPdfPreview(paper)">查看 PDF</a-button>
-          </article>
-        </div>
-        <a-empty v-else description="暂无可查看试卷" />
-      </a-spin>
+      <a-card class="paper-list-card" :bordered="false">
+        <template #title>
+          <div class="list-title">
+            <span>试卷列表</span>
+            <small>共 {{ pagination.total }} 份</small>
+          </div>
+        </template>
 
-      <div class="pager-wrap">
-        <a-pagination
-          :current="pagination.page"
-          :page-size="pagination.size"
-          :total="pagination.total"
-          :show-size-changer="false"
-          :show-total="(total: number) => `共 ${total} 份`"
-          @change="handlePageChange"
-        />
-      </div>
-    </a-card>
-
-    <a-card class="question-card" :bordered="false">
-      <template #title>
-        <span>
-          题目查看
-          <template v-if="selectedPaper"> · {{ selectedPaper.name }}</template>
-        </span>
-      </template>
-      <template #extra>
-        <a-space>
-          <a-button :type="showOnlyWrong ? 'primary' : 'default'" @click="showOnlyWrong = !showOnlyWrong">
-            {{ showOnlyWrong ? "查看全部题目" : "只看错题" }}
-          </a-button>
-          <a-button v-if="selectedPaper" @click="openPdfPreview(selectedPaper)">打开试卷 PDF</a-button>
-        </a-space>
-      </template>
-
-      <div v-if="!selectedPaper" class="empty-wrap">
-        <a-empty description="请先在上方选择一份试卷" />
-      </div>
-
-      <a-spin v-else :spinning="loadingQuestions || loadingQuestionScores" tip="题目加载中...">
-        <div class="paper-brief">
-          <span>考试：{{ selectedPaper.exam_name || selectedPaper.exam_id }}</span>
-          <span>科目：{{ selectedPaper.subject || "-" }}</span>
-          <span>错题数：{{ wrongQuestionCount }}</span>
-        </div>
-
-        <div v-if="!displayQuestionList.length" class="empty-wrap">
-          <a-empty :description="showOnlyWrong ? '当前试卷暂无错题' : '当前试卷暂无题目'" />
-        </div>
-
-        <div v-else class="question-list">
-          <article
-            v-for="(question, index) in displayQuestionList"
-            :key="question.id || `${question.string_number}-${index}`"
-            class="question-item"
-          >
-            <header class="question-head">
-              <div class="question-left">
-                <div class="question-index">第 {{ question.string_number || index + 1 }} 题</div>
-                <div class="question-meta">
-                  <span class="meta-rate">正确率：{{ question.correct_rate ?? "-" }}</span>
-                  <div v-if="normalizeStringArray(question.keywords).length" class="keyword-wrap">
-                    <a-tag
-                      v-for="keyword in normalizeStringArray(question.keywords)"
-                      :key="keyword"
-                      color="cyan"
-                    >
-                      {{ keyword }}
-                    </a-tag>
-                  </div>
+        <a-spin :spinning="loadingPapers">
+          <div v-if="paperList.length" class="paper-grid">
+            <article v-for="paper in paperList" :key="paper.id" class="paper-card">
+              <div class="paper-card-head">
+                <div>
+                  <div class="paper-title">{{ paper.name || `试卷${paper.id}` }}</div>
+                  <div class="paper-sub">{{ paper.exam_name || `考试${paper.exam_id}` }}</div>
                 </div>
+                <a-tag :color="statusColor(paper.status)">{{ paper.status || "unknown" }}</a-tag>
               </div>
-
-              <div class="score-pill">
-                <span class="score-label">得分</span>
-                <span class="score-value">{{ formatScore(getQuestionOwnScore(question, index)) }}</span>
-                <span class="score-divider">/</span>
-                <span class="score-total">{{ formatScore(getQuestionTotalScore(question)) }}</span>
+              <div class="paper-meta-row">
+                <a-tag color="blue">{{ paper.subject || "-" }}</a-tag>
+                <a-tag color="green">{{ paper.exam_student_grade || "-" }}</a-tag>
+                <span>试卷 ID：{{ paper.id }}</span>
               </div>
-            </header>
-
-            <section
-              v-if="getQuestionContent(question) || normalizeStringArray(question.images).length"
-              class="question-panel"
-            >
-              <h4>题目</h4>
-              <div
-                v-if="getQuestionContent(question)"
-                class="question-content"
-                v-html="renderMarkdown(getQuestionContent(question))"
-              ></div>
-              <div v-if="normalizeStringArray(question.images).length" class="image-wrap">
-                <a-image
-                  v-for="(img, imgIndex) in normalizeStringArray(question.images)"
-                  :key="`${question.id}-${imgIndex}`"
-                  :src="getTestPaperFileUrl(img)"
-                  :preview="true"
-                  width="460px"
-                  class="question-image"
-                />
+              <div class="paper-footer">
+                <span>{{ paper.create_time || "-" }}</span>
+                <a-button type="primary" size="small" @click="openPdfPreview(paper)">查看 PDF</a-button>
               </div>
-            </section>
-
-            <section v-if="question.answer" class="answer-panel">
-              <h4>参考答案</h4>
-              <div class="answer-markdown" v-html="renderMarkdown(question.answer)"></div>
-            </section>
-          </article>
-        </div>
-
-        <div v-if="false && selectedPaper" class="wrong-search-wrap">
-          <a-divider />
-          <div class="wrong-search-title">我的错题搜索</div>
-          <a-space wrap class="wrong-search-filters">
-            <a-select
-              v-model:value="wrongQuestionSearchFilters.question_type"
-              :options="wrongQuestionTypeOptions"
-              placeholder="题型筛选"
-              style="width: 180px"
-              allow-clear
-            />
-            <a-input
-              v-model:value="wrongQuestionSearchFilters.knowledge_keyword"
-              placeholder="按知识点模糊搜索"
-              style="width: 260px"
-              allow-clear
-              @pressEnter="triggerWrongQuestionSearch"
-            />
-            <a-button type="primary" @click="triggerWrongQuestionSearch">搜索</a-button>
-            <a-button @click="resetWrongQuestionSearchFilters">重置</a-button>
-          </a-space>
-
-          <div v-if="wrongQuestionRecommendKnowledge.length" class="knowledge-recommend">
-            <span class="knowledge-recommend-label">推荐知识点：</span>
-            <a-tag
-              v-for="item in wrongQuestionRecommendKnowledge"
-              :key="item.name"
-              class="recommend-tag"
-              color="processing"
-              @click="useRecommendKnowledge(item.name)"
-            >
-              {{ item.name }} ({{ item.count }})
-            </a-tag>
+            </article>
           </div>
+          <a-empty v-else description="暂无可查看试卷" />
+        </a-spin>
 
-          <a-table
-            :columns="wrongQuestionSearchColumns"
-            :data-source="wrongQuestionSearchList"
-            :loading="loadingWrongQuestionSearch"
-            :pagination="false"
-            :row-key="(row) => `${row.class_id}-${row.question_key}`"
-            size="small"
-          >
-            <template #bodyCell="{ column, record }">
-              <template v-if="column.dataIndex === 'knowledge_points'">
-                {{ formatKnowledgePoints(record.knowledge_points) }}
-              </template>
-              <template v-else-if="column.dataIndex === 'wrong_rate'">
-                {{ formatPercent(record.wrong_rate) }}
-              </template>
-              <template v-else-if="column.key === 'wrong_count'">
-                {{ Number(record.wrong_count || 0) }}/{{ Number(record.participant_count || 0) }}
-              </template>
-            </template>
-          </a-table>
-          <div class="pager-wrap">
-            <a-pagination
-              :current="wrongQuestionSearchPagination.page"
-              :page-size="wrongQuestionSearchPagination.size"
-              :total="wrongQuestionSearchPagination.total"
-              :show-size-changer="true"
-              :show-total="(total: number) => `共 ${total} 条`"
-              @change="handleWrongQuestionSearchPageChange"
-              @showSizeChange="handleWrongQuestionSearchSizeChange"
-            />
-          </div>
+        <div class="pager-wrap">
+          <a-pagination
+            :current="pagination.page"
+            :page-size="pagination.size"
+            :total="pagination.total"
+            :show-size-changer="false"
+            :show-total="(total: number) => `共 ${total} 份`"
+            @change="handlePageChange"
+          />
         </div>
-      </a-spin>
-    </a-card>
+      </a-card>
+    </section>
 
     <a-modal
       v-model:open="pdfPreviewOpen"
@@ -243,16 +100,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
 import {
-  getStudentWrongQuestionRecommendApi,
-  getStudentTestPaperApi,
-  getTestPaperFileUrl,
-  getTestPaperQuestionScoreApi,
-  getTestPaperQuestionsApi,
-  searchStudentWrongQuestionApi,
-} from "@/servers/api/testPaper";
+  getStudentTestPaper,
+  getTestPaperQuestion,
+  getTestPaperQuestionScore as getTestPaperQuestionScoreApi,
+} from "@/servers/api/tp";
+import {
+  getStudentWrongQuestionRecommend as getStudentWrongQuestionRecommendApi,
+  getStudentWrongQuestionSearch as searchStudentWrongQuestionApi,
+} from "@/servers/api/wrongQuestion";
 import { useUserStore } from "@/store";
 import router from "@/router";
 
@@ -260,6 +118,7 @@ type PaperItem = {
   id: number;
   exam_id: number;
   exam_name?: string;
+  exam_student_grade?: string;
   name: string;
   subject?: string;
   status?: string;
@@ -308,6 +167,7 @@ const loadingPapers = ref(false);
 const loadingQuestions = ref(false);
 const loadingQuestionScores = ref(false);
 const paperList = ref<PaperItem[]>([]);
+const allPaperOptions = ref<PaperItem[]>([]);
 const questionList = ref<QuestionItem[]>([]);
 const selectedPaper = ref<PaperItem | null>(null);
 const studentQuestionScoreMap = ref<ScoreMap>({});
@@ -333,13 +193,13 @@ const wrongQuestionTypeOptions = ref<{ label: string; value: string }[]>([]);
 const wrongQuestionRecommendKnowledge = ref<{ name: string; count: number }[]>([]);
 
 const filters = reactive<{
-  exam_id?: number;
+  student_grade?: string;
   subject?: string;
   name?: string;
 }>({
-  exam_id: undefined,
+  student_grade: undefined,
   subject: undefined,
-  name: "",
+  name: undefined,
 });
 
 const pagination = reactive({
@@ -347,6 +207,11 @@ const pagination = reactive({
   size: 9,
   total: 0,
 });
+const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
+const getStudentTestPaperApi = (student_uid: string, params: Record<string, any>) =>
+  getStudentTestPaper({ student_uid, ...params });
+const getTestPaperQuestionsApi = (test_paper_id: number) =>
+  getTestPaperQuestion({ test_paper_id });
 
 const subjectOptions = [
   { label: "语文", value: "语文" },
@@ -359,6 +224,46 @@ const subjectOptions = [
   { label: "历史", value: "历史" },
   { label: "地理", value: "地理" },
 ];
+
+const getPaperGrade = (paper: PaperItem) =>
+  String(paper.exam_student_grade || paper.student_grade || "").trim();
+
+const sortLabelOptions = <T extends { label: string }>(options: T[]) =>
+  options.sort((a, b) => b.label.localeCompare(a.label, "zh-Hans-CN", { numeric: true }));
+
+const gradeOptions = computed(() => {
+  const gradeMap = new Map<string, string>();
+  for (const paper of allPaperOptions.value) {
+    const grade = getPaperGrade(paper);
+    if (grade) gradeMap.set(grade, grade);
+  }
+  return sortLabelOptions(Array.from(gradeMap.values()).map((grade) => ({ label: grade, value: grade })));
+});
+
+const availableSubjectOptions = computed(() => {
+  const subjectMap = new Map<string, string>();
+  for (const paper of allPaperOptions.value) {
+    if (filters.student_grade && getPaperGrade(paper) !== filters.student_grade) continue;
+    const subject = String(paper.subject || "").trim();
+    if (subject) subjectMap.set(subject, subject);
+  }
+  const dynamicOptions = Array.from(subjectMap.values()).map((subject) => ({
+    label: subject,
+    value: subject,
+  }));
+  return dynamicOptions.length ? sortLabelOptions(dynamicOptions) : subjectOptions;
+});
+
+const paperNameOptions = computed(() => {
+  const nameMap = new Map<string, string>();
+  for (const paper of allPaperOptions.value) {
+    if (filters.student_grade && getPaperGrade(paper) !== filters.student_grade) continue;
+    if (filters.subject && paper.subject !== filters.subject) continue;
+    const name = String(paper.name || "").trim();
+    if (name) nameMap.set(name, name);
+  }
+  return sortLabelOptions(Array.from(nameMap.values()).map((name) => ({ label: name, value: name })));
+});
 
 const wrongQuestionSearchColumns = [
   { title: "题号", dataIndex: "string_number", width: 90 },
@@ -574,9 +479,9 @@ const buildQueryParams = () => {
     page: pagination.page,
     size: pagination.size,
   };
-  if (filters.exam_id !== undefined) params.exam_id = filters.exam_id;
+  if (filters.student_grade) params.student_grade = filters.student_grade;
   if (filters.subject) params.subject = filters.subject;
-  if (filters.name && filters.name.trim()) params.name = filters.name.trim();
+  if (filters.name) params.name = filters.name;
   return params;
 };
 
@@ -585,8 +490,13 @@ const loadExamOptions = async () => {
   const response = await getStudentTestPaperApi(studentUid.value, { page: 1, size: 1000 });
   if (response.code !== 200) return;
 
+  allPaperOptions.value = (response.data || []).map((item: any) => ({
+    ...item,
+    exam_name: item.exam_name || `考试${item.exam_id}`,
+  }));
+
   const examMap = new Map<number, string>();
-  for (const paper of response.data || []) {
+  for (const paper of allPaperOptions.value) {
     const examId = Number(paper.exam_id);
     if (!Number.isFinite(examId)) continue;
     examMap.set(examId, paper.exam_name || `考试${examId}`);
@@ -646,7 +556,8 @@ const loadWrongQuestionRecommend = async () => {
   if (!studentUid.value || !selectedPaper.value?.id || !selectedPaper.value?.exam_id) return;
 
   try {
-    const response = await getStudentWrongQuestionRecommendApi(studentUid.value, {
+    const response = await getStudentWrongQuestionRecommendApi({
+      student_uid: studentUid.value,
       exam_id: Number(selectedPaper.value.exam_id),
       test_paper_id: Number(selectedPaper.value.id),
       question_type: String(wrongQuestionSearchFilters.question_type || "").trim() || undefined,
@@ -680,7 +591,8 @@ const loadWrongQuestionSearch = async (resetPage = false) => {
 
   loadingWrongQuestionSearch.value = true;
   try {
-    const response = await searchStudentWrongQuestionApi(studentUid.value, {
+    const response = await searchStudentWrongQuestionApi({
+      student_uid: studentUid.value,
       page: wrongQuestionSearchPagination.page,
       size: wrongQuestionSearchPagination.size,
       exam_id: Number(selectedPaper.value.exam_id),
@@ -781,17 +693,13 @@ const loadPapers = async (resetPage = false) => {
       return;
     }
 
-    const selectedId = selectedPaper.value?.id;
-    const stillExists = selectedId
-      ? paperList.value.find((item) => Number(item.id) === Number(selectedId))
-      : null;
-
-    if (stillExists) {
-      selectedPaper.value = stillExists;
-      await loadPaperDetail(stillExists);
-    } else {
-      await selectPaper(paperList.value[0]);
-    }
+    selectedPaper.value = null;
+    questionList.value = [];
+    studentQuestionScoreMap.value = {};
+    wrongQuestionSearchList.value = [];
+    wrongQuestionRecommendKnowledge.value = [];
+    wrongQuestionTypeOptions.value = [];
+    wrongQuestionSearchPagination.total = 0;
   } catch (_error) {
     message.error("试卷列表加载失败");
   } finally {
@@ -814,12 +722,27 @@ const handlePageChange = async (page: number) => {
 };
 
 const resetFilters = async () => {
-  filters.exam_id = undefined;
+  filters.student_grade = undefined;
   filters.subject = undefined;
-  filters.name = "";
+  filters.name = undefined;
   pagination.page = 1;
   await loadPapers(false);
 };
+
+watch(
+  () => filters.student_grade,
+  () => {
+    filters.subject = undefined;
+    filters.name = undefined;
+  }
+);
+
+watch(
+  () => filters.subject,
+  () => {
+    filters.name = undefined;
+  }
+);
 
 onMounted(async () => {
   userInfo.value = userStore.getUserInfo();
@@ -847,274 +770,180 @@ onMounted(async () => {
 <style scoped lang="less">
 .student-paper-page {
   min-height: 100vh;
-  padding: 20px;
-  background:
-    radial-gradient(circle at top right, rgba(22, 119, 255, 0.12), transparent 36%),
-    radial-gradient(circle at left 20%, rgba(64, 158, 255, 0.08), transparent 32%),
-    #f4f7fd;
+  padding: 24px;
+  background: #f6f8fb;
+}
+
+.page-shell {
+  max-width: 1180px;
+  margin: 0 auto;
 }
 
 .hero-section {
-  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 18px;
+  margin-bottom: 18px;
 
   h2 {
-    margin: 0 0 6px;
+    margin: 0 0 8px;
+    color: #172033;
     font-size: 30px;
     font-weight: 700;
-    color: #183a6b;
   }
 
   p {
     margin: 0;
-    color: #4f6484;
+    color: #667085;
     font-size: 14px;
   }
 }
 
-.paper-list-card,
-.question-card {
-  border-radius: 14px;
-  box-shadow: 0 10px 28px rgba(17, 58, 109, 0.08);
+.hero-stat {
+  min-width: 148px;
+  padding: 12px 16px;
+  border: 1px solid #d9e5f2;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(24, 39, 75, 0.06);
+  text-align: right;
+
+  span {
+    display: block;
+    color: #0f766e;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  small {
+    display: block;
+    margin-top: 6px;
+    color: #667085;
+  }
+}
+
+.filter-card,
+.paper-list-card {
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(24, 39, 75, 0.07);
+}
+
+.filter-card {
   margin-bottom: 16px;
+  border-top: 3px solid #f59e0b;
+}
+
+.filter-actions {
+  width: 100%;
+}
+
+.filter-control {
+  width: 220px;
+}
+
+.filter-control-sm {
+  width: 170px;
+}
+
+.filter-input {
+  width: 260px;
+}
+
+.paper-list-card {
+  border-top: 3px solid #2563eb;
+}
+
+.list-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+
+  span {
+    color: #172033;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  small {
+    color: #8a94a6;
+    font-weight: 400;
+  }
 }
 
 .paper-grid {
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
 .paper-card {
-  border: 1px solid #d7e5f7;
-  border-radius: 12px;
-  padding: 14px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  transition: all 0.2s ease;
-  cursor: pointer;
+  display: flex;
+  min-height: 174px;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid #d9e5f2;
+  border-left: 4px solid #0f766e;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .paper-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(22, 119, 255, 0.16);
+  border-color: #9cc7ff;
+  box-shadow: 0 12px 26px rgba(24, 39, 75, 0.1);
 }
 
-.paper-card.selected {
-  border-color: #1677ff;
-  box-shadow: 0 10px 24px rgba(22, 119, 255, 0.2);
+.paper-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
 }
 
 .paper-title {
+  display: -webkit-box;
+  min-height: 44px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  color: #172033;
   font-size: 16px;
   font-weight: 700;
-  color: #102a4d;
-  margin-bottom: 6px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .paper-sub {
-  color: #546b8d;
-  margin-bottom: 8px;
+  color: #667085;
+  font-size: 13px;
 }
 
 .paper-meta-row {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  gap: 8px;
+  align-items: center;
+  margin: 16px 0 12px;
+  color: #667085;
+  font-size: 13px;
 }
 
-.paper-time {
-  color: #7c8ca8;
+.paper-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  color: #8a94a6;
   font-size: 12px;
-  margin-bottom: 4px;
 }
 
 .pager-wrap {
-  margin-top: 14px;
+  margin-top: 18px;
   text-align: right;
-}
-
-.wrong-search-wrap {
-  margin-top: 14px;
-}
-
-.wrong-search-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #133862;
-  margin-bottom: 10px;
-}
-
-.wrong-search-filters {
-  margin-bottom: 10px;
-}
-
-.knowledge-recommend {
-  margin-bottom: 10px;
-  color: #4f6484;
-}
-
-.knowledge-recommend-label {
-  margin-right: 8px;
-}
-
-.recommend-tag {
-  cursor: pointer;
-  user-select: none;
-}
-
-.paper-brief {
-  margin-bottom: 14px;
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  color: #425a7e;
-}
-
-.question-list {
-  display: grid;
-  gap: 12px;
-}
-
-.question-item {
-  border-radius: 14px;
-  border: 1px solid #d8e6f9;
-  background: #fff;
-  padding: 18px;
-  box-shadow: 0 6px 18px rgba(15, 69, 133, 0.08);
-}
-
-.question-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.question-left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.question-index {
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: #0e2e56;
-}
-
-.question-meta {
-  color: #4f6484;
-  text-align: left;
-}
-
-.meta-rate {
-  display: inline-block;
-  margin-bottom: 6px;
-  font-size: 14px;
-}
-
-.score-pill {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  border: 1px solid #bfd9ff;
-  border-radius: 999px;
-  padding: 6px 12px;
-  background: #edf5ff;
-}
-
-.score-label {
-  font-size: 12px;
-  color: #4f6484;
-}
-
-.score-value,
-.score-total {
-  font-size: 20px;
-  font-weight: 700;
-  color: #0f4ea8;
-}
-
-.score-divider {
-  color: #6e88ad;
-  font-size: 18px;
-}
-
-.keyword-wrap {
-  margin-bottom: 0;
-}
-
-.question-panel {
-  border-radius: 12px;
-  border: 1px solid #d7e8ff;
-  background: #f6fbff;
-  padding: 12px;
-  margin-bottom: 12px;
-
-  h4 {
-    margin: 0 0 8px;
-    color: #20446e;
-    font-size: 15px;
-  }
-}
-
-.question-content {
-  color: #10385d;
-  line-height: 1.9;
-  font-size: 20px;
-  word-break: break-word;
-  margin-bottom: 10px;
-}
-
-.answer-panel {
-  border-radius: 12px;
-  border: 1px solid #d9e9ff;
-  background: #f8fbff;
-  padding: 12px;
-  margin-bottom: 10px;
-
-  h4 {
-    margin: 0 0 8px;
-    color: #20446e;
-    font-size: 15px;
-  }
-}
-
-.answer-markdown {
-  color: #17365d;
-  line-height: 1.8;
-  font-size: 15px;
-  word-break: break-word;
-}
-
-.answer-markdown :deep(code),
-.question-content :deep(code) {
-  background: #e8f0ff;
-  border-radius: 4px;
-  padding: 1px 4px;
-}
-
-.answer-markdown :deep(a),
-.question-content :deep(a) {
-  color: #1356b7;
-  text-decoration: underline;
-}
-
-.image-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.question-image {
-  max-width: 100%;
-}
-
-.empty-wrap {
-  padding: 34px 0;
 }
 
 .pdf-frame {
@@ -1123,18 +952,29 @@ onMounted(async () => {
   border: none;
 }
 
-@media (max-width: 900px) {
-  .question-head {
+@media (max-width: 768px) {
+  .student-paper-page {
+    padding: 16px;
+  }
+
+  .hero-section {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-stat {
+    text-align: left;
+  }
+
+  .filter-control,
+  .filter-control-sm,
+  .filter-input {
+    width: 100%;
+  }
+
+  .paper-footer {
     align-items: flex-start;
-  }
-
-  .question-index {
-    font-size: 24px;
-  }
-
-  .question-content {
-    font-size: 18px;
+    flex-direction: column;
   }
 }
 </style>

@@ -2,10 +2,25 @@
 /* eslint-disable */
 import request from "@/utils/request";
 
-/** 此处后端没有提供注释 POST /api/upload */
-export async function postUpload(
+/** 此处后端没有提供注释 GET /api/paper-question-score */
+export async function getPaperQuestionScore(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.postUploadParams,
+  params: API.getPaperQuestionScoreParams,
+  options?: { [key: string]: any }
+) {
+  return request<any>("/api/paper-question-score", {
+    method: "GET",
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
+/** 此处后端没有提供注释 POST /api/paper-question-score */
+export async function postPaperQuestionScore(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.postPaperQuestionScoreParams,
   body: {},
   file?: File,
   options?: { [key: string]: any }
@@ -32,7 +47,7 @@ export async function postUpload(
     }
   });
 
-  return request<any>("/api/upload", {
+  return request<any>("/api/paper-question-score", {
     method: "POST",
     params: {
       ...params,
@@ -43,17 +58,17 @@ export async function postUpload(
   });
 }
 
-/** 此处后端没有提供注释 DELETE /api/upload */
-export async function deleteUpload(
-  body: API.delFile,
+/** 此处后端没有提供注释 DELETE /api/paper-question-score */
+export async function deletePaperQuestionScore(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.deletePaperQuestionScoreParams,
   options?: { [key: string]: any }
 ) {
-  return request<any>("/api/upload", {
+  return request<any>("/api/paper-question-score", {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
+    params: {
+      ...params,
     },
-    data: body,
     ...(options || {}),
   });
 }

@@ -2,7 +2,7 @@
 /* eslint-disable */
 import request from "@/utils/request";
 
-/** 获取班级记录列表，支持分页和条件过滤 GET /api/classes/ */
+/** 此处后端没有提供注释 GET /api/classes/ */
 export async function getClassesApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getClassesApiParams,
@@ -17,7 +17,7 @@ export async function getClassesApi(
   });
 }
 
-/** 添加新的班级记录 POST /api/classes/ */
+/** 此处后端没有提供注释 POST /api/classes/ */
 export async function postClassesApi(
   body: API.Classes,
   options?: { [key: string]: any }
@@ -32,7 +32,7 @@ export async function postClassesApi(
   });
 }
 
-/** 获取指定的班级记录详情 GET /api/classes/${param0} */
+/** 此处后端没有提供注释 GET /api/classes/${param0} */
 export async function getClassesDetailApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getClassesDetailApiParams,
@@ -46,7 +46,7 @@ export async function getClassesDetailApi(
   });
 }
 
-/** 更新指定的班级记录 PUT /api/classes/${param0} */
+/** 此处后端没有提供注释 PUT /api/classes/${param0} */
 export async function putClassesDetailApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.putClassesDetailApiParams,
@@ -65,7 +65,7 @@ export async function putClassesDetailApi(
   });
 }
 
-/** 删除指定的班级记录 DELETE /api/classes/${param0} */
+/** 此处后端没有提供注释 DELETE /api/classes/${param0} */
 export async function deleteClassesDetailApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.deleteClassesDetailApiParams,
