@@ -309,6 +309,12 @@ const getCurrentGrade = () => {
   return '';
 };
 
+const examTime = (exam: any) => {
+  const timeText = exam.update_time || exam.create_time || '';
+  const time = timeText ? new Date(timeText).getTime() : 0;
+  return Number.isFinite(time) ? time : 0;
+};
+
 // 初始化：获取班级、考试列表
 const init = async () => {
   try {
@@ -329,8 +335,13 @@ const init = async () => {
       // 直接使用返回的考试对象数组（包含id和name）
       examList.value = examRes.data.map((exam: any) => ({
         id: exam.id,
-        name: exam.name
-      }));
+        name: exam.name,
+        create_time: exam.create_time,
+        update_time: exam.update_time
+      })).sort((a: any, b: any) => {
+        const timeDiff = examTime(b) - examTime(a);
+        return timeDiff || Number(b.id) - Number(a.id);
+      });
       
       if (examList.value.length > 0) {
         selectedExamId.value = examList.value[0].id;
@@ -483,8 +494,9 @@ const runComparison = async () => {
     const res = await getCompareWithStudent({
       student_id: userInfo.student.uid,
       compare_student_id: finalOpponentId.value,
-      selected_exam_id: selectedExamId.value.toString()
-    });
+      selected_exam_id: selectedExamId.value,
+      compare_class_id: opponentClassId.value
+    } as any);
 
     if (res.code === 200 && res.data) {
       currentStudentData.value = res.data.current_student;

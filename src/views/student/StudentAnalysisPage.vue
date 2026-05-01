@@ -312,7 +312,7 @@ const fetchExamStats = async () => {
     const res = await postPassLineAnalysis({ 
       student_id: studentId, 
       exam_ids: examListSelected.value 
-    }) as { code: number; data?: PassLineResponse };
+    } as any) as { code: number; data?: PassLineResponse };
     
     if (res.code === 200 && res.data) {
       examAnalysisRaw.value = Object.entries(res.data)
@@ -361,7 +361,7 @@ const fetchComprehensiveAnalysis = async () => {
     const res = await postStudentAverageAnalysis({
       student_id: studentId,
       exam_ids: examListSelected.value
-    }) as StudentAverageAnalysisResponse;
+    } as any) as StudentAverageAnalysisResponse;
 
     if (res.code === 200 && res.data && res.data.length > 0) {
       const compData = res.data[0]; // 取数组第一个元素

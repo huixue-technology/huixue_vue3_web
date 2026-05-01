@@ -102,6 +102,7 @@
 <script setup lang="ts">
 import { getGradeApi } from '@/servers/api/grade';
 import { getStudentExamApi } from '@/servers/api/student';
+import { getPassLine } from '@/servers/api/analysis';
 import { ref, onMounted, onUnmounted, onBeforeMount, computed } from 'vue';
 import { useUserStore } from '@/store/modules/user';
 import router from '@/router';
@@ -202,17 +203,19 @@ interface Exam {
 }
 
 type TableData = {
+    field: string;
     name: string;
     sum_: number;
     sumb: number;
     sumd: number;
     maxB: number;
-    passLine: number;
+    passLine: number | string;
 }; 
 
 const examList = ref<Exam[]>([])
 const currentExamId = ref<string>('')
 const tableData = ref<TableData[]>([])
+const passLineData = ref<Record<string, any>>({})
 
 onBeforeMount(async () => {
     if (!userStore.isLogin) {
@@ -248,6 +251,7 @@ onBeforeMount(async () => {
                 exam_id: parseInt(currentExamId.value)
             });
             if (gradeRes.code === 200 && gradeRes.data?.[0]) {
+                await fetchPassLine(currentExamId.value);
                 handleGradeDetail(gradeRes.data[0]);
             }
         }else{
@@ -258,6 +262,25 @@ onBeforeMount(async () => {
     }
 })
 
+const fetchPassLine = async (examId: string) => {
+    passLineData.value = {};
+    try {
+        const res = await getPassLine({ exam_id: parseInt(examId), size: 100 });
+        if (res.code !== 200 || !Array.isArray(res.data)) return;
+        passLineData.value = res.data.find((line: any) => {
+            const lineName = String(line?.line_name || '');
+            return lineName.includes('一本') || lineName.includes('一段');
+        }) || {};
+    } catch (err) {
+        passLineData.value = {};
+    }
+}
+
+const getPassLineValue = (field: string) => {
+    const value = passLineData.value?.[field];
+    return value ?? '-';
+}
+
 const handleGradeDetail = (gradeData:API.Grade) => {
     tableData.value = []
     currentExamData.value = gradeData
@@ -266,36 +289,40 @@ const handleGradeDetail = (gradeData:API.Grade) => {
     
     tableData.value = [
     {
+        field: 'sum_',
         name: '总分',
         sum_: safeScore(gradeData.sum_, 750),
         sumb: gradeData.sumb || 0,
         sumd: gradeData.sumd || 0,
         maxB: safeScore(gradeData.sum_, 750),
-        passLine: 0,
+        passLine: getPassLineValue('sum_'),
     },
     {
+        field: 'yuwen',
         name: '语文',
         sum_: safeScore(gradeData.yuwen, 150),
         sumb: gradeData.yuwenb || 0,
         sumd: gradeData.yuwend || 0,
         maxB: safeScore(gradeData.yuwen, 150),
-        passLine: 0,
+        passLine: getPassLineValue('yuwen'),
     },
     {
+        field: 'yingyu',
         name: '英语',
         sum_: safeScore(gradeData.yingyu, 150),
         sumb: gradeData.yingyub || 0,
         sumd: gradeData.yingyud || 0,
         maxB: safeScore(gradeData.yingyu, 150),
-        passLine: 0,
+        passLine: getPassLineValue('yingyu'),
     },
     {
+        field: 'shuxue',
         name: '数学',
         sum_: safeScore(gradeData.shuxue, 150),
         sumb: gradeData.shuxueb || 0,
         sumd: gradeData.shuxued || 0,
         maxB: safeScore(gradeData.shuxue, 150),
-        passLine: 0,
+        passLine: getPassLineValue('shuxue'),
     }
 ];
     const selection = studentInfo.value?.subject_selection;
@@ -312,12 +339,13 @@ const handleGradeDetail = (gradeData:API.Grade) => {
         if (!hasSelection || selection.includes(e.short)) {
             const score = (gradeData as any)[e.key];
             tableData.value.push({
+                field: e.key,
                 name: e.label,
                 sum_: safeScore(score, 100),
                 sumb: (gradeData as any)[`${e.key}b`] || 0,
                 sumd: (gradeData as any)[`${e.key}d`] || 0,
                 maxB: safeScore(score, 100),
-                passLine: 0,
+                passLine: getPassLineValue(e.key),
             });
         }
     }
@@ -339,6 +367,10 @@ const  tableColumns = [{
         title: '年级排名',
         dataIndex: 'sumd',
         align: 'center',
+    },{
+        title: '一本线',
+        dataIndex:'passLine',
+        align: 'center',
     }
 ]
 
@@ -350,6 +382,7 @@ const handleChange = async (value:string) => {
             exam_id: parseInt(value)
         });
         if (gradeRes.code === 200 && gradeRes.data?.[0]) {
+            await fetchPassLine(value);
             handleGradeDetail(gradeRes.data[0]);
         }
     } catch (err) {

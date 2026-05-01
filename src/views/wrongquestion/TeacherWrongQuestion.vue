@@ -567,7 +567,7 @@ const stringList = (value: unknown): string[] => {
 const fileUrl = (path: unknown) => {
   const value = text(path);
   if (!value) return "";
-  if (/^(https?:)?\/\//i.test(value) || value.startsWith("data:")) return value;
+  if (/^(https?:)?\/\//i.test(value) || value.startsWith("data:") || value.startsWith("/api/tp/file")) return value;
   return getTestPaperFileUrl(value);
 };
 const formatScore = (value: unknown) => {
@@ -582,11 +582,25 @@ const formatPercent = (value: unknown) => {
 };
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-const renderMarkdown = (value: unknown) =>
-  text(value)
-    .split(/\r?\n/)
-    .map((line) => `<p>${escapeHtml(line)}</p>`)
-    .join("");
+const renderMarkdownLine = (line: string) => {
+  const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
+  let cursor = 0;
+  let html = "";
+  let match: RegExpExecArray | null;
+
+  while ((match = imagePattern.exec(line)) !== null) {
+    html += escapeHtml(line.slice(cursor, match.index));
+    const src = fileUrl(match[2]);
+    if (src) {
+      html += `<img class="markdown-image" src="${escapeHtml(src)}" alt="${escapeHtml(match[1] || "answer image")}" />`;
+    }
+    cursor = match.index + match[0].length;
+  }
+
+  html += escapeHtml(line.slice(cursor));
+  return `<p>${html}</p>`;
+};
+const renderMarkdown = (value: unknown) => text(value).split(/\r?\n/).map(renderMarkdownLine).join("");
 const recordKey = (record: WrongQuestionRecord) =>
   [record.exam_id, record.test_paper_id, record.class_id, record.student_id, record.question_key || record.string_number].map(text).join("-");
 
@@ -807,6 +821,14 @@ onMounted(async () => {
 
 .markdown-body :deep(p) {
   margin: 0 0 8px;
+}
+
+.markdown-body :deep(.markdown-image) {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  margin: 8px 0;
+  object-fit: contain;
 }
 
 .pagination-wrap {
