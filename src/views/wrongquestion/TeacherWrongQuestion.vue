@@ -55,7 +55,7 @@
         <a-select
           v-model:value="filters.test_paper_id"
           class="filter-control"
-          :placeholder="canChoosePaper ? '试卷' : '先选科目、学校和年级'"
+          :placeholder="canChoosePaper ? '试卷' : '先选班级'"
           :disabled="!canChoosePaper"
           :options="paperOptions"
           :loading="paperLoading"
@@ -274,7 +274,7 @@ const questionTypeOptions: Option[] = ["单选题", "多选题", "填空题", "�
 }));
 
 const canChooseClass = computed(() => Boolean(filters.subject && filters.school_id && filters.grade));
-const canChoosePaper = computed(() => Boolean(filters.subject && filters.school_id && filters.grade));
+const canChoosePaper = computed(() => Boolean(filters.subject && filters.school_id && filters.grade && filters.class_id));
 const ruleText = computed(() =>
   mode.value === "class"
     ? "筛选班级错题前，需要先确定科目、学校、年级和班级；试卷可作为进一步筛选。"
@@ -282,6 +282,11 @@ const ruleText = computed(() =>
 );
 
 const text = (value: unknown) => String(value ?? "").trim();
+const normalizeGradeForApi = (value: unknown) => {
+  const grade = text(value);
+  if (!grade) return undefined;
+  return grade.endsWith("\u7ea7") || !/^\d{4}$/.test(grade) ? grade : `${grade}\u7ea7`;
+};
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
 const filterOption = (input: string, option: any) => text(option?.label).toLowerCase().includes(input.toLowerCase());
 const sortOptions = (a: Option, b: Option) => String(a.label).localeCompare(String(b.label), "zh-Hans-CN", { numeric: true });
@@ -296,7 +301,7 @@ const buildParams = () => ({
   size: pagination.size,
   subject: filters.subject,
   school_id: text(filters.school_id) || undefined,
-  grade: filters.grade,
+  grade: normalizeGradeForApi(filters.grade),
   class_id: filters.class_id,
   test_paper_id: filters.test_paper_id,
   student_id: mode.value === "student" ? filters.student_id : undefined,
@@ -349,7 +354,7 @@ const loadPapers = async () => {
       page: 1,
       size: 1000,
       school_id: text(filters.school_id),
-      grade: filters.grade,
+      grade: normalizeGradeForApi(filters.grade),
       subject: filters.subject,
     } as any);
     const data = Array.isArray(res?.data) ? res.data : [];
@@ -371,7 +376,7 @@ const loadStudents = async () => {
   if (!filters.class_id) return;
   studentLoading.value = true;
   try {
-    const res = await getStudentApi({ school: filters.school_id, grade: filters.grade, class_id: filters.class_id, page: 1, size: 1000 } as any);
+    const res = await getStudentApi({ school: filters.school_id, grade: normalizeGradeForApi(filters.grade), class_id: filters.class_id, page: 1, size: 1000 } as any);
     const data = Array.isArray(res?.data) ? res.data : [];
     studentOptions.value = data
       .map((item: any) => ({
@@ -392,12 +397,12 @@ const validateSearch = () => {
     errorText.value = "请先选择科目、学校 ID 和年级。";
     return false;
   }
-  if (mode.value === "student" && !filters.student_id) {
-    errorText.value = "学生错题模式需要先选择班级和学生。";
+  if (!filters.class_id) {
+    errorText.value = "请先选择班级，再查询错题。";
     return false;
   }
-  if (mode.value === "class" && !filters.class_id && !filters.test_paper_id) {
-    errorText.value = "班级错题模式请至少选择班级；试卷可选。";
+  if (mode.value === "student" && !filters.student_id) {
+    errorText.value = "学生错题模式需要先选择班级和学生。";
     return false;
   }
   if (mode.value === "student" && !filters.test_paper_id) {
@@ -447,10 +452,17 @@ const loadRecommend = async () => {
 };
 
 const handleSearch = () => search(true);
+const clearQueryResult = () => {
+  rows.value = [];
+  pagination.page = 1;
+  pagination.total = 0;
+  recommendKnowledge.value = [];
+  recommendTypes.value = [];
+  recommendText.value = "";
+};
 const handleModeChange = () => {
   filters.student_id = undefined;
-  rows.value = [];
-  pagination.total = 0;
+  clearQueryResult();
   if (mode.value === "student" && filters.class_id) {
     loadStudents();
   }
@@ -463,8 +475,8 @@ const handleBaseChange = async () => {
   classOptions.value = [];
   paperOptions.value = [];
   studentOptions.value = [];
+  clearQueryResult();
   refreshClassOptions();
-  await loadPapers();
 };
 const handleSchoolChange = async () => {
   filters.grade = undefined;
@@ -475,6 +487,7 @@ const handleSchoolChange = async () => {
   gradeOptions.value = [];
   classOptions.value = [];
   paperOptions.value = [];
+  clearQueryResult();
   await loadClasses();
 };
 const handleGradeChange = async () => {
@@ -484,16 +497,25 @@ const handleGradeChange = async () => {
   filters.question_type = "";
   studentOptions.value = [];
   paperOptions.value = [];
+  clearQueryResult();
   refreshClassOptions();
-  await loadPapers();
 };
 const handlePaperChange = async () => {
   filters.question_type = "";
   await search(true);
 };
 const handleClassChange = async () => {
+  filters.test_paper_id = undefined;
   filters.student_id = undefined;
   studentOptions.value = [];
+  paperOptions.value = [];
+  clearQueryResult();
+  if (!filters.class_id) {
+    errorText.value = "请先选择班级，再查询错题。";
+    return;
+  }
+  errorText.value = "";
+  await loadPapers();
   if (mode.value === "student") await loadStudents();
   else await search(true);
 };
