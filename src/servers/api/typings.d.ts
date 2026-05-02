@@ -290,10 +290,12 @@ declare namespace API {
   type getCompareWithStudentParams = {
     /** 学生id */
     student_id: string;
-    /** 对比学生id */
+    /** 对比学生id或姓名 */
     compare_student_id: string;
     /** 选中考试id */
     selected_exam_id: number;
+    /** 对比学生班级id */
+    compare_class_id?: string;
   };
 
   type getExamApiParams = {
@@ -905,6 +907,11 @@ declare namespace API {
     class_id: number;
   };
 
+  type postTestPaperAnswerImageParams = {
+    /** test paper id */
+    test_paper_id: number;
+  };
+
   type postTestPaperParams = {
     /** 学校ID */
     school_id: string;
@@ -922,6 +929,18 @@ declare namespace API {
     name?: string;
     /** 试卷备注 */
     description?: string;
+  };
+
+  type postTestPaperPdfParams = {
+    /** test paper id */
+    test_paper_id: number;
+  };
+
+  type postTestPaperQuestionImageParams = {
+    /** test paper id */
+    test_paper_id: number;
+    /** question id */
+    question_id?: number;
   };
 
   type postUploadParams = {
@@ -1033,8 +1052,10 @@ declare namespace API {
   };
 
   type StudentAverage = {
-    /** 学生ID */
-    student_id: string[];
+    /** 学生ID或学生ID列表 */
+    student_id: Record<string, any>;
+    /** 考试ID列表 */
+    exam_ids?: number[];
   };
 
   type StudentWrongQuestionReview = {

@@ -24,10 +24,15 @@ export async function postTestPaper(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postTestPaperParams,
   body: {},
+  pdf_file?: File,
   file?: File,
   options?: { [key: string]: any }
 ) {
   const formData = new FormData();
+
+  if (pdf_file) {
+    formData.append("pdf_file", pdf_file);
+  }
 
   if (file) {
     formData.append("file", file);
@@ -76,6 +81,47 @@ export async function deleteTestPaper(
   });
 }
 
+/** Upload a Markdown answer image and return a preview URL. POST /api/tp/answer-image */
+export async function postTestPaperAnswerImage(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.postTestPaperAnswerImageParams,
+  body: {},
+  file?: File,
+  options?: { [key: string]: any }
+) {
+  const formData = new FormData();
+
+  if (file) {
+    formData.append("file", file);
+  }
+
+  Object.keys(body).forEach((ele) => {
+    const item = (body as any)[ele];
+
+    if (item !== undefined && item !== null) {
+      if (typeof item === "object" && !(item instanceof File)) {
+        if (item instanceof Array) {
+          item.forEach((f) => formData.append(ele, f || ""));
+        } else {
+          formData.append(ele, JSON.stringify(item));
+        }
+      } else {
+        formData.append(ele, item);
+      }
+    }
+  });
+
+  return request<any>("/api/tp/answer-image", {
+    method: "POST",
+    params: {
+      ...params,
+    },
+    data: formData,
+    requestType: "form",
+    ...(options || {}),
+  });
+}
+
 /** 读取试卷相关文件 试卷/题目文件读取接口：用于访问本地或 OSS 中保存的试卷文件、题目图片。
 根据存储路径返回文件内容。上传解析出的图片通常会以 /api/tp/file?path=... 的形式给前端访问。 GET /api/tp/file */
 export async function getTestPaperFile(
@@ -88,6 +134,88 @@ export async function getTestPaperFile(
     params: {
       ...params,
     },
+    ...(options || {}),
+  });
+}
+
+/** Upload or replace the PDF file for an existing test paper. POST /api/tp/pdf */
+export async function postTestPaperPdf(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.postTestPaperPdfParams,
+  body: {},
+  file?: File,
+  options?: { [key: string]: any }
+) {
+  const formData = new FormData();
+
+  if (file) {
+    formData.append("file", file);
+  }
+
+  Object.keys(body).forEach((ele) => {
+    const item = (body as any)[ele];
+
+    if (item !== undefined && item !== null) {
+      if (typeof item === "object" && !(item instanceof File)) {
+        if (item instanceof Array) {
+          item.forEach((f) => formData.append(ele, f || ""));
+        } else {
+          formData.append(ele, JSON.stringify(item));
+        }
+      } else {
+        formData.append(ele, item);
+      }
+    }
+  });
+
+  return request<any>("/api/tp/pdf", {
+    method: "POST",
+    params: {
+      ...params,
+    },
+    data: formData,
+    requestType: "form",
+    ...(options || {}),
+  });
+}
+
+/** Upload a question image and return a storage path that can be saved on test_question.images. POST /api/tp/question-image */
+export async function postTestPaperQuestionImage(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.postTestPaperQuestionImageParams,
+  body: {},
+  file?: File,
+  options?: { [key: string]: any }
+) {
+  const formData = new FormData();
+
+  if (file) {
+    formData.append("file", file);
+  }
+
+  Object.keys(body).forEach((ele) => {
+    const item = (body as any)[ele];
+
+    if (item !== undefined && item !== null) {
+      if (typeof item === "object" && !(item instanceof File)) {
+        if (item instanceof Array) {
+          item.forEach((f) => formData.append(ele, f || ""));
+        } else {
+          formData.append(ele, JSON.stringify(item));
+        }
+      } else {
+        formData.append(ele, item);
+      }
+    }
+  });
+
+  return request<any>("/api/tp/question-image", {
+    method: "POST",
+    params: {
+      ...params,
+    },
+    data: formData,
+    requestType: "form",
     ...(options || {}),
   });
 }

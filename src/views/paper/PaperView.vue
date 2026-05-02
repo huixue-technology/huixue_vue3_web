@@ -126,6 +126,7 @@ type PaperItem = {
   subject?: string;
   status?: string;
   file_path?: string;
+  pdf_file_path?: string;
   create_time?: string;
   [key: string]: any;
 };
@@ -1144,11 +1145,11 @@ const rowClassName = (record: PaperItem) => {
 };
 
 const openPdfPreview = (paper: PaperItem) => {
-  if (!paper.file_path) {
+  if (!paper.pdf_file_path) {
     message.warning("该试卷暂无PDF路径");
     return;
   }
-  pdfPreviewUrl.value = getTestPaperFileUrl(paper.file_path);
+  pdfPreviewUrl.value = getTestPaperFileUrl(paper.pdf_file_path);
   pdfPreviewOpen.value = true;
 };
 
