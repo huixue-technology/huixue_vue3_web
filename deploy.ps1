@@ -3,7 +3,7 @@
     [string]$Action = 'deploy',
 
     [string]$BuildDir = 'dist',
-    [string]$DeployDir = '/opt/huixue_frontend',
+    [string]$DeployDir = '/opt/huixue_frontend_sangao',
     [string]$DeployUser = 'root',
     [string]$DeployHost = '101.200.240.100',
     [switch]$UseUserSshConfig
