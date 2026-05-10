@@ -26,16 +26,16 @@ export function useSchoolSelection() {
     }
 
     /**
-     * 根据学校名称获取年级列表
+     * 根据学校ID获取年级列表
      */
-    const fetchGradesBySchool = async (schoolName: string) => {
+    const fetchGradesBySchool = async (schoolId: string) => {
         gradeList.value = []
         classList.value = []
 
-        if (!schoolName) return
+        if (!schoolId) return
 
         try {
-            const res = await getClassesApi({ school_id: schoolName })
+            const res = await getClassesApi({ school_id: schoolId })
             if (res.code === 200 && res.data && res.data.length > 0) {
                 const grades = new Set<string>()
                 res.data.forEach((cls: any) => {
@@ -63,15 +63,15 @@ export function useSchoolSelection() {
     }
 
     /**
-     * 根据学校名称和年级获取班级列表
+     * 根据学校ID和年级获取班级列表
      */
-    const fetchClassesByGrade = async (schoolName: string, grade: string) => {
+    const fetchClassesByGrade = async (schoolId: string, grade: string) => {
         classList.value = []
 
-        if (!grade || !schoolName) return
+        if (!grade || !schoolId) return
 
         try {
-            const res = await getClassesApi({ school_id: schoolName })
+            const res = await getClassesApi({ school_id: schoolId })
             if (res.code === 200 && res.data) {
                 classList.value = res.data
                     .filter((cls: any) => {

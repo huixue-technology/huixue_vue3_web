@@ -52,7 +52,7 @@ const items = computed<MenuProps["items"]>(() => {
   }
 
   const menuItems: MenuProps["items"] = [];
-  const isTeacher = String(user.role).length !== 10;
+  const isTeacher = user.role_type === "teacher" || user.teacher !== undefined;
 
   if (isTeacher) {
     menuItems.push(

@@ -61,17 +61,17 @@
 
       <a-form-item
          label="所在学校"
-         name="schoolName"
+         name="schoolId"
          :rules="[{ required: true, message: '请选择学校!' }]"
       >
          <a-select
-           v-model:value="formparams.schoolName"
+           v-model:value="formparams.schoolId"
            @change="handleSchoolChange"
            style="width: 100%"
            placeholder="请选择学校"
            :loading="schoolList.length === 0"
          >
-           <a-select-option v-for="school in schoolList" :key="school.id" :value="school.name">
+           <a-select-option v-for="school in schoolList" :key="school.school_id" :value="school.school_id">
              {{ school.name }}
            </a-select-option>
          </a-select>
@@ -87,8 +87,8 @@
            @change="handleGradeChange"
            style="width: 100%"
            placeholder="请选择年级"
-           :loading="gradeList.length === 0 && formparams.schoolName"
-           :disabled="!formparams.schoolName"
+           :loading="gradeList.length === 0 && formparams.schoolId"
+           :disabled="!formparams.schoolId"
          >
            <a-select-option v-for="grade in gradeList" :key="grade" :value="grade">
              {{ grade }}
@@ -175,13 +175,14 @@ interface FormParams {
   name: string
   phone: string
   schoolName: string
+  schoolId: string
   grade: string
   subject: string
   classId: number | undefined
 }
 
 const disabled = computed(() => {
-  return !(formparams.uid && formparams.password && formparams.name && formparams.phone && formparams.schoolName && formparams.grade && formparams.subject && formparams.classId);
+  return !(formparams.uid && formparams.password && formparams.name && formparams.phone && formparams.schoolId && formparams.grade && formparams.subject && formparams.classId);
 });
 
 const formparams = reactive<FormParams>({
@@ -190,6 +191,7 @@ const formparams = reactive<FormParams>({
   name: '',
   phone: '',
   schoolName: '',
+  schoolId: '',
   grade: '',
   subject: '',
   classId: undefined
@@ -199,7 +201,9 @@ const userStore = useUserStore();
 
 // 学校选择事件处理
 const handleSchoolChange = async (value: string) => {
-  formparams.schoolName = value;
+  formparams.schoolId = value;
+  const selectedSchool = schoolList.value.find(school => school.school_id === value);
+  formparams.schoolName = selectedSchool ? selectedSchool.name : '';
   formparams.grade = '';
   formparams.classId = undefined;
   await fetchGradesBySchool(value);
@@ -209,16 +213,15 @@ const handleSchoolChange = async (value: string) => {
 const handleGradeChange = async (value: string) => {
   formparams.grade = value;
   formparams.classId = undefined;
-  await fetchClassesByGrade(formparams.schoolName, value);
+  await fetchClassesByGrade(formparams.schoolId, value);
 };
 
 // 提交表单
 const onFinish = async (values: any) => {
   try {
     // 先查找选中学校的ID
-    console.log('Selected school:', formparams.schoolName);
-    const selectedSchool = schoolList.value.find(school => school.name === formparams.schoolName);
-    const schoolId = selectedSchool ? selectedSchool.name : '';
+    console.log('Selected school:', formparams.schoolId);
+    const schoolId = formparams.schoolId;
     
     // 注册教师信息
     const teacherData = {
