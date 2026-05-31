@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="wrong-question-page">
     <header class="page-header">
       <div>
@@ -21,14 +21,19 @@
           allow-clear
           @change="handleBaseChange"
         />
-        <a-input
+
+        <a-select
           v-model:value="filters.school_id"
           class="filter-control"
-          placeholder="学校 ID"
+          placeholder="学校"
+          :options="schoolOptions"
+          :loading="schoolLoading"
           allow-clear
+          show-search
+          :filter-option="filterOption"
           @change="handleSchoolChange"
-          @pressEnter="handleSearch"
         />
+
         <a-select
           v-model:value="filters.grade"
           class="filter-control"
@@ -208,6 +213,7 @@ import {
   getTeacherWrongQuestionSearch as searchTeacherWrongQuestionApi,
 } from "@/servers/api/wrongQuestion";
 import { useUserStore } from "@/store";
+import { getSchoolApi } from "@/servers/api/school";
 
 type Option = { label: string; value: string | number };
 type CountItem = { name: string; count: number };
@@ -240,6 +246,7 @@ const optionLoading = ref(false);
 const paperLoading = ref(false);
 const studentLoading = ref(false);
 const recommendLoading = ref(false);
+const schoolLoading = ref(false);
 const errorText = ref("");
 const allClasses = ref<Array<Option & { grade: string }>>([]);
 const gradeOptions = ref<Option[]>([]);
@@ -249,6 +256,9 @@ const studentOptions = ref<Option[]>([]);
 const recommendKnowledge = ref<CountItem[]>([]);
 const recommendTypes = ref<CountItem[]>([]);
 const recommendText = ref("");
+
+//学校下拉选项
+const schoolOptions = ref<Option[]>([]);
 
 const filters = reactive({
   subject: undefined as string | undefined,
@@ -294,6 +304,26 @@ const sortOptions = (a: Option, b: Option) => String(a.label).localeCompare(Stri
 const getLocalSchoolId = () => {
   const user = userStore.getUserInfo();
   return text(user?.teacher?.school_id || user?.school_id || user?.teacher?.school);
+};
+
+//加载学校列表
+const loadSchools = async () => {
+  schoolLoading.value = true;
+  try {
+    const res = await getSchoolApi({ page: 1, size: 1000 });
+    const data = Array.isArray(res?.data) ? res.data : [];
+    schoolOptions.value = data
+      .map((item: any) => ({
+        label: text(item.name) || `学校 ${text(item.school_id)}`,
+        value: text(item.school_id),
+      }))
+      .filter((item) => item.value)
+      .sort(sortOptions);
+  } catch {
+    message.error("学校加载失败");
+  } finally {
+    schoolLoading.value = false;
+  }
 };
 
 const buildParams = () => ({
@@ -394,7 +424,7 @@ const loadStudents = async () => {
 
 const validateSearch = () => {
   if (!filters.subject || !text(filters.school_id) || !filters.grade) {
-    errorText.value = "请先选择科目、学校 ID 和年级。";
+    errorText.value = "请先选择科目、学校和年级。";
     return false;
   }
   if (!filters.class_id) {
@@ -606,6 +636,7 @@ const recordKey = (record: WrongQuestionRecord) =>
 
 onMounted(async () => {
   filters.school_id = getLocalSchoolId();
+  await loadSchools();
   if (filters.school_id) await loadClasses();
 });
 </script>
