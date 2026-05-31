@@ -82,6 +82,30 @@ declare namespace API {
     class_id?: string;
   };
 
+  type deleteQuickAdminClassDeleteParams = {
+    /** school id */
+    school_id: string;
+    /** grade */
+    grade?: string;
+  };
+
+  type deleteQuickAdminPassLineDeleteParams = {
+    /** exam id */
+    exam_id: number;
+  };
+
+  type deleteQuickAdminScoreDeleteParams = {
+    /** exam id */
+    exam_id: number;
+  };
+
+  type deleteQuickAdminStudentDeleteParams = {
+    /** school id */
+    school_id: string;
+    /** grade */
+    grade?: string;
+  };
+
   type deleteSchoolDetailApiParams = {
     school_id: string;
   };
@@ -116,11 +140,6 @@ declare namespace API {
     user_id: string;
   };
 
-  type delFile = {
-    /** 文件路径 */
-    file_path: string;
-  };
-
   type Exam = {
     /** 考试ID */
     id?: number;
@@ -132,6 +151,8 @@ declare namespace API {
     exam_type?: string;
     /** 学期（兼容字段，映射到 exam_type） */
     semester?: string;
+    /** 考试类型 */
+    exam_category?: string;
     /** 考试年级 */
     student_grade?: string;
     /** 考试试卷ID列表，以逗号分隔 */
@@ -311,6 +332,8 @@ declare namespace API {
     exam_type?: string;
     /** 学期（可选，兼容字段） */
     semester?: string;
+    /** 考试类型（可选） */
+    exam_category?: string;
     /** 学生年级（可选） */
     student_grade?: string;
   };
@@ -389,6 +412,45 @@ declare namespace API {
     page?: number;
     /** 每页记录数 */
     size?: number;
+  };
+
+  type getQuickAdminExamListParams = {
+    /** page */
+    page?: number;
+    /** page size */
+    size?: number;
+    /** school id */
+    school_id?: string;
+    /** grade */
+    student_grade?: string;
+    /** grade alias */
+    grade?: string;
+    /** semester */
+    semester?: string;
+    /** exam year/time */
+    exam_time?: string;
+    /** exam time alias */
+    time?: string;
+    /** year alias */
+    year?: string;
+    /** exam category */
+    exam_category?: string;
+    /** exam category alias */
+    exam_type?: string;
+    /** exam name */
+    name?: string;
+    /** exam name alias */
+    exam_name?: string;
+  };
+
+  type getQuickAdminGradeClassCountParams = {
+    /** school id */
+    school_id: string;
+  };
+
+  type getQuickAdminGradeStudentCountParams = {
+    /** school id */
+    school_id: string;
   };
 
   type getSameGradeClassListParams = {
@@ -809,9 +871,15 @@ declare namespace API {
 
   type Login = {
     /** 用户邮箱 */
-    email: string;
+    email?: string;
+    /** 用户账号 */
+    username?: string;
+    /** 用户账号 */
+    account?: string;
     /** 用户密码 */
     password: string;
+    /** 是否仅允许管理员登录 */
+    admin_only?: boolean;
   };
 
   type PassLine = {
@@ -884,6 +952,11 @@ declare namespace API {
     class_id?: string;
   };
 
+  type postClassUploadApiParams = {
+    /** 学校id */
+    school_id: string;
+  };
+
   type postCompareRankMultiExamParams = {
     /** 学生id */
     student_id: string;
@@ -893,6 +966,21 @@ declare namespace API {
     compare_exam_ids: string;
   };
 
+  type postGradeUploadApiParams = {
+    /** 学校id */
+    school_id: string;
+    /** 年级 */
+    grade: string;
+    /** 学期年份 */
+    year: string;
+    /** 学期 */
+    semester: string;
+    /** 考试名称 */
+    exam_name?: string;
+    /** 考试类型 */
+    exam_category?: string;
+  };
+
   type postPaperQuestionScoreParams = {
     /** 学校ID */
     school_id: string;
@@ -900,11 +988,98 @@ declare namespace API {
     paper_id: string;
   };
 
+  type postPaperUploadApiParams = {
+    /** 学校id */
+    school_id: string;
+    /** 年级 */
+    grade: string;
+    /** 考试id */
+    exam_id: string;
+    /** 科目 */
+    subject: string;
+    /** 考试类型 */
+    catagory?: string;
+    /** 试卷名称 */
+    name: string;
+    /** 备注 */
+    comment?: string;
+  };
+
+  type postQuestionScoreUploadApiParams = {
+    /** 学校ID */
+    school_id: string;
+    /** 试卷编号 */
+    paper_id: string;
+  };
+
+  type postQuickAdminClassImportParams = {
+    /** school id */
+    school_id: string;
+    /** grade */
+    grade: string;
+  };
+
+  type postQuickAdminPassLineImportParams = {
+    /** exam id */
+    exam_id: number;
+  };
+
+  type postQuickAdminScoreImportParams = {
+    /** school id */
+    school_id: string;
+    /** grade */
+    student_grade?: string;
+    /** grade alias */
+    grade?: string;
+    /** semester */
+    semester: string;
+    /** exam year/time */
+    exam_time?: string;
+    /** exam time alias */
+    time?: string;
+    /** year alias */
+    year?: string;
+    /** exam category */
+    exam_category: string;
+    /** exam category alias */
+    exam_type?: string;
+    /** exam name */
+    name?: string;
+    /** exam name alias */
+    exam_name?: string;
+  };
+
+  type postQuickAdminStudentImportParams = {
+    /** school id */
+    school_id: string;
+    /** grade */
+    grade?: string;
+    /** grade alias */
+    student_grade?: string;
+  };
+
+  type postScoreLineUploadApiParams = {
+    /** 考试id */
+    exam_id: number;
+  };
+
+  type postStudentUploadApiParams = {
+    /** 学校id */
+    school_id: string;
+    /** 年级 */
+    grade: string;
+  };
+
   type postTeacherBindApiParams = {
     /** 教师ID */
     teacher_id: number;
     /** 班级id */
     class_id: number;
+  };
+
+  type postTeacherUploadApiParams = {
+    /** 学校ID */
+    school_id: string;
   };
 
   type postTestPaperAnswerImageParams = {
@@ -943,27 +1118,9 @@ declare namespace API {
     question_id?: number;
   };
 
-  type postUploadParams = {
-    /** 上传类型 */
-    type: string;
-    /** 学校ID */
-    school_id?: string;
-    /** 考试ID */
-    exam_id?: number;
-    /** 试卷ID */
-    test_paper_id?: number;
-    /** 考试名称 */
-    exam_name?: string;
-    /** 考试年份（grade 上传可选） */
-    year?: string;
-    /** 学生年级（grade 上传可选） */
-    student_grade?: string;
-    /** 考试类型（grade 上传可选） */
-    exam_type?: string;
-    /** 兼容字段，将映射到 exam_type */
-    semester?: string;
-    /** 附加信息 JSON */
-    additional_info?: string;
+  type postWrongQuestionDownloadParams = {
+    /** 错题 question_id 列表 */
+    question_ids: number[];
   };
 
   type putClassesDetailApiParams = {

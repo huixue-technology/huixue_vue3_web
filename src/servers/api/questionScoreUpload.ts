@@ -2,10 +2,10 @@
 /* eslint-disable */
 import request from "@/utils/request";
 
-/** 此处后端没有提供注释 POST /api/upload */
-export async function postUpload(
+/** 此处后端没有提供注释 POST /api/question_score_upload/question_score */
+export async function postQuestionScoreUploadApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.postUploadParams,
+  params: API.postQuestionScoreUploadApiParams,
   body: {},
   file?: File,
   options?: { [key: string]: any }
@@ -32,28 +32,13 @@ export async function postUpload(
     }
   });
 
-  return request<any>("/api/upload", {
+  return request<any>("/api/question_score_upload/question_score", {
     method: "POST",
     params: {
       ...params,
     },
     data: formData,
     requestType: "form",
-    ...(options || {}),
-  });
-}
-
-/** 此处后端没有提供注释 DELETE /api/upload */
-export async function deleteUpload(
-  body: API.delFile,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/upload", {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    data: body,
     ...(options || {}),
   });
 }

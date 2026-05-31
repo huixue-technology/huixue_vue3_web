@@ -220,6 +220,57 @@ export async function postTestPaperQuestionImage(
   });
 }
 
+/** 根据题目图片生成关键词。 使用 LangChain 视觉模型分析单道题图片，返回题型和知识点关键词。 POST /api/tp/question-keywords */
+export async function postTestPaperQuestionKeywords(
+  body: {},
+  file?: File,
+  file_2?: File,
+  file_3?: File,
+  file_4?: File,
+  options?: { [key: string]: any }
+) {
+  const formData = new FormData();
+
+  if (file) {
+    formData.append("file", file);
+  }
+
+  if (file_2) {
+    formData.append("file_2", file_2);
+  }
+
+  if (file_3) {
+    formData.append("file_3", file_3);
+  }
+
+  if (file_4) {
+    formData.append("file_4", file_4);
+  }
+
+  Object.keys(body).forEach((ele) => {
+    const item = (body as any)[ele];
+
+    if (item !== undefined && item !== null) {
+      if (typeof item === "object" && !(item instanceof File)) {
+        if (item instanceof Array) {
+          item.forEach((f) => formData.append(ele, f || ""));
+        } else {
+          formData.append(ele, JSON.stringify(item));
+        }
+      } else {
+        formData.append(ele, item);
+      }
+    }
+  });
+
+  return request<any>("/api/tp/question-keywords", {
+    method: "POST",
+    data: formData,
+    requestType: "form",
+    ...(options || {}),
+  });
+}
+
 /** 查询小题分 小题分接口：查询或删除学生在某场考试某张试卷中的小题得分。
 按考试、试卷、学生筛选小题分记录；默认会补充学生姓名和班级，便于前端列表展示。 GET /api/tp/question-score */
 export async function getTestPaperQuestionScore(
