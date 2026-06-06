@@ -66,7 +66,7 @@
           <article v-for="record in rows" :key="recordKey(record)" class="question-card">
             <div class="question-main">
               <div class="question-title">
-                <strong>第 {{ record.string_number || record.question_key || "-" }} 题</strong>
+                <strong>{{ record.string_number || record.question_key || "-" }} 题</strong>
                 <a-tag v-if="record.subject" color="blue">{{ record.subject }}</a-tag>
                 <a-tag v-if="record.question_type" color="gold">{{ record.question_type }}</a-tag>
                 <a-tag v-if="record.year" color="green">{{ record.year }}</a-tag>

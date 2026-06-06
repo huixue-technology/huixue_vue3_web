@@ -21,13 +21,16 @@
           allow-clear
           @change="handleBaseChange"
         />
-        <a-input
+        <a-select
           v-model:value="filters.school_id"
           class="filter-control"
-          placeholder="学校 ID"
+          placeholder="学校"
+          :options="schoolOptions"
+          :loading="schoolLoading"
           allow-clear
+          show-search
+          :filter-option="filterOption"
           @change="handleSchoolChange"
-          @pressEnter="handleSearch"
         />
         <a-select
           v-model:value="filters.grade"
@@ -142,7 +145,7 @@
           <article v-for="record in rows" :key="recordKey(record)" class="question-card">
             <div class="question-main">
               <div class="question-title">
-                <strong>第 {{ record.string_number || record.question_key || "-" }} 题</strong>
+                <strong>{{ record.string_number || record.question_key || "-" }} 题</strong>
                 <a-tag v-if="record.subject" color="blue">{{ record.subject }}</a-tag>
                 <a-tag v-if="record.question_type" color="gold">{{ record.question_type }}</a-tag>
                 <a-tag v-if="record.class_id" color="cyan">班级 {{ record.class_id }}</a-tag>
@@ -201,6 +204,7 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import { getClassesApi } from "@/servers/api/classes";
+import { getSchoolApi } from "@/servers/api/school";
 import { getStudentApi } from "@/servers/api/student";
 import { getTestPaper as getTestPaperApi } from "@/servers/api/tp";
 import {
@@ -236,6 +240,7 @@ const userStore = useUserStore();
 const mode = ref<"class" | "student">("class");
 const rows = ref<WrongQuestionRecord[]>([]);
 const loading = ref(false);
+const schoolLoading = ref(false);
 const optionLoading = ref(false);
 const paperLoading = ref(false);
 const studentLoading = ref(false);
@@ -249,10 +254,11 @@ const studentOptions = ref<Option[]>([]);
 const recommendKnowledge = ref<CountItem[]>([]);
 const recommendTypes = ref<CountItem[]>([]);
 const recommendText = ref("");
+const schoolList = ref<any[]>([]);
 
 const filters = reactive({
   subject: undefined as string | undefined,
-  school_id: "",
+  school_id: undefined as string | undefined,
   grade: undefined as string | undefined,
   class_id: undefined as string | undefined,
   test_paper_id: undefined as number | undefined,
@@ -290,6 +296,18 @@ const normalizeGradeForApi = (value: unknown) => {
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
 const filterOption = (input: string, option: any) => text(option?.label).toLowerCase().includes(input.toLowerCase());
 const sortOptions = (a: Option, b: Option) => String(a.label).localeCompare(String(b.label), "zh-Hans-CN", { numeric: true });
+const schoolOptions = computed(() =>
+  schoolList.value
+    .map((item: any) => {
+      const value = text(item.school_id || item.id);
+      return {
+        label: text(item.name || item.school_name || item.school) || value,
+        value,
+      };
+    })
+    .filter((item: Option) => item.value)
+    .sort(sortOptions)
+);
 
 const getLocalSchoolId = () => {
   const user = userStore.getUserInfo();
@@ -315,6 +333,19 @@ const refreshClassOptions = () => {
     .filter((item) => !grade || item.grade === grade)
     .map(({ label, value }) => ({ label, value }))
     .sort(sortOptions);
+};
+
+const loadSchools = async () => {
+  schoolLoading.value = true;
+  try {
+    const res = await getSchoolApi({ page: 1, size: 1000 } as any);
+    const data = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.records) ? res.data.records : [];
+    schoolList.value = data;
+  } catch {
+    message.error("学校列表加载失败");
+  } finally {
+    schoolLoading.value = false;
+  }
 };
 
 const loadClasses = async () => {
@@ -394,7 +425,7 @@ const loadStudents = async () => {
 
 const validateSearch = () => {
   if (!filters.subject || !text(filters.school_id) || !filters.grade) {
-    errorText.value = "请先选择科目、学校 ID 和年级。";
+    errorText.value = "请先选择科目、学校和年级。";
     return false;
   }
   if (!filters.class_id) {
@@ -605,6 +636,7 @@ const recordKey = (record: WrongQuestionRecord) =>
   [record.exam_id, record.test_paper_id, record.class_id, record.student_id, record.question_key || record.string_number].map(text).join("-");
 
 onMounted(async () => {
+  await loadSchools();
   filters.school_id = getLocalSchoolId();
   if (filters.school_id) await loadClasses();
 });

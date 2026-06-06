@@ -1,7 +1,7 @@
 const { defineConfig } = require("@vue/cli-service");
 const path = require("path");
 
-const LOCAL_API_TARGET = "http://127.0.0.1:5000";
+const LOCAL_API_TARGET = "http://111.228.38.111:5003"; // http://111.228.38.111:5003 ; http://127.0.0.1:5000
 const REMOTE_API_TARGET = "http://111.228.38.111:5003";
 const isLocalMachine = process.platform === "win32" || process.platform === "darwin";
 console.log(`[vue.config] isLocalMachine: ${isLocalMachine}`);
