@@ -32,8 +32,7 @@
       <a-button @click="resetFilters">重置</a-button>
     </section>
 
-    <section v-if="recommendText || recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
-      <span class="recommend-summary">{{ recommendText }}</span>
+    <section v-if="recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
       <a-tag
         v-for="item in recommendKnowledge"
         :key="`k-${item.name}`"
@@ -41,7 +40,7 @@
         class="click-tag"
         @click="useKnowledge(item.name)"
       >
-        {{ item.name }} {{ item.count }}
+        {{ item.name }}
       </a-tag>
       <a-tag
         v-for="item in recommendTypes"
@@ -50,7 +49,7 @@
         class="click-tag"
         @click="useType(item.name)"
       >
-        {{ item.name }} {{ item.count }}
+        {{ item.name }}
       </a-tag>
     </section>
 
@@ -168,7 +167,6 @@ const recommendLoading = ref(false);
 const recommendKnowledge = ref<CountItem[]>([]);
 const recommendTypes = ref<CountItem[]>([]);
 const questionTypeOptions = ref<Option[]>([]);
-const recommendText = ref("");
 const studentUid = ref("");
 const studentName = ref("");
 const reviewUpdatingKey = ref("");
@@ -232,7 +230,6 @@ const loadRecommend = async () => {
     recommendKnowledge.value = Array.isArray(res?.data?.knowledge_points) ? res.data.knowledge_points : [];
     recommendTypes.value = Array.isArray(res?.data?.question_types) ? res.data.question_types : [];
     questionTypeOptions.value = recommendTypes.value.map((item) => ({ label: item.name, value: item.name }));
-    recommendText.value = `匹配题量 ${Number(res?.data?.matched_total || 0)}`;
   } catch (error: any) {
     message.error(error?.message || "推荐加载失败");
   } finally {
@@ -256,7 +253,6 @@ const resetFilters = () => {
   filters.is_reviewed = undefined;
   recommendKnowledge.value = [];
   recommendTypes.value = [];
-  recommendText.value = "";
   search(true);
 };
 const useKnowledge = async (name: string) => {
@@ -426,11 +422,6 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 8px;
   padding: 12px 16px;
-}
-
-.recommend-summary {
-  color: #40566f;
-  font-weight: 600;
 }
 
 .click-tag {

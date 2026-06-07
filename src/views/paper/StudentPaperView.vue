@@ -4,7 +4,7 @@
       <header class="hero-section">
         <div>
           <h2>我的试卷</h2>
-          <p>按考试、科目或名称查找试卷，直接打开 PDF 预览。</p>
+          <p>按考试、科目或名称查找试卷，点击查看后下载文件。</p>
         </div>
         <div class="hero-stat">
           <span>{{ pagination.total }}</span>
@@ -58,7 +58,6 @@
                   <div class="paper-title">{{ paper.name || `试卷${paper.id}` }}</div>
                   <div class="paper-sub">{{ paper.exam_name || `考试${paper.exam_id}` }}</div>
                 </div>
-                <a-tag :color="statusColor(paper.status)">{{ paper.status || "unknown" }}</a-tag>
               </div>
               <div class="paper-meta-row">
                 <a-tag color="blue">{{ paper.subject || "-" }}</a-tag>
@@ -67,7 +66,7 @@
               </div>
               <div class="paper-footer">
                 <span>{{ paper.create_time || "-" }}</span>
-                <a-button type="primary" size="small" @click="openPdfPreview(paper)">查看 PDF</a-button>
+                <a-button type="primary" size="small" @click="downloadPaperFile(paper)">查看/下载</a-button>
               </div>
             </article>
           </div>
@@ -86,16 +85,6 @@
         </div>
       </a-card>
     </section>
-
-    <a-modal
-      v-model:open="pdfPreviewOpen"
-      title="试卷 PDF 预览"
-      :footer="null"
-      width="92%"
-      destroy-on-close
-    >
-      <iframe v-if="pdfPreviewUrl" :src="pdfPreviewUrl" class="pdf-frame"></iframe>
-    </a-modal>
   </div>
 </template>
 
@@ -121,9 +110,11 @@ type PaperItem = {
   exam_student_grade?: string;
   name: string;
   subject?: string;
-  status?: string;
   file_path?: string;
   pdf_file_path?: string;
+  word_file_path?: string;
+  doc_file_path?: string;
+  document_file_path?: string;
   create_time?: string;
   [key: string]: any;
 };
@@ -174,8 +165,6 @@ const selectedPaper = ref<PaperItem | null>(null);
 const studentQuestionScoreMap = ref<ScoreMap>({});
 const examOptions = ref<{ label: string; value: number }[]>([]);
 const showOnlyWrong = ref(false);
-const pdfPreviewOpen = ref(false);
-const pdfPreviewUrl = ref("");
 const loadingWrongQuestionSearch = ref(false);
 const wrongQuestionSearchList = ref<WrongQuestionSearchRecord[]>([]);
 const wrongQuestionSearchPagination = reactive({
@@ -209,6 +198,25 @@ const pagination = reactive({
   total: 0,
 });
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
+const getPaperFilePath = (paper: PaperItem) =>
+  String(
+    paper.pdf_file_path ||
+      paper.word_file_path ||
+      paper.doc_file_path ||
+      paper.document_file_path ||
+      paper.file_path ||
+      ""
+  ).trim();
+const getPaperDownloadName = (paper: PaperItem, path: string) => {
+  const rawName = (path.split(/[\\/]/).pop() || "").split("?")[0].trim();
+  let fileName = rawName;
+  try {
+    fileName = decodeURIComponent(rawName);
+  } catch (_error) {
+    fileName = rawName;
+  }
+  return fileName || paper.name || `试卷${paper.id}`;
+};
 const getStudentTestPaperApi = (student_uid: string, params: Record<string, any>) =>
   getStudentTestPaper({ student_uid, ...params });
 const getTestPaperQuestionsApi = (test_paper_id: number) =>
@@ -462,19 +470,6 @@ const renderMarkdown = (rawValue: string) => {
     .replace(/\n/g, "<br/>");
 };
 
-const statusColor = (status?: string) => {
-  switch (status) {
-    case "success":
-      return "green";
-    case "processing":
-      return "blue";
-    case "fail":
-      return "red";
-    default:
-      return "default";
-  }
-};
-
 const buildQueryParams = () => {
   const params: Record<string, any> = {
     page: pagination.page,
@@ -708,13 +703,19 @@ const loadPapers = async (resetPage = false) => {
   }
 };
 
-const openPdfPreview = (paper: PaperItem) => {
-  if (!paper.pdf_file_path) {
-    message.warning("该试卷暂无 PDF 路径");
+const downloadPaperFile = (paper: PaperItem) => {
+  const filePath = getPaperFilePath(paper);
+  if (!filePath) {
+    message.warning("该试卷暂无可下载文件");
     return;
   }
-  pdfPreviewUrl.value = getTestPaperFileUrl(paper.pdf_file_path);
-  pdfPreviewOpen.value = true;
+  const link = document.createElement("a");
+  link.href = getTestPaperFileUrl(filePath);
+  link.download = getPaperDownloadName(paper, filePath);
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 const handlePageChange = async (page: number) => {
@@ -945,12 +946,6 @@ onMounted(async () => {
 .pager-wrap {
   margin-top: 18px;
   text-align: right;
-}
-
-.pdf-frame {
-  width: 100%;
-  height: 76vh;
-  border: none;
 }
 
 @media (max-width: 768px) {

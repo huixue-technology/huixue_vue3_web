@@ -141,7 +141,7 @@ declare namespace API {
   };
 
   type Exam = {
-    /** 考试ID */
+    /** 考试ID，创建考试的时候不需要 */
     id?: number;
     /** 考试名称 */
     name: string;
@@ -149,14 +149,10 @@ declare namespace API {
     year: string;
     /** 考试类型：1代表高三的文理科，2代表高一、高二的选科 */
     exam_type?: string;
-    /** 学期（兼容字段，映射到 exam_type） */
-    semester?: string;
     /** 考试类型 */
     exam_category?: string;
     /** 考试年级 */
     student_grade?: string;
-    /** 考试试卷ID列表，以逗号分隔 */
-    exam_paper_ids?: string;
   };
 
   type FeedbackSubmit = {
@@ -330,8 +326,6 @@ declare namespace API {
     year?: string;
     /** 考试类型（可选） */
     exam_type?: string;
-    /** 学期（可选，兼容字段） */
-    semester?: string;
     /** 考试类型（可选） */
     exam_category?: string;
     /** 学生年级（可选） */
@@ -967,18 +961,8 @@ declare namespace API {
   };
 
   type postGradeUploadApiParams = {
-    /** 学校id */
-    school_id: string;
-    /** 年级 */
-    grade: string;
-    /** 学期年份 */
-    year: string;
-    /** 学期 */
-    semester: string;
-    /** 考试名称 */
-    exam_name?: string;
-    /** 考试类型 */
-    exam_category?: string;
+    /** 考试id */
+    exam_id: number;
   };
 
   type postPaperQuestionScoreParams = {
@@ -1025,14 +1009,16 @@ declare namespace API {
   };
 
   type postQuickAdminScoreImportParams = {
+    /** exam id */
+    exam_id: number;
     /** school id */
-    school_id: string;
+    school_id?: string;
     /** grade */
     student_grade?: string;
     /** grade alias */
     grade?: string;
     /** semester */
-    semester: string;
+    semester?: string;
     /** exam year/time */
     exam_time?: string;
     /** exam time alias */
@@ -1040,7 +1026,7 @@ declare namespace API {
     /** year alias */
     year?: string;
     /** exam category */
-    exam_category: string;
+    exam_category?: string;
     /** exam category alias */
     exam_type?: string;
     /** exam name */
@@ -1248,6 +1234,36 @@ declare namespace API {
     subject?: string;
     /** 学校ID */
     school_id?: string;
+  };
+
+  type TestPaperQuestionBatchUpdate = {
+    /** 试卷ID */
+    test_paper_id: number;
+    /** 需要更新的题目列表 */
+    questions: TestPaperQuestionUpdateItem[];
+  };
+
+  type TestPaperQuestionUpdateItem = {
+    /** 题目ID */
+    id: number;
+    /** 题号 */
+    string_number?: string;
+    /** 题型 */
+    question_type?: string;
+    /** 关键词列表 */
+    keywords?: string[];
+    /** 年级 */
+    grade?: string;
+    /** 题目图片存储路径列表 */
+    images?: string[];
+    /** 题目答案 */
+    quick_answer?: string;
+    /** 题目解析，支持 Markdown */
+    answer?: string;
+    /** 正确率 */
+    correct_rate?: number;
+    /** 分值 */
+    score?: number;
   };
 
   type updateFeedbackStatusParams = {

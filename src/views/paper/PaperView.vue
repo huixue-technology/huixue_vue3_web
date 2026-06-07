@@ -46,7 +46,7 @@
         <template #title>
           <div class="list-title">
             <span>试卷列表</span>
-            <small>点击操作栏可预览 PDF</small>
+            <small>点击操作栏可下载试卷文件</small>
           </div>
         </template>
 
@@ -59,14 +59,9 @@
           size="middle"
         >
           <template #bodyCell="{ column, record }">
-            <template v-if="column.dataIndex === 'status'">
-              <a-tag :color="statusColor(record.status)">
-                {{ record.status || 'unknown' }}
-              </a-tag>
-            </template>
-            <template v-else-if="column.key === 'action'">
-              <a-button type="link" class="pdf-link" @click.stop="openPdfPreview(record)">
-                查看 PDF
+            <template v-if="column.key === 'action'">
+              <a-button type="link" class="download-link" @click.stop="downloadPaperFile(record)">
+                查看/下载
               </a-button>
             </template>
           </template>
@@ -85,17 +80,6 @@
         </div>
       </a-card>
     </section>
-
-    <a-modal
-      v-model:open="pdfPreviewOpen"
-      title="试卷PDF预览"
-      :footer="null"
-      width="92%"
-      destroy-on-close
-    >
-      <iframe v-if="pdfPreviewUrl" :src="pdfPreviewUrl" class="pdf-frame"></iframe>
-    </a-modal>
-
   </div>
 </template>
 
@@ -124,9 +108,11 @@ type PaperItem = {
   exam_student_grade?: string;
   name: string;
   subject?: string;
-  status?: string;
   file_path?: string;
   pdf_file_path?: string;
+  word_file_path?: string;
+  doc_file_path?: string;
+  document_file_path?: string;
   create_time?: string;
   [key: string]: any;
 };
@@ -194,8 +180,6 @@ const allPaperOptions = ref<PaperItem[]>([]);
 const questionList = ref<QuestionItem[]>([]);
 const selectedPaper = ref<PaperItem | null>(null);
 const examOptions = ref<{ label: string; value: number }[]>([]);
-const pdfPreviewOpen = ref(false);
-const pdfPreviewUrl = ref("");
 const loadingQuestionScores = ref(false);
 const questionScoreRecords = ref<QuestionScoreRecord[]>([]);
 const studentQuestionScoreMap = ref<ScoreMap>({});
@@ -257,6 +241,25 @@ const pagination = reactive({
   total: 0,
 });
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
+const getPaperFilePath = (paper: PaperItem) =>
+  String(
+    paper.pdf_file_path ||
+      paper.word_file_path ||
+      paper.doc_file_path ||
+      paper.document_file_path ||
+      paper.file_path ||
+      ""
+  ).trim();
+const getPaperDownloadName = (paper: PaperItem, path: string) => {
+  const rawName = (path.split(/[\\/]/).pop() || "").split("?")[0].trim();
+  let fileName = rawName;
+  try {
+    fileName = decodeURIComponent(rawName);
+  } catch (_error) {
+    fileName = rawName;
+  }
+  return fileName || paper.name || `试卷${paper.id}`;
+};
 const getStudentTestPaperApi = (student_uid: string, params: Record<string, any>) =>
   getStudentTestPaper({ student_uid, ...params });
 const getTestPaperQuestionsApi = (test_paper_id: number) =>
@@ -329,7 +332,6 @@ const paperColumns = [
   { title: "考试", dataIndex: "exam_name", ellipsis: true },
   { title: "年级", dataIndex: "exam_student_grade", width: 110 },
   { title: "科目", dataIndex: "subject", width: 90 },
-  { title: "状态", dataIndex: "status", width: 100 },
   { title: "创建时间", dataIndex: "create_time", width: 170 },
   { title: "操作", key: "action", width: 90 },
 ];
@@ -527,19 +529,6 @@ const buildAverageScoreMap = (records: QuestionScoreRecord[]): ScoreMap => {
     result[questionKey] = Number(average.toFixed(2));
   }
   return result;
-};
-
-const statusColor = (status?: string) => {
-  switch (status) {
-    case "success":
-      return "green";
-    case "processing":
-      return "blue";
-    case "fail":
-      return "red";
-    default:
-      return "default";
-  }
 };
 
 const displayedQuestionScoreMap = computed<ScoreMap>(() => {
@@ -1144,13 +1133,19 @@ const rowClassName = (record: PaperItem) => {
   return Number(record.id) === Number(selectedPaper.value.id) ? "selected-row" : "";
 };
 
-const openPdfPreview = (paper: PaperItem) => {
-  if (!paper.pdf_file_path) {
-    message.warning("该试卷暂无PDF路径");
+const downloadPaperFile = (paper: PaperItem) => {
+  const filePath = getPaperFilePath(paper);
+  if (!filePath) {
+    message.warning("该试卷暂无可下载文件");
     return;
   }
-  pdfPreviewUrl.value = getTestPaperFileUrl(paper.pdf_file_path);
-  pdfPreviewOpen.value = true;
+  const link = document.createElement("a");
+  link.href = getTestPaperFileUrl(filePath);
+  link.download = getPaperDownloadName(paper, filePath);
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 const handlePageChange = async (page: number) => {
@@ -1311,7 +1306,7 @@ onMounted(async () => {
   }
 }
 
-.pdf-link {
+.download-link {
   padding: 0;
   font-weight: 600;
 }
@@ -1319,12 +1314,6 @@ onMounted(async () => {
 .pagination-wrap {
   margin-top: 16px;
   text-align: right;
-}
-
-.pdf-frame {
-  width: 100%;
-  height: 76vh;
-  border: none;
 }
 
 :deep(.ant-table-thead > tr > th) {

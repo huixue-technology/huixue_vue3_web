@@ -109,8 +109,7 @@
       </div>
     </section>
 
-    <section v-if="recommendText || recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
-      <span class="recommend-summary">{{ recommendText }}</span>
+    <section v-if="recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
       <a-tag
         v-for="item in recommendKnowledge"
         :key="`k-${item.name}`"
@@ -118,7 +117,7 @@
         class="click-tag"
         @click="useKnowledge(item.name)"
       >
-        {{ item.name }} {{ item.count }}
+        {{ item.name }}
       </a-tag>
       <a-tag
         v-for="item in recommendTypes"
@@ -127,7 +126,7 @@
         class="click-tag"
         @click="useType(item.name)"
       >
-        {{ item.name }} {{ item.count }}
+        {{ item.name }}
       </a-tag>
     </section>
 
@@ -253,7 +252,6 @@ const paperOptions = ref<Option[]>([]);
 const studentOptions = ref<Option[]>([]);
 const recommendKnowledge = ref<CountItem[]>([]);
 const recommendTypes = ref<CountItem[]>([]);
-const recommendText = ref("");
 const schoolList = ref<any[]>([]);
 
 const filters = reactive({
@@ -474,7 +472,6 @@ const loadRecommend = async () => {
     if (Number(res?.code) !== 200) throw new Error(res?.msg || "推荐失败");
     recommendKnowledge.value = Array.isArray(res?.data?.knowledge_points) ? res.data.knowledge_points : [];
     recommendTypes.value = Array.isArray(res?.data?.question_types) ? res.data.question_types : [];
-    recommendText.value = `匹配题量 ${Number(res?.data?.matched_total || 0)}`;
   } catch (error: any) {
     message.error(error?.message || "推荐加载失败");
   } finally {
@@ -489,7 +486,6 @@ const clearQueryResult = () => {
   pagination.total = 0;
   recommendKnowledge.value = [];
   recommendTypes.value = [];
-  recommendText.value = "";
 };
 const handleModeChange = () => {
   filters.student_id = undefined;
@@ -572,7 +568,6 @@ const resetFilters = async () => {
   pagination.total = 0;
   recommendKnowledge.value = [];
   recommendTypes.value = [];
-  recommendText.value = "";
   paperOptions.value = [];
   await loadClasses();
 };
@@ -726,11 +721,6 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 8px;
   padding: 12px 16px;
-}
-
-.recommend-summary {
-  color: #40566f;
-  font-weight: 600;
 }
 
 .click-tag {

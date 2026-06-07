@@ -19,7 +19,7 @@ export async function getTestPaper(
 }
 
 /** 上传试卷题目表 试卷主数据接口：上传试卷、查询试卷列表、删除试卷。
-上传 xlsx 试卷题目表，创建试卷记录并解析题目、题型、分值和题目图片。文件表头需要包含题号、题型、分值、题目图片。 POST /api/tp/ */
+上传 xlsx 试卷题目表，创建试卷记录并解析题目、题型、分值、答案和题目图片。文件表头需要包含题号、题型、分值、答案、题目图片；解析列可选。 POST /api/tp/ */
 export async function postTestPaper(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postTestPaperParams,
@@ -320,10 +320,17 @@ export async function getTestPaperQuestion(
 }
 
 /** 试卷题目接口：查看、编辑、删除某张试卷下的题目。
-通过 JSON body 批量更新题号、题型、关键词、分值、图片、答案、正确率等题目信息。 PUT /api/tp/questions */
-export async function putTestPaperQuestion(options?: { [key: string]: any }) {
+通过 JSON body 批量更新题目信息。quick_answer 是答案，answer 是解析。 PUT /api/tp/questions */
+export async function putTestPaperQuestion(
+  body: API.TestPaperQuestionBatchUpdate,
+  options?: { [key: string]: any }
+) {
   return request<any>("/api/tp/questions", {
     method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
     ...(options || {}),
   });
 }

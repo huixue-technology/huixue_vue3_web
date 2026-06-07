@@ -2,7 +2,7 @@
 /* eslint-disable */
 import request from "@/utils/request";
 
-/** 成绩上传：保存 Excel 后立即返回，后台 Celery 慢慢入库。 POST /api/grade_upload/grade */
+/** 成绩上传：传入已有考试 id 和成绩 Excel，后台 Celery 入库。 POST /api/grade_upload/grade */
 export async function postGradeUploadApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postGradeUploadApiParams,
