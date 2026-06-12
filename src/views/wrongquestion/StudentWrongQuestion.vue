@@ -110,6 +110,12 @@
                 <a-empty v-else description="暂无答案" />
               </div>
             </div>
+
+            <div class="analysis-box">
+              <div class="box-title">解析</div>
+              <div v-if="text(record.analysis)" class="markdown-body" v-html="renderMarkdown(record.analysis)"></div>
+              <a-empty v-else description="暂无解析" />
+            </div>
           </article>
         </div>
       </a-spin>
@@ -153,6 +159,7 @@ type WrongQuestionRecord = {
   knowledge_points?: string[] | string;
   images?: string[] | string;
   answer?: string;
+  analysis?: string;
   student_score?: number | string;
   full_score?: number | string;
   class_id?: string;
@@ -493,12 +500,17 @@ onMounted(async () => {
 }
 
 .media-box,
-.answer-box {
+.answer-box,
+.analysis-box {
   min-width: 0;
   border: 1px solid #e4ebf3;
   border-radius: 8px;
   padding: 12px;
   background: #f8fafc;
+}
+
+.analysis-box {
+  margin-top: 12px;
 }
 
 .box-title {
