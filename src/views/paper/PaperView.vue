@@ -24,7 +24,7 @@
           <a-select
             v-model:value="filters.paper_semester"
             :options="paperSemesterOptions"
-            :placeholder="filters.student_grade ? '按学期筛选' : '请先选择年级'"
+            :placeholder="'按学期筛选'"
             :disabled="!filters.student_grade"
             allow-clear
             class="filter-control-sm"
@@ -113,6 +113,7 @@ import {
   getPaperGrade,
   getPaperSemesterQuery,
 } from "./semesterOptions";
+import { createPaperColumns } from "./paperColumns";
 
 type PaperItem = {
   id: number;
@@ -357,15 +358,7 @@ const paperNameOptions = computed(() => {
   return sortLabelOptions(Array.from(nameMap.values()).map((name) => ({ label: name, value: name })));
 });
 
-const paperColumns = [
-  { title: "试卷ID", dataIndex: "id", width: 92 },
-  { title: "试卷名称", dataIndex: "name", ellipsis: true },
-  { title: "考试", dataIndex: "exam_name", ellipsis: true },
-  { title: "年级", dataIndex: "exam_student_grade", width: 110 },
-  { title: "科目", dataIndex: "subject", width: 90 },
-  { title: "创建时间", dataIndex: "create_time", width: 170 },
-  { title: "操作", key: "action", width: 90 },
-];
+const paperColumns = createPaperColumns();
 
 const wrongStudentColumns = [
   { title: "学号", dataIndex: "student_id", width: 150 },

@@ -98,11 +98,15 @@
                   <a-button v-if="stringList(record.images).length" type="link" size="small" @click="openQuestionViewer(record)">放大</a-button>
                 </div>
                 <div v-if="stringList(record.images).length" class="image-row">
-                  <a-image
+                  <img
                     v-for="(image, index) in stringList(record.images)"
                     :key="`${recordKey(record)}-${index}`"
                     :src="fileUrl(image)"
                     class="question-image"
+                    loading="lazy"
+                    decoding="async"
+                    alt="question image"
+                    @click="openQuestionViewer(record)"
                   />
                 </div>
                 <a-empty v-else description="暂无题图" />
@@ -235,7 +239,7 @@ const filters = reactive({
   is_reviewed: undefined as string | undefined,
 });
 
-const pagination = reactive({ page: 1, size: 10, total: 0 });
+const pagination = reactive({ page: 1, size: 5, total: 0 });
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
 const reviewStatusOptions: Option[] = [
   { label: "未复习", value: "false" },
@@ -400,7 +404,7 @@ const renderMarkdownLine = (line: string) => {
     html += escapeHtml(line.slice(cursor, match.index));
     const src = fileUrl(match[2]);
     if (src) {
-      html += `<img class="markdown-image" src="${escapeHtml(src)}" data-preview-src="${escapeHtml(src)}" alt="${escapeHtml(match[1] || "answer image")}" />`;
+      html += `<img class="markdown-image" src="${escapeHtml(src)}" data-preview-src="${escapeHtml(src)}" alt="${escapeHtml(match[1] || "answer image")}" loading="lazy" decoding="async" />`;
     }
     cursor = match.index + match[0].length;
   }
@@ -628,13 +632,14 @@ onMounted(async () => {
   gap: 10px;
 }
 
+.question-image,
 :deep(.question-image) {
   width: 420px;
   max-width: 100%;
   border: 1px solid #dce6f1;
   border-radius: 6px;
-  overflow: hidden;
   background: #fff;
+  cursor: zoom-in;
 }
 
 :deep(.question-image img) {

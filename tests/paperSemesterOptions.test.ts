@@ -1,5 +1,6 @@
 import {
   buildPaperSemesterOptions,
+  formatPaperSemesterLabel,
   getPaperSemesterQuery,
   type PaperSemesterSource,
   type PaperSemesterOption,
@@ -49,5 +50,10 @@ assertEqual(highGradeOptions[0].label, "高二上");
 
 const cohort2024Options = buildPaperSemesterOptions(papers, "2024级");
 assertEqual(cohort2024Options[0].label, "高二下");
+
+assertEqual(
+  formatPaperSemesterLabel({ exam_student_grade: "2023级", year: "2024", semester: "下学期" }),
+  "高一下"
+);
 
 console.log("paperSemesterOptions ok");

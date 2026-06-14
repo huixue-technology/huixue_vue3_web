@@ -76,6 +76,15 @@ const getGradeStageLabel = (selectedGrade: string, year: string, semester: strin
 const encodePaperSemesterValue = (year: string, semester: string) =>
   JSON.stringify({ year, semester });
 
+export const formatPaperSemesterLabel = (paper: PaperSemesterSource) => {
+  const grade = getPaperGrade(paper);
+  const year = getPaperYear(paper);
+  const semester = getPaperSemester(paper);
+  const semesterSuffix = normalizeSemesterSuffix(semester);
+  if (!grade || !year || !semester || !semesterSuffix) return "";
+  return `${getGradeStageLabel(grade, year, semester)}${semesterSuffix}`;
+};
+
 export const getPaperSemesterQuery = (value?: string): SemesterQuery => {
   if (!value) return {};
   try {
