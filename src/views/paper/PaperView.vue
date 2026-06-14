@@ -22,6 +22,14 @@
             class="filter-control"
           />
           <a-select
+            v-model:value="filters.paper_semester"
+            :options="paperSemesterOptions"
+            :placeholder="filters.student_grade ? '按学期筛选' : '请先选择年级'"
+            :disabled="!filters.student_grade"
+            allow-clear
+            class="filter-control-sm"
+          />
+          <a-select
             v-model:value="filters.subject"
             :options="availableSubjectOptions"
             placeholder="按科目筛选"
@@ -100,12 +108,21 @@ import {
   getTeacherWrongQuestionSearch as searchTeacherWrongQuestionApi,
 } from "@/servers/api/wrongQuestion";
 import { useUserStore } from "@/store";
+import {
+  buildPaperSemesterOptions,
+  getPaperGrade,
+  getPaperSemesterQuery,
+} from "./semesterOptions";
 
 type PaperItem = {
   id: number;
   exam_id: number;
   exam_name?: string;
   exam_student_grade?: string;
+  student_grade?: string;
+  grade?: string;
+  year?: string | number;
+  semester?: string;
   name: string;
   subject?: string;
   file_path?: string;
@@ -227,10 +244,12 @@ const wrongQuestionRecommendKnowledge = ref<{ name: string; count: number }[]>([
 
 const filters = reactive<{
   student_grade?: string;
+  paper_semester?: string;
   subject?: string;
   name?: string;
 }>({
   student_grade: undefined,
+  paper_semester: undefined,
   subject: undefined,
   name: undefined,
 });
@@ -286,9 +305,6 @@ const subjectOptions = [
   { label: "地理", value: "地理" },
 ];
 
-const getPaperGrade = (paper: PaperItem) =>
-  String(paper.exam_student_grade || paper.student_grade || "").trim();
-
 const sortLabelOptions = <T extends { label: string }>(options: T[]) =>
   options.sort((a, b) => b.label.localeCompare(a.label, "zh-Hans-CN", { numeric: true }));
 
@@ -301,10 +317,24 @@ const gradeOptions = computed(() => {
   return sortLabelOptions(Array.from(gradeMap.values()).map((grade) => ({ label: grade, value: grade })));
 });
 
+const paperSemesterOptions = computed(() =>
+  buildPaperSemesterOptions(allPaperOptions.value, filters.student_grade)
+);
+
+const selectedPaperSemesterQuery = computed(() => getPaperSemesterQuery(filters.paper_semester));
+
+const matchesSelectedPaperSemester = (paper: PaperItem) => {
+  const { year, semester } = selectedPaperSemesterQuery.value;
+  if (year && String(paper.year ?? "").trim() !== year) return false;
+  if (semester && String(paper.semester ?? "").trim() !== semester) return false;
+  return true;
+};
+
 const availableSubjectOptions = computed(() => {
   const subjectMap = new Map<string, string>();
   for (const paper of allPaperOptions.value) {
     if (filters.student_grade && getPaperGrade(paper) !== filters.student_grade) continue;
+    if (!matchesSelectedPaperSemester(paper)) continue;
     const subject = String(paper.subject || "").trim();
     if (subject) subjectMap.set(subject, subject);
   }
@@ -319,6 +349,7 @@ const paperNameOptions = computed(() => {
   const nameMap = new Map<string, string>();
   for (const paper of allPaperOptions.value) {
     if (filters.student_grade && getPaperGrade(paper) !== filters.student_grade) continue;
+    if (!matchesSelectedPaperSemester(paper)) continue;
     if (filters.subject && paper.subject !== filters.subject) continue;
     const name = String(paper.name || "").trim();
     if (name) nameMap.set(name, name);
@@ -1055,6 +1086,11 @@ const buildQueryParams = () => {
     size: pagination.size,
   };
   if (filters.student_grade) params.student_grade = filters.student_grade;
+  if (filters.paper_semester) {
+    const { year, semester } = getPaperSemesterQuery(filters.paper_semester);
+    if (year) params.year = year;
+    if (semester) params.semester = semester;
+  }
   if (filters.subject) params.subject = filters.subject;
   if (filters.name) params.name = filters.name;
   return params;
@@ -1161,6 +1197,7 @@ const handleSizeChange = async (_current: number, size: number) => {
 
 const resetFilters = async () => {
   filters.student_grade = undefined;
+  filters.paper_semester = undefined;
   filters.subject = undefined;
   filters.name = undefined;
   pagination.page = 1;
@@ -1169,6 +1206,15 @@ const resetFilters = async () => {
 
 watch(
   () => filters.student_grade,
+  () => {
+    filters.paper_semester = undefined;
+    filters.subject = undefined;
+    filters.name = undefined;
+  }
+);
+
+watch(
+  () => filters.paper_semester,
   () => {
     filters.subject = undefined;
     filters.name = undefined;
