@@ -102,6 +102,7 @@
       <div class="filter-actions">
         <span class="rule-text">{{ ruleText }}</span>
         <div class="button-row">
+          <a-button type="primary" ghost @click="downloadOpen = true">错题下载</a-button>
           <a-button type="primary" :loading="loading" @click="handleSearch">查询</a-button>
           <a-button :loading="recommendLoading" @click="loadRecommend">推荐筛选</a-button>
           <a-button @click="resetFilters">重置</a-button>
@@ -243,6 +244,14 @@
         <a-image v-for="(src, index) in analysisPreviewImages" :key="`analysis-preview-${index}-${src}`" :src="src" />
       </a-image-preview-group>
     </div>
+
+    <!-- 错题下载弹窗 -->
+    <WrongQuestionDownloadModal
+      v-model:open="downloadOpen"
+      :total="pagination.total"
+      :question-list="rows"
+      :query-params="buildParams()"
+    />
   </div>
 </template>
 
@@ -258,6 +267,7 @@ import {
   getTeacherWrongQuestionSearch as searchTeacherWrongQuestionApi,
 } from "@/servers/api/wrongQuestion";
 import { useUserStore } from "@/store";
+import WrongQuestionDownloadModal from "./components/WrongQuestionDownloadModal.vue";
 
 type Option = { label: string; value: string | number };
 type CountItem = { name: string; count: number };
@@ -293,6 +303,7 @@ const paperLoading = ref(false);
 const studentLoading = ref(false);
 const recommendLoading = ref(false);
 const errorText = ref("");
+const downloadOpen = ref(false);
 const allClasses = ref<Array<Option & { grade: string }>>([]);
 const gradeOptions = ref<Option[]>([]);
 const classOptions = ref<Option[]>([]);
@@ -357,7 +368,7 @@ const text = (value: unknown) => String(value ?? "").trim();
 const normalizeGradeForApi = (value: unknown) => {
   const grade = text(value);
   if (!grade) return undefined;
-  return grade.endsWith("\u7ea7") || !/^\d{4}$/.test(grade) ? grade : `${grade}\u7ea7`;
+  return grade.endsWith("级") || !/^\d{4}$/.test(grade) ? grade : `${grade}级`;
 };
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
 const filterOption = (input: string, option: any) => text(option?.label).toLowerCase().includes(input.toLowerCase());
