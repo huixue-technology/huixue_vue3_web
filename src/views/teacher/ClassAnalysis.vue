@@ -340,7 +340,7 @@ const processStudentRateData = (classData: any) => {
 };
 
 // 获取学生过线率数据
-const fetchSubjectRateData = async () => {
+const fetchSubjectRateData = async (silent = false) => {
   if (!props.classId) return;
 
   try {
@@ -363,11 +363,11 @@ const fetchSubjectRateData = async () => {
       if (Array.isArray(responseData.data) && responseData.data.length > 0) {
         const classData = responseData.data[0];
         processStudentRateData(classData);
-        message.success('数据加载成功');
+        if (!silent) message.success('数据加载成功');
       } else if (typeof responseData.data === 'object' && responseData.data.student_one_line_rate) {
         // data 是对象而非数组，直接使用
         processStudentRateData(responseData.data);
-        message.success('数据加载成功');
+        if (!silent) message.success('数据加载成功');
       } else {
         message.info('暂无数据');
         studentRateList.value = [];
@@ -387,7 +387,7 @@ const fetchSubjectRateData = async () => {
 
 // 暴露方法给父组件（必须在函数定义之后）
 defineExpose({
-  refresh: fetchSubjectRateData,
+  refresh: () => fetchSubjectRateData(true),
 });
 </script>
 

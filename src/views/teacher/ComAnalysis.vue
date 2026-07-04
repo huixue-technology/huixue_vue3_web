@@ -21,15 +21,7 @@
         ref="classAnalysisRef"
         :class-id="selectedClass"
       />
-        <!-- 考试指标折线图 -->
-        <a-col>
-          <ExamMetricsChart 
-            :student-grades-data="classAnalysisData" 
-            :metric-label-map="metricLabelMap" 
-            :class-info="currentClassInfo"
-          />
-        </a-col>
-          <!-- 分数线过线率 -->
+  <!-- 分数线过线率 -->
           <PassLineRate 
             :pass-line-rate-data="passLineRateData" 
             :class-info="currentClassInfo"
@@ -58,7 +50,6 @@ import { message } from 'ant-design-vue';
 import { getClassesApi } from '@/servers/api/classes';
 // 导入子组件
 import ClassAnalysis from './ClassAnalysis.vue';
-import ExamMetricsChart from './components/ExamMetricsChart.vue';
 import PassLineRate from './components/PassLineRate.vue';
 
 interface ClassInfo {
@@ -86,15 +77,6 @@ const classAnalysisData = ref<any>({});
 const passLineRateData = ref<any>({});
 const studentGradesData = ref<any[]>([]);
 const classAnalysisRef = ref<any>(null); // 子组件引用
-
-const metricLabelMap: Record<string, string> = {
-  average: '平均分',
-  averageD: '平均分排名',
-  zScore: 'Z分数',
-  tScore: 'T分数',
-  classStd: '班级标准差',
-  classCV: '班级变异系数'
-};
 
 // 计算当前班级信息
 const currentClassInfo = computed((): ClassInfo | undefined => {
