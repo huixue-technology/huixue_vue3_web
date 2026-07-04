@@ -194,13 +194,13 @@
         </a-col>
         <a-col :span="12" :lg="4">
           <div class="summary-card pass-line-card">
-            <div class="card-title">一本线</div>
+            <div class="card-title">特控线</div>
             <div class="card-value">{{ loadingPassLine ? '加载中' : passLine }}</div>
           </div>
         </a-col>
         <a-col :span="12" :lg="4">
           <div class="summary-card pass-rate-card">
-            <div class="card-title">一本率</div>
+            <div class="card-title">特控率</div>
             <div class="card-value">{{ loadingPassLine ? '加载中' : `${passRate}%` }}</div>
           </div>
         </a-col>
@@ -213,7 +213,7 @@
       </a-row>
     </div>
 <div class="table-notes" style="margin-bottom: 10px; color: #666; font-size: 12px; text-align: right;">
-		    注：一本线上下5分区间成绩标为橙色,低于一本线五分及以下的成绩标为红色，超出一本线5分以上成绩标为黑色
+		    注：特控线上下5分区间成绩标为橙色,低于特控线五分及以下的成绩标为红色，超出特控线5分以上成绩标为黑色
 		  </div>
     <!-- 成绩表格区域 -->
     <div class="table-section">
@@ -382,7 +382,7 @@ const filteredSubjectList = computed(() => {
   return filtered;
 });
 
-// 新增：存储各科一本线
+// 新增：存储各科特控线
 const subjectPassLines = ref<Record<string, number>>({});
 
 // 筛选状态
@@ -587,7 +587,7 @@ const calculateStats = () => {
   });
   classMin.value = min;
 
-  // 计算一本率（需等待分数线加载完成）
+  // 计算特控率（需等待分数线加载完成）
   if (!loadingPassLine.value && passLine.value > 0) {
     const passCount = stats.totalScore.filter(score => score >= passLine.value).length;
     passRate.value = Math.round((passCount / stats.totalScore.length) * 100);
@@ -596,7 +596,7 @@ const calculateStats = () => {
   }
 };
 
-// 获取对应考试的总分和各科一本线
+// 获取对应考试的总分和各科特控线
 const fetchPassLine = async (examId: number) => {
   loadingPassLine.value = true; // 开始加载，标记为true
   try {
@@ -606,34 +606,34 @@ const fetchPassLine = async (examId: number) => {
       const subjectSel = classInfo.value?.subject_selection || '';
       const trimmedSel = subjectSel.trim(); // 去除首尾空格，兼容空字符串场景
       
-      // 精准匹配选科对应的一本线
+      // 精准匹配选科对应的特控线
       if (trimmedSel === '' || trimmedSel === '未选科') {
-        // 空选科/未选科 → 匹配含"未选科"且含"一本"的分数线
+        // 空选科/未选科 → 匹配含"未选科"且含"特控"的分数线
         targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('未选科') && line.line_name.includes('一本')
+          line.line_name && line.line_name.includes('未选科') && line.line_name.includes('特控')
         );
       } else if (subjectSel.includes('物')) {
-        // 物理类 → 匹配含"物/理"且含"一本"的分数线
+        // 物理类 → 匹配含"物/理"且含"特控"的分数线
         targetLine = res.data.find((line: any) => 
-          line.line_name && (line.line_name.includes('物') || line.line_name.includes('理')) && line.line_name.includes('一本')
+          line.line_name && (line.line_name.includes('物') || line.line_name.includes('理')) && line.line_name.includes('特控')
         );
       } else if (subjectSel.includes('史')) {
-        // 历史类 → 匹配含"史"且含"一本"的分数线
+        // 历史类 → 匹配含"史"且含"特控"的分数线
         targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('史') && line.line_name.includes('一本')
+          line.line_name && line.line_name.includes('史') && line.line_name.includes('特控')
         );
       } else {
-        // 无明确选科时查找包含"一本"的分数线
+        // 无明确选科时查找包含"特控"的分数线
         targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('一本')
+          line.line_name && line.line_name.includes('特控')
         ) || res.data[0];
       }
       
       if (targetLine) {
-        // 设置总分一本线
+        // 设置总分特控线
         passLine.value = targetLine.sum_ || 0;
         
-        // 设置各科一本线
+        // 设置各科特控线
         const subjectKeys = Object.keys(filteredSubjectList.value);
         subjectKeys.forEach(key => {
           subjectPassLines.value[key] = targetLine[key] || 0;
@@ -652,7 +652,7 @@ const fetchPassLine = async (examId: number) => {
     subjectPassLines.value = {};
   } finally {
     loadingPassLine.value = false; // 加载完成，标记为false
-    calculateStats(); // 重新计算一本率
+    calculateStats(); // 重新计算特控率
   }
 };
 

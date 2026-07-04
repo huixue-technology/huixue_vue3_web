@@ -132,7 +132,7 @@
           </a-col>
           <a-col :span="24" :md="8">
             <div class="summary-card pass-rate-card">
-              <h3>一本线通过率</h3>
+              <h3>特控通过率</h3>
               <div class="summary-item">
                 <span class="class-name">{{ getClassName(selectedClass1) }}</span>
                 <span class="rate">{{ formatRate(comparisonData.pass_rate.current) }}</span>
@@ -148,7 +148,7 @@
           </a-col>
           <a-col :span="24" :md="8">
             <div class="summary-card pass-count-card">
-              <h3>一本线通过人数</h3>
+              <h3>特控通过人数</h3>
               <div class="summary-item">
                 <span class="class-name">{{ getClassName(selectedClass1) }}</span>
                 <span class="count">{{ comparisonData.pass_count.current }}</span>

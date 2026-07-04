@@ -22,7 +22,7 @@
       <div class="table-section">
         <h2>考试统计 <span class="total-exams">共统计{{ examListSelected.length }}场考试</span></h2>
         <p class="description">
-          说明：一本进线率低于60%为<span style="color: red;">红色</span>，在60%到80%之间为<span style="color: orange;">橙色</span>，高于80%为<span style="color: green;">绿色</span>。
+          说明：特控进线率低于60%为<span style="color: red;">红色</span>，在60%到80%之间为<span style="color: orange;">橙色</span>，高于80%为<span style="color: green;">绿色</span>。
         </p>
         <!-- 横向滚动：表格列过多时横向滚动 -->
         <div class="table-horizontal-scroll">
@@ -128,7 +128,7 @@ const getPassRateColor = (text: string) => {
   
   // 处理转换失败的情况
   if (isNaN(rateValue)) {
-    console.warn('无效的一本进线率数据:', text);
+    console.warn('无效的特控进线率数据:', text);
     return 'rgba(0, 0, 0, 0.85)';
   }
   
@@ -153,7 +153,7 @@ const mergedStatsColumns: ColumnType[] = [
     customCell: () => ({ style: { backgroundColor: '#f7f9fc', fontWeight: '600' } }),
   },
   {
-    title: '一本进线次数',
+    title: '特控进线次数',
     dataIndex: 'passCount',
     key: 'passCount',
     align: 'center',
@@ -161,7 +161,7 @@ const mergedStatsColumns: ColumnType[] = [
     customRender: ({ value }: { value: number }) => value || 0,
   },
   {
-    title: '一本进线率',
+    title: '特控进线率',
     dataIndex: 'passRate',
     key: 'passRate',
     align: 'center',
@@ -198,7 +198,7 @@ const mergedStatsColumns: ColumnType[] = [
     customRender: ({ value }: { value: number }) => value || 0,
   },
   {
-    title: '一本达线次数',
+    title: '特控达线次数',
     dataIndex: 'oneLineCount',
     key: 'oneLineCount',
     align: 'center',

@@ -94,7 +94,7 @@ export async function deleteGradeDetailApi(
   });
 }
 
-/** 班级pk，返回前三名，各科平均分，各科最高分，一本线通过率 GET /api/grade/class_compare */
+/** 班级pk，返回前三名，各科平均分，各科最高分，特控通过率 GET /api/grade/class_compare */
 export async function getClassCompare(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getClassCompareParams,

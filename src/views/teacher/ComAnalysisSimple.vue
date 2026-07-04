@@ -423,7 +423,7 @@ onUnmounted(() => {
         <a-col :xs="24" :sm="12" :md="8" :lg="6">
           <a-card class="stat-card info-card">
             <a-statistic 
-              title="一本过线率" 
+              title="特控通过率"
               :value="passLineRateData.first_line_rate || 0" 
               :precision="2"
               suffix="%"
@@ -557,7 +557,7 @@ onUnmounted(() => {
             <a-row :gutter="16">
               <a-col :xs="24" :sm="12" :md="6">
                 <div class="pass-rate-item">
-                  <h4>一本线</h4>
+                  <h4>特控线</h4>
                   <div class="rate">{{ (passLineRateData.first_line_rate || 0).toFixed(2) }}%</div>
                   <div class="description">重点大学录取线</div>
                 </div>

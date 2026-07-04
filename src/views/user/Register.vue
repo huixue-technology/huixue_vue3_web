@@ -50,17 +50,17 @@
       <!-- 学校选择器 -->
       <a-form-item
          label="所在学校"
-         name="schoolName"
+         name="schoolId"
          :rules="[{ required: true, message: '请选择学校!' }]"
       >
          <a-select
-           v-model:value="formparams.schoolName"
+           v-model:value="formparams.schoolId"
            @change="handleSchoolChange"
            style="width: 100%"
            placeholder="请选择学校"
            :loading="schoolList.length === 0"
          >
-           <a-select-option v-for="school in schoolList" :key="school.id" :value="school.name">
+           <a-select-option v-for="school in schoolList" :key="school.school_id" :value="school.school_id">
              {{ school.name }}
            </a-select-option>
          </a-select>
@@ -76,8 +76,8 @@
            @change="handleGradeChange"
            style="width: 100%"
            placeholder="请选择年级"
-           :loading="gradeList.length === 0 && formparams.schoolName"
-           :disabled="!formparams.schoolName"
+           :loading="gradeList.length === 0 && formparams.schoolId"
+           :disabled="!formparams.schoolId"
          >
            <a-select-option v-for="grade in gradeList" :key="grade" :value="grade">
              {{ grade }}
@@ -158,6 +158,7 @@ interface FormParams {
   password: string
   name: string
   schoolName: string
+  schoolId: string
   grade: string
   classId: number
   stuName: string
@@ -174,7 +175,7 @@ interface ExtendedBindStatus {
 }
 
 const disabled = computed(() => {
-  return !(formparams.email && formparams.password && formparams.name && formparams.schoolName && formparams.grade && formparams.classId && formparams.stuName);
+  return !(formparams.email && formparams.password && formparams.name && formparams.schoolId && formparams.grade && formparams.classId && formparams.stuName);
 });
 
 const formparams = reactive<FormParams>({
@@ -182,6 +183,7 @@ const formparams = reactive<FormParams>({
   password: '',
   name:'',
   schoolName: '',
+  schoolId: '',
   grade: '',
   classId: 0,
   stuName: '',
@@ -192,7 +194,10 @@ const userStore = useUserStore();
 
 // 学校选择事件处理
 const handleSchoolChange = async (value: string) => {
-  formparams.schoolName = value;
+  formparams.schoolId = value;
+  // 同时保存学校名称用于后续绑定
+  const selectedSchool = schoolList.value.find(s => s.school_id === value);
+  formparams.schoolName = selectedSchool ? selectedSchool.name : '';
   formparams.grade = '';
   formparams.classId = 0;
   formparams.stuName = '';
@@ -204,15 +209,19 @@ const handleGradeChange = async (value: string) => {
   formparams.grade = value;
   formparams.classId = 0;
   formparams.stuName = '';
-  await fetchClassesByGrade(formparams.schoolName, value);
+  await fetchClassesByGrade(formparams.schoolId, value);
+  // 默认选中第一个班级
+  if (classList.value.length > 0) {
+    formparams.classId = classList.value[0].id;
+  }
 };
 
 const onFinish = async (values: any) => {
   try {
     // 先验证学生是否存在
     const status_id = await getStudentApi({
-      class_id: formparams.classId, 
-      school: formparams.schoolName,
+      class_id: formparams.classId,
+      school: formparams.schoolId,
       name: formparams.stuName
     });
     

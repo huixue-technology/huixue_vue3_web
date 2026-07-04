@@ -33,7 +33,7 @@
             <th>班次</th>
             <th>段次</th>
             <th>班级最高分</th>
-            <th>一本线</th>
+            <th>特控线</th>
           </tr>
         </thead>
         <tbody>
@@ -58,7 +58,7 @@
             <th>班次</th>
             <th>段次</th>
             <th>班级最高分</th>
-            <th>一本线</th>
+            <th>特控线</th>
           </tr>
         </thead>
         <tbody>

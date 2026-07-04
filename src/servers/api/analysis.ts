@@ -62,7 +62,7 @@ export async function getExamSmallPoint(
   });
 }
 
-/** 获取对应考试的一本线 GET /api/analysis/pass_line */
+/** 获取对应考试的特控线 GET /api/analysis/pass_line */
 export async function getPassLine(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getPassLineParams,
@@ -81,7 +81,7 @@ export async function getPassLine(
   });
 }
 
-/** 更新对应考试的一本线 PUT /api/analysis/pass_line */
+/** 更新对应考试的特控线 PUT /api/analysis/pass_line */
 export async function putPassLine(
   body: API.PassLine,
   options?: { [key: string]: any }
@@ -111,7 +111,7 @@ export async function deletePassLine(
   });
 }
 
-/** 进一本线分析 POST /api/analysis/pass_line_analysis */
+/** 进特控线分析 POST /api/analysis/pass_line_analysis */
 export async function postPassLineAnalysis(
   body: API.PassLineAnalysis,
   options?: { [key: string]: any }

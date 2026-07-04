@@ -147,6 +147,13 @@ onMounted(async () => {
 })
 
 const generateTable = async (examData : any[], types: Object)=>{
+  // 按考试ID升序排列：ID越小=越早的考试=图表最左边
+  const sortedExamData = [...examData].sort((a, b) => {
+    const idA = a.exam?.[0]?.id ?? 0;
+    const idB = b.exam?.[0]?.id ?? 0;
+    return idA - idB;
+  });
+
   // 分开获取总分和各科成绩数组已经对应的考试名称
 
   const tempData: TempDataType = {
@@ -162,14 +169,14 @@ const generateTable = async (examData : any[], types: Object)=>{
     '政治': {'x_name': [], 'y_score': []}
   }
 
-  for(let item of examData) {
+  for(let item of sortedExamData) {
     if(item.exam === undefined) {
       message.error('似乎还没有参加一场考试');
       return
     }
     const examName = item.exam[0].name;
     console.log(item)
-    // 获取该考试的一本线分数
+    // 获取该考试的特控线分数
     let passLine = null;
     const examId = item.exam[0].id;
     if (typeof examId !== 'number' || isNaN(examId)) {
@@ -182,17 +189,17 @@ const generateTable = async (examData : any[], types: Object)=>{
       passLine = await getPassLine({'exam_id':examId});
       console.log('getPassLine 响应:', passLine);
     } catch (error) {
-      console.error('获取一本线数据失败，考试ID:', examId, error);
+      console.error('获取特控线数据失败，考试ID:', examId, error);
     }
     
-    // 处理一本线数据，确保正确处理数组格式
+    // 处理特控线数据，确保正确处理数组格式
     let selectedPassLine = null;
     if (passLine && passLine.data && Array.isArray(passLine.data) && passLine.data.length > 0) {
-      // 如果返回的是数组，需要根据学生选科来选择正确的一本线
-      // 简化处理：优先选择包含学生实际考试科目的一本线
+      // 如果返回的是数组，需要根据学生选科来选择正确的特控线
+      // 简化处理：优先选择包含学生实际考试科目的特控线
       const passLineData = passLine.data;
       
-      // 查找最适合的一本线（根据学生是否有该科目成绩来判断）
+      // 查找最适合的特控线（根据学生是否有该科目成绩来判断）
       for (const line of passLineData) {
         let matchCount = 0;
         // 检查理科科目
@@ -252,13 +259,13 @@ const generateTable = async (examData : any[], types: Object)=>{
 const fetchData = async () => {
   console.log(options.value)
   if (mode.value === 'rank') {
-    // 获取所有考试的一本线分数
+    // 获取所有考试的特控线分数
     if (messageReturn.value) {
       generateTable(messageReturn.value,fieldMappingRank)
     }
   }
   else {
-    // 获取所有考试的一本线分数
+    // 获取所有考试的特控线分数
     if (messageReturn.value) {
       generateTable(messageReturn.value,fieldMappingScore)
     }
@@ -298,7 +305,7 @@ const getSubjectOption = (subject: string) => {
       }
     },
     legend: { 
-      data: ['本人成绩', '一本线'],
+      data: ['本人成绩', '特控线'],
       top: '10%',
       textStyle: {
         color: '#666'
@@ -352,7 +359,7 @@ const getSubjectOption = (subject: string) => {
         symbolSize: 6
       },
       {
-        name: '一本线',
+        name: '特控线',
         type: 'line',
         data: lines,
         itemStyle: { 

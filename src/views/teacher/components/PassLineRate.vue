@@ -12,7 +12,7 @@
       <a-col :xs="24" :md="8">
         <a-card class="stat-card" title="各科目过线率详情">
           <a-tabs v-model:activeKey="activeTab">
-            <a-tab-pane key="pass_rate" tab="一本率">
+            <a-tab-pane key="pass_rate" tab="特控率">
               <div class="rate-grid">
                 <div v-for="item in passRateItems" :key="item.subject" class="rate-item">
                   <span class="subject-name">{{ item.subjectName }}</span>
@@ -223,7 +223,7 @@ const passLineChartOption = computed(() => {
       trigger: 'axis'
     },
     legend: {
-      data: ['一本率', '清北率', '985率', '211率']
+      data: ['特控率', '清北率', '985率', '211率']
     },
     xAxis: {
       type: 'category',
@@ -237,7 +237,7 @@ const passLineChartOption = computed(() => {
     },
     series: [
       {
-        name: '一本率',
+        name: '特控率',
         type: 'line',
         data: passRate,
         label: {

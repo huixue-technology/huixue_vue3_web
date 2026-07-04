@@ -171,11 +171,11 @@
                       {{ getSubjectScore(subject.code) }}
                     </td>
                   </tr>
-                  <!-- 一本线行 -->
+                  <!-- 特控线行 -->
                   <tr>
-                    <td class="row-label">一本线</td>
+                    <td class="row-label">特控线</td>
                     <td class="pass-line">{{ getSubjectPassLine('sum_') }}</td>
-                    <!-- 动态渲染科目一本线 -->
+                    <!-- 动态渲染科目特控线 -->
                     <td v-for="subject in displaySubjects" :key="`pass-${subject.code}`" class="pass-line">
                       {{ getSubjectPassLine(subject.code) }}
                     </td>
@@ -599,7 +599,7 @@ const getSubjectScore = (subject: string) => {
   return detail ? detail[subject] || 0 : 0;
 };
 
-// 获取单科一本线
+// 获取单科特控线
 const getSubjectPassLine = (subject: string) => {
   const detail = passLineDetails.value[selectedExamId.value];
   return detail ? detail[subject] || 0 : 0;
@@ -865,11 +865,11 @@ const compareTableData = computed(() => {
 const scoreChartOption = computed(() => {
   const subjects = filteredScoreData.value.map(item => item.subjectName);
   const scores = filteredScoreData.value.map(item => item.score);
-  // 获取一本线数据
+  // 获取特控线数据
   const passLineData = filteredScoreData.value.map(item => {
     const passLine = passLineDetails.value[selectedExamId.value];
     if (!passLine) return 0;
-    // 根据科目编码查找对应的一本线
+    // 根据科目编码查找对应的特控线
     const code = item.subject;
     return passLine[code] || 0;
   });
@@ -882,7 +882,7 @@ const scoreChartOption = computed(() => {
       }
     },
     legend: {
-      data: ['本人成绩', '一本线'],
+      data: ['本人成绩', '特控线'],
       top: '5%'
     },
     xAxis: {
@@ -915,7 +915,7 @@ const scoreChartOption = computed(() => {
         symbolSize: 8
       },
       {
-        name: '一本线',
+        name: '特控线',
         type: 'line',
         data: passLineData,
         itemStyle: {
@@ -1239,28 +1239,28 @@ const fetchPassLine = async (examId: number) => {
       let targetLine = null;
       const subjectSel = classInfo.value?.subject_selection || '';
       
-      // 精准匹配选科对应的一本线
+      // 精准匹配选科对应的特控线
       if (subjectSel.includes('物')) {
-        // 物理类 → 匹配含"物/理"且含"一本"的分数线
+        // 物理类 → 匹配含"物/理"且含"特控"的分数线
         targetLine = res.data.find((line: any) => 
-          line.line_name && (line.line_name.includes('物') || line.line_name.includes('理')) && line.line_name.includes('一本')
+          line.line_name && (line.line_name.includes('物') || line.line_name.includes('理')) && line.line_name.includes('特控')
         );
       } else if (subjectSel.includes('史')) {
-        // 历史类 → 匹配含"史"且含"一本"的分数线
+        // 历史类 → 匹配含"史"且含"特控"的分数线
         targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('史') && line.line_name.includes('一本')
+          line.line_name && line.line_name.includes('史') && line.line_name.includes('特控')
         );
       } else {
-        // 无明确选科时查找包含"一本"的分数线
+        // 无明确选科时查找包含"特控"的分数线
         targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('一本')
+          line.line_name && line.line_name.includes('特控')
         ) || res.data[0];
       }
       
       if (targetLine) {
         passLineDetails.value[examId] = targetLine;
       } else {
-        message.warning('未找到匹配的一本线数据');
+        message.warning('未找到匹配的特控线数据');
         passLineDetails.value[examId] = {};
       }
     } else {

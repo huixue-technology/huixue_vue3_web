@@ -1528,15 +1528,15 @@
     "@esbuild-kit/core-utils" "^3.3.2"
     get-tsconfig "^4.7.0"
 
-"@esbuild/win32-x64@0.18.20":
+"@esbuild/darwin-arm64@0.18.20":
   version "0.18.20"
-  resolved "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.18.20.tgz"
-  integrity sha512-kTdfRcSiDfQca/y9QIkng02avJ+NCaQvrMejlsB3RRv5sE9rRoeBPISaZpKxHELzRxZyLvNts1P27W3wV+8geQ==
+  resolved "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.18.20.tgz"
+  integrity sha512-bxRHW5kHU38zS2lPTPOyuyTm+S+eobPUnTNkdJEfAddYgEcll4xkT8DB9d2008DtTbl7uJag2HuE5NZAZgnNEA==
 
-"@esbuild/win32-x64@0.21.4":
+"@esbuild/darwin-arm64@0.21.4":
   version "0.21.4"
-  resolved "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.21.4.tgz"
-  integrity sha512-sywLRD3UK/qRJt0oBwdpYLBibk7KiRfbswmWRDabuncQYSlf8aLEEUor/oP6KRz8KEG+HoiVLBhPRD5JWjS8Sg==
+  resolved "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.21.4.tgz"
+  integrity sha512-72eaIrDZDSiWqpmCzVaBD58c8ea8cw/U0fq/PPOTqE3c53D0xVMRt2ooIABZ6/wj99Y+h4ksT/+I+srCDLU9TA==
 
 "@eslint-community/eslint-utils@^4.2.0":
   version "4.6.1"
@@ -1902,10 +1902,10 @@
     "@module-federation/runtime" "0.8.12"
     "@module-federation/sdk" "0.8.12"
 
-"@napi-rs/nice-win32-x64-msvc@1.0.1":
+"@napi-rs/nice-darwin-arm64@1.0.1":
   version "1.0.1"
-  resolved "https://registry.npmjs.org/@napi-rs/nice-win32-x64-msvc/-/nice-win32-x64-msvc-1.0.1.tgz"
-  integrity sha512-JlF+uDcatt3St2ntBG8H02F1mM45i5SF9W+bIKiReVE6wiy3o16oBP/yxt+RZ+N6LbCImJXJ6bXNO2kn9AXicg==
+  resolved "https://registry.npmjs.org/@napi-rs/nice-darwin-arm64/-/nice-darwin-arm64-1.0.1.tgz"
+  integrity sha512-91k3HEqUl2fsrz/sKkuEkscj6EAj3/eZNCLqzD2AA0TtVbkQi8nqxZCZDMkfklULmxLkMxuUdKe7RvG/T6s2AA==
 
 "@napi-rs/nice@^1.0.1":
   version "1.0.1"
@@ -2780,10 +2780,10 @@
   resolved "https://registry.npmjs.org/@umijs/did-you-know/-/did-you-know-1.0.3.tgz"
   integrity sha512-9EZ+rgY9+2HEaE+Z9dGkal2ccw8L4uuz77tCB5WpskW7NBZX5nOj82sqF/shEtA5tU3SWO/Mi4n35K3iONvDtw==
 
-"@umijs/es-module-parser-win32-x64-msvc@0.0.7":
+"@umijs/es-module-parser-darwin-arm64@0.0.7":
   version "0.0.7"
-  resolved "https://registry.npmjs.org/@umijs/es-module-parser-win32-x64-msvc/-/es-module-parser-win32-x64-msvc-0.0.7.tgz"
-  integrity sha512-X3Pqy0l38hg6wMPquPeMHuoHU+Cx+wzyz32SVYCta+RPJQ7n9PjrEBiIuVAw5+GJZjSABN7LVr8u/n0RZT9EQA==
+  resolved "https://registry.npmjs.org/@umijs/es-module-parser-darwin-arm64/-/es-module-parser-darwin-arm64-0.0.7.tgz"
+  integrity sha512-1QeNupekuVYVvL4UHyCRq4ISP2PNk4rDd9UOPONW+KpqTyP9p7RfgGpwB0VLPaFSu2ADtm0XZyIaYEGPY6zuDw==
 
 "@umijs/es-module-parser@0.0.7":
   version "0.0.7"
@@ -2826,10 +2826,10 @@
     postcss-syntax "0.36.2"
     stylelint-config-standard "25.0.0"
 
-"@umijs/mako-win32-x64-msvc@0.11.10":
+"@umijs/mako-darwin-arm64@0.11.10":
   version "0.11.10"
-  resolved "https://registry.npmjs.org/@umijs/mako-win32-x64-msvc/-/mako-win32-x64-msvc-0.11.10.tgz"
-  integrity sha512-NjUfV1vwUeDk5IXyleGb+pa/DZkGpjkclY/TJcK/X2OQ0Yh7Cr3sfZykhCoTEN2Y74k5rEKWYNQA0nTb6akj9Q==
+  resolved "https://registry.npmjs.org/@umijs/mako-darwin-arm64/-/mako-darwin-arm64-0.11.10.tgz"
+  integrity sha512-kCn0mJx2Hq4RIkMNIzMDOdO4JSWq120auFmSEleHkfrFFFqSWX2qgz5mR5VI7kaPH0GUh0+hwfRkjEVGysJGjA==
 
 "@umijs/mako@0.11.10":
   version "0.11.10"
@@ -6992,6 +6992,11 @@ fs.realpath@^1.0.0:
   resolved "https://registry.npmmirror.com/fs.realpath/-/fs.realpath-1.0.0.tgz"
   integrity sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==
 
+fsevents@^2.3.2, fsevents@~2.3.2:
+  version "2.3.3"
+  resolved "https://registry.npmmirror.com/fsevents/-/fsevents-2.3.3.tgz"
+  integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
+
 function-bind@^1.1.2:
   version "1.1.2"
   resolved "https://registry.npmmirror.com/function-bind/-/function-bind-1.1.2.tgz"
@@ -8497,10 +8502,10 @@ levn@^0.4.1:
     prelude-ls "^1.2.1"
     type-check "~0.4.0"
 
-lightningcss-win32-x64-msvc@1.22.1:
+lightningcss-darwin-arm64@1.22.1:
   version "1.22.1"
-  resolved "https://registry.npmjs.org/lightningcss-win32-x64-msvc/-/lightningcss-win32-x64-msvc-1.22.1.tgz"
-  integrity sha512-4pozV4eyD0MDET41ZLHAeBo+H04Nm2UEYIk5w/ts40231dRFV7E0cjwbnZvSoc1DXFgecAhiC0L16ruv/ZDCpg==
+  resolved "https://registry.npmjs.org/lightningcss-darwin-arm64/-/lightningcss-darwin-arm64-1.22.1.tgz"
+  integrity sha512-ldvElu+R0QimNTjsKpaZkUv3zf+uefzLy/R1R19jtgOfSRM+zjUCUgDhfEDRmVqJtMwYsdhMI2aJtJChPC6Osg==
 
 lightningcss@^1.21.0, lightningcss@1.22.1:
   version "1.22.1"

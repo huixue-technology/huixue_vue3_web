@@ -23,9 +23,7 @@ import {
   MergeCellsOutlined,
   MessageOutlined,
   SecurityScanOutlined,
-  SolutionOutlined,
   ThunderboltOutlined,
-  ToolOutlined,
   UsergroupAddOutlined,
   UserOutlined,
 } from "@ant-design/icons-vue";
@@ -46,13 +44,14 @@ const items = computed<MenuProps["items"]>(() => {
   if (isAuthPage) return [];
 
   const user = userStore.getUserInfo();
-  if (!user || user.role === null || user.role === undefined) {
+  // 检查是否有有效的用户身份（student 或 teacher 字段）
+  if (!user || (!user.student && !user.teacher)) {
     router.push("/user/login");
     return [];
   }
 
   const menuItems: MenuProps["items"] = [];
-  const isTeacher = String(user.role).length !== 10;
+  const isTeacher = user.teacher !== undefined;
 
   if (isTeacher) {
     menuItems.push(
@@ -68,20 +67,12 @@ const items = computed<MenuProps["items"]>(() => {
     );
   } else {
     menuItems.push(
-      { key: "user", icon: () => h(UserOutlined), label: "我的信息", title: "我的信息" },
-      { key: "grade", icon: () => h(MailOutlined), label: "成绩", title: "成绩" },
-      { key: "compare", icon: () => h(AppstoreOutlined), label: "历次排名", title: "历次排名" },
-      { key: "student", icon: () => h(ThunderboltOutlined), label: "学生分析", title: "学生分析" },
-      { key: "challenge", icon: () => h(ToolOutlined), label: "学生挑战", title: "学生挑战" },
-      { key: "detail", icon: () => h(SolutionOutlined), label: "名次详情", title: "名次详情" },
+      { key: "grade", icon: () => h(MailOutlined), label: "我的成绩", title: "我的成绩" },
+      { key: "student", icon: () => h(SecurityScanOutlined), label: "学生分析", title: "学生分析" },
+      { key: "compare", icon: () => h(ThunderboltOutlined), label: "学生对比", title: "学生对比" },
       { key: "simulate", icon: () => h(FrownOutlined), label: "成绩模拟", title: "成绩模拟" },
       { key: "student_paper_view", icon: () => h(ForkOutlined), label: "试卷查看", title: "试卷查看" },
-      {
-        key: "student_wrong_question",
-        icon: () => h(AppstoreOutlined),
-        label: "错题模块",
-        title: "错题模块",
-      }
+      { key: "student_wrong_question", icon: () => h(AppstoreOutlined), label: "错题模块", title: "错题模块" }
     );
   }
 

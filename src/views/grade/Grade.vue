@@ -269,7 +269,7 @@ const fetchPassLine = async (examId: string) => {
         if (res.code !== 200 || !Array.isArray(res.data)) return;
         passLineData.value = res.data.find((line: any) => {
             const lineName = String(line?.line_name || '');
-            return lineName.includes('一本') || lineName.includes('一段');
+            return lineName.includes('特控') || lineName.includes('一段');
         }) || {};
     } catch (err) {
         passLineData.value = {};
@@ -368,7 +368,7 @@ const  tableColumns = [{
         dataIndex: 'sumd',
         align: 'center',
     },{
-        title: '一本线',
+        title: '特控线',
         dataIndex:'passLine',
         align: 'center',
     }

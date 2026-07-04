@@ -153,7 +153,7 @@ const generateTable = async (examData: any[], types: Record<string, string>) => 
     const examName = item.exam[0].name
     const examId = item.exam[0].id
     
-    // 获取一本线数据
+    // 获取特控线数据
     let selectedPassLine = null
     try {
       if (examId) {
@@ -165,7 +165,7 @@ const generateTable = async (examData: any[], types: Record<string, string>) => 
         }
       }
     } catch (error) {
-      console.warn('获取一本线失败:', error)
+      console.warn('获取特控线失败:', error)
     }
 
     // 处理总分
@@ -207,7 +207,7 @@ const getSubjectOption = (subject: string) => {
       textStyle: { color: '#333' }
     },
     legend: { 
-      data: ['本人成绩', '一本线'],
+      data: ['本人成绩', '特控线'],
       top: '10%',
       textStyle: { color: '#666' }
     },
@@ -235,7 +235,7 @@ const getSubjectOption = (subject: string) => {
         symbolSize: 6
       },
       {
-        name: '一本线',
+        name: '特控线',
         type: 'line',
         data: lines,
         itemStyle: { color: '#EE6666', shadowBlur: 3 },

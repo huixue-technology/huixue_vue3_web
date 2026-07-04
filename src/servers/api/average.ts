@@ -77,7 +77,7 @@ export async function postClassPassLineRate(
   });
 }
 
-/** 获取班级一本线过线率排名 POST /api/average/class_students_one_line_rate */
+/** 获取班级特控通过率排名 POST /api/average/class_students_one_line_rate */
 export async function postClassAlwaysTopBottomStudents(
   body: API.ClassAnalysis,
   options?: { [key: string]: any }
