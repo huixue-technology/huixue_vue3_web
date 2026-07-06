@@ -105,11 +105,26 @@
                 </div>
                 <a-empty v-else description="暂无题图" />
               </div>
-              <div class="answer-box">
-                <div class="box-title">答案</div>
-                <div v-if="text(record.answer)" class="markdown-body" v-html="renderMarkdown(record.answer)"></div>
-                <a-empty v-else description="暂无答案" />
+              <div class="analysis-box">
+                <div class="box-title">解析</div>
+                <div v-if="text(record.analysis)" class="analysis-body">
+                  <div v-if="extractAnalysisText(record.analysis)" class="analysis-text">{{ extractAnalysisText(record.analysis) }}</div>
+                  <div v-if="extractImageUrls(record.analysis).length" class="image-row">
+                    <a-image
+                      v-for="(url, index) in extractImageUrls(record.analysis)"
+                      :key="`analysis-${index}`"
+                      :src="url"
+                      class="question-image"
+                    />
+                  </div>
+                </div>
+                <a-empty v-else description="暂无解析" />
               </div>
+            </div>
+            <div class="answer-row">
+              <div class="box-title">答案</div>
+              <div v-if="text(record.answer)" class="markdown-body" v-html="renderMarkdown(record.answer)"></div>
+              <a-empty v-else description="暂无答案" />
             </div>
           </article>
         </div>
@@ -154,6 +169,7 @@ type WrongQuestionRecord = {
   knowledge_points?: string[] | string;
   images?: string[] | string;
   answer?: string;
+  analysis?: string;
   student_score?: number | string;
   full_score?: number | string;
   class_id?: string;
@@ -310,6 +326,27 @@ const renderMarkdownLine = (line: string) => {
   return `<p>${html}</p>`;
 };
 const renderMarkdown = (value: unknown) => text(value).split(/\r?\n/).map(renderMarkdownLine).join("");
+
+// 从解析文本中提取出图片URL
+const extractImageUrls = (value: unknown): string[] => {
+  const raw = text(value);
+  if (!raw) return [];
+  const imagePattern = /!\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
+  const urls: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = imagePattern.exec(raw)) !== null) {
+    const src = fileUrl(match[1]);
+    if (src) urls.push(src);
+  }
+  return urls;
+};
+
+// 从解析文本中提取纯文本部分（不含图片标记）
+const extractAnalysisText = (value: unknown): string => {
+  const raw = text(value);
+  if (!raw) return "";
+  return raw.replace(/!\[[^\]]*\]\([^)\s]+(?:\s+["'][^"']*["'])?\)/g, "").trim();
+};
 const recordKey = (record: WrongQuestionRecord) =>
   [record.exam_id, record.test_paper_id, record.question_key || record.string_number].map(text).join("-");
 
@@ -502,12 +539,17 @@ onMounted(async () => {
 }
 
 .media-box,
-.answer-box {
+.analysis-box,
+.answer-row {
   min-width: 0;
   border: 1px solid #e4ebf3;
   border-radius: 8px;
   padding: 12px;
   background: #f8fafc;
+}
+
+.answer-row {
+  margin-top: 12px;
 }
 
 .box-title {
@@ -557,6 +599,19 @@ onMounted(async () => {
   max-height: 360px;
   margin: 8px 0;
   object-fit: contain;
+}
+
+.analysis-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analysis-text {
+  color: #26384c;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .pagination-wrap {
