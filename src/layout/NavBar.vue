@@ -63,8 +63,8 @@ const items = computed<MenuProps["items"]>(() => {
       { key: "student_analysis", icon: () => h(SecurityScanOutlined), label: "学生分析", title: "学生分析" },
       { key: "student_compare", icon: () => h(ThunderboltOutlined), label: "学生对比", title: "学生对比" },
       { key: "simulate", icon: () => h(FrownOutlined), label: "成绩模拟", title: "成绩模拟" },
-      { key: "paper_view", icon: () => h(ForkOutlined), label: "试卷查看", title: "试卷查看" },
-      { key: "wrong_question", icon: () => h(AppstoreOutlined), label: "错题模块", title: "错题模块" }
+      { key: "wrong_question", icon: () => h(AppstoreOutlined), label: "错题模块", title: "错题模块" },
+      { key: "paper_view", icon: () => h(ForkOutlined), label: "试卷查看", title: "试卷查看" }
     );
   } else {
     menuItems.push(
@@ -75,13 +75,13 @@ const items = computed<MenuProps["items"]>(() => {
       { key: "challenge", icon: () => h(ToolOutlined), label: "学生挑战", title: "学生挑战" },
       { key: "detail", icon: () => h(SolutionOutlined), label: "名次详情", title: "名次详情" },
       { key: "simulate", icon: () => h(FrownOutlined), label: "成绩模拟", title: "成绩模拟" },
-      { key: "student_paper_view", icon: () => h(ForkOutlined), label: "试卷查看", title: "试卷查看" },
       {
         key: "student_wrong_question",
         icon: () => h(AppstoreOutlined),
         label: "错题模块",
         title: "错题模块",
-      }
+      },
+      { key: "student_paper_view", icon: () => h(ForkOutlined), label: "试卷查看", title: "试卷查看" }
     );
   }
 
