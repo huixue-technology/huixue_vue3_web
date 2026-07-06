@@ -2,7 +2,8 @@
 node_modules
 /dist
 
-
+.claude/
+.opencode/
 # local env files
 .env.local
 .env.*.local
