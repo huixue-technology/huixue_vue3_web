@@ -287,7 +287,7 @@ const onFinish = async (values: any) => {
     
     const bindData: ExtendedBindStatus = {
       id: loginRes.data.id,
-      school: formparams.schoolName,
+      school: formparams.schoolId,
       class_id: String(formparams.classId),
       stuName: formparams.stuName,
       uid: selectedStudent.uid
@@ -299,7 +299,7 @@ const onFinish = async (values: any) => {
     // 使用原有的绑定接口（不包含uid）
     const basicBindData = {
       id: loginRes.data.id,
-      school: formparams.schoolName,
+      school: formparams.schoolId,
       class_id: String(formparams.classId),
       stuName: formparams.stuName
     };

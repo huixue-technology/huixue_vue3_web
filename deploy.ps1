@@ -3,7 +3,10 @@
     [string]$Action = 'deploy',
 
     [string]$BuildDir = 'dist',
-    [string]$DeployDir = '/opt/huixue_frontend',
+    [string[]]$DeployDir = @(
+        '/opt/huixue_frontend_sangao',
+        '/opt/huixue_frontend'
+    ),
     [string]$DeployUser = 'root',
     [string]$DeployHost = '101.200.240.100',
     [switch]$UseUserSshConfig
@@ -48,9 +51,12 @@ function Invoke-Deploy {
 
     if (Get-Command 'rsync' -ErrorAction SilentlyContinue) {
         Write-Host 'Deploying with rsync...'
-        & rsync -avz --delete --progress "$BuildDir/" "$remote`:$DeployDir/"
-        if ($LASTEXITCODE -ne 0) {
-            throw "rsync failed with exit code $LASTEXITCODE"
+        foreach ($targetDir in $DeployDir) {
+            Write-Host "Deploying to $targetDir..."
+            & rsync -avz --delete --progress "$BuildDir/" "$remote`:$targetDir/"
+            if ($LASTEXITCODE -ne 0) {
+                throw "rsync failed for $targetDir with exit code $LASTEXITCODE"
+            }
         }
         return
     }
@@ -65,14 +71,18 @@ function Invoke-Deploy {
         $sshCommonArgs += @('-F', 'NUL')
     }
 
-    & ssh @sshCommonArgs $remote "mkdir -p '$DeployDir' && rm -rf '$DeployDir'/*"
-    if ($LASTEXITCODE -ne 0) {
-        throw "Remote clean failed with exit code $LASTEXITCODE"
-    }
+    foreach ($targetDir in $DeployDir) {
+        Write-Host "Deploying to $targetDir..."
 
-    & scp @sshCommonArgs -r "$BuildDir/*" "$remote`:$DeployDir/"
-    if ($LASTEXITCODE -ne 0) {
-        throw "scp upload failed with exit code $LASTEXITCODE"
+        & ssh @sshCommonArgs $remote "mkdir -p '$targetDir' && rm -rf '$targetDir'/*"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Remote clean failed for $targetDir with exit code $LASTEXITCODE"
+        }
+
+        & scp @sshCommonArgs -r "$BuildDir/*" "$remote`:$targetDir/"
+        if ($LASTEXITCODE -ne 0) {
+            throw "scp upload failed for $targetDir with exit code $LASTEXITCODE"
+        }
     }
 }
 

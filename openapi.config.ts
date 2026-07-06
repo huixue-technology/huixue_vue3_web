@@ -41,7 +41,7 @@ const authorization =
     : undefined;
 
 generateService({
-  schemaPath: process.env.OPENAPI_SCHEMA_PATH || 'http://127.0.0.1:5000/swagger.json',
+  schemaPath: process.env.OPENAPI_SCHEMA_PATH || 'http://111.228.38.111:5003/swagger.json',
   // schemaPath: 'http://111.228.38.111:5000/swagger.json',
   authorization,
   serversPath: './src/servers',

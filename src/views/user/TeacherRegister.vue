@@ -192,6 +192,7 @@ const formparams = reactive<FormParams>({
   phone: '',
   schoolName: '',
   schoolId: '',
+  schoolId: '',
   grade: '',
   subject: '',
   classId: undefined

@@ -21,7 +21,6 @@
           allow-clear
           @change="handleBaseChange"
         />
-
         <a-select
           v-model:value="filters.school_id"
           class="filter-control"
@@ -104,6 +103,7 @@
       <div class="filter-actions">
         <span class="rule-text">{{ ruleText }}</span>
         <div class="button-row">
+          <a-button type="primary" ghost @click="downloadOpen = true">错题下载</a-button>
           <a-button type="primary" :loading="loading" @click="handleSearch">查询</a-button>
           <a-button :loading="recommendLoading" @click="loadRecommend">推荐筛选</a-button>
           <a-button @click="resetFilters">重置</a-button>
@@ -111,8 +111,7 @@
       </div>
     </section>
 
-    <section v-if="recommendText || recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
-      <span class="recommend-summary">{{ recommendText }}</span>
+    <section v-if="recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
       <a-tag
         v-for="item in recommendKnowledge"
         :key="`k-${item.name}`"
@@ -120,7 +119,7 @@
         class="click-tag"
         @click="useKnowledge(item.name)"
       >
-        {{ item.name }} {{ item.count }}
+        {{ item.name }}
       </a-tag>
       <a-tag
         v-for="item in recommendTypes"
@@ -129,7 +128,7 @@
         class="click-tag"
         @click="useType(item.name)"
       >
-        {{ item.name }} {{ item.count }}
+        {{ item.name }}
       </a-tag>
     </section>
 
@@ -147,7 +146,7 @@
           <article v-for="record in rows" :key="recordKey(record)" class="question-card">
             <div class="question-main">
               <div class="question-title">
-                <strong>第 {{ record.string_number || record.question_key || "-" }} 题</strong>
+                <strong>{{ record.string_number || record.question_key || "-" }} 题</strong>
                 <a-tag v-if="record.subject" color="blue">{{ record.subject }}</a-tag>
                 <a-tag v-if="record.question_type" color="gold">{{ record.question_type }}</a-tag>
                 <a-tag v-if="record.class_id" color="cyan">班级 {{ record.class_id }}</a-tag>
@@ -166,13 +165,20 @@
 
             <div class="content-grid">
               <div class="media-box">
-                <div class="box-title">题目图片</div>
+                <div class="box-title box-title-row">
+                  <span>题目图片</span>
+                  <a-button v-if="stringList(record.images).length" type="link" size="small" @click="openQuestionViewer(record)">放大</a-button>
+                </div>
                 <div v-if="stringList(record.images).length" class="image-row">
-                  <a-image
+                  <img
                     v-for="(image, index) in stringList(record.images)"
                     :key="`${recordKey(record)}-${index}`"
                     :src="fileUrl(image)"
                     class="question-image"
+                    loading="lazy"
+                    decoding="async"
+                    alt="question image"
+                    @click="openQuestionViewer(record)"
                   />
                 </div>
                 <a-empty v-else description="暂无题图" />
@@ -198,6 +204,24 @@
               <div v-if="text(record.answer)" class="markdown-body" v-html="renderMarkdown(record.answer)"></div>
               <a-empty v-else description="暂无答案" />
             </div>
+
+            <div class="analysis-box">
+              <div class="box-title box-title-row">
+                <span>解析</span>
+                <a-button v-if="text(record.analysis)" type="link" size="small" @click="openAnalysisViewer(record)">放大</a-button>
+              </div>
+              <div v-if="text(record.analysis)" class="markdown-body" v-html="renderMarkdown(record.analysis)"></div>
+              <a-empty v-else description="暂无解析" />
+            </div>
+
+            <div class="analysis-box">
+              <div class="box-title box-title-row">
+                <span>解析</span>
+                <a-button v-if="text(record.analysis)" type="link" size="small" @click="openAnalysisViewer(record)">放大</a-button>
+              </div>
+              <div v-if="text(record.analysis)" class="markdown-body" v-html="renderMarkdown(record.analysis)"></div>
+              <a-empty v-else description="暂无解析" />
+            </div>
           </article>
         </div>
       </a-spin>
@@ -214,13 +238,53 @@
         />
       </div>
     </section>
+
+    <a-modal
+      v-model:open="analysisViewer.open"
+      :title="analysisViewerTitle"
+      :footer="null"
+      :width="960"
+      wrap-class-name="analysis-viewer-modal"
+    >
+      <div
+        v-if="analysisViewer.record && text(analysisViewer.record.analysis)"
+        class="markdown-body analysis-viewer-body"
+        @click="handleAnalysisImageClick"
+        v-html="renderMarkdown(analysisViewer.record.analysis)"
+      ></div>
+      <a-empty v-else description="暂无解析" />
+    </a-modal>
+
+    <div class="hidden-preview-group" aria-hidden="true">
+      <a-image-preview-group
+        v-if="questionPreviewImages.length"
+        :preview="{ visible: questionPreview.open, current: questionPreview.current, onVisibleChange: handleQuestionPreviewVisibleChange }"
+      >
+        <a-image v-for="(src, index) in questionPreviewImages" :key="`question-preview-${index}-${src}`" :src="src" />
+      </a-image-preview-group>
+      <a-image-preview-group
+        v-if="analysisPreviewImages.length"
+        :preview="{ visible: analysisPreview.open, current: analysisPreview.current, onVisibleChange: handleAnalysisPreviewVisibleChange }"
+      >
+        <a-image v-for="(src, index) in analysisPreviewImages" :key="`analysis-preview-${index}-${src}`" :src="src" />
+      </a-image-preview-group>
+    </div>
+
+    <!-- 错题下载弹窗 -->
+    <WrongQuestionDownloadModal
+      v-model:open="downloadOpen"
+      :total="pagination.total"
+      :question-list="rows"
+      :query-params="buildParams()"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, nextTick, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import { getClassesApi } from "@/servers/api/classes";
+import { getSchoolApi } from "@/servers/api/school";
 import { getStudentApi } from "@/servers/api/student";
 import { getTestPaper as getTestPaperApi } from "@/servers/api/tp";
 import {
@@ -228,7 +292,7 @@ import {
   getTeacherWrongQuestionSearch as searchTeacherWrongQuestionApi,
 } from "@/servers/api/wrongQuestion";
 import { useUserStore } from "@/store";
-import { getSchoolApi } from "@/servers/api/school";
+import WrongQuestionDownloadModal from "./components/WrongQuestionDownloadModal.vue";
 
 type Option = { label: string; value: string | number };
 type CountItem = { name: string; count: number };
@@ -258,12 +322,13 @@ const userStore = useUserStore();
 const mode = ref<"class" | "student">("class");
 const rows = ref<WrongQuestionRecord[]>([]);
 const loading = ref(false);
+const schoolLoading = ref(false);
 const optionLoading = ref(false);
 const paperLoading = ref(false);
 const studentLoading = ref(false);
 const recommendLoading = ref(false);
-const schoolLoading = ref(false);
 const errorText = ref("");
+const downloadOpen = ref(false);
 const allClasses = ref<Array<Option & { grade: string }>>([]);
 const gradeOptions = ref<Option[]>([]);
 const classOptions = ref<Option[]>([]);
@@ -271,14 +336,24 @@ const paperOptions = ref<Option[]>([]);
 const studentOptions = ref<Option[]>([]);
 const recommendKnowledge = ref<CountItem[]>([]);
 const recommendTypes = ref<CountItem[]>([]);
-const recommendText = ref("");
-
-//学校下拉选项
-const schoolOptions = ref<Option[]>([]);
+const schoolList = ref<any[]>([]);
+const questionPreview = reactive<{ open: boolean; current: number; record: WrongQuestionRecord | null }>({
+  open: false,
+  current: 0,
+  record: null,
+});
+const analysisViewer = reactive<{ open: boolean; record: WrongQuestionRecord | null }>({
+  open: false,
+  record: null,
+});
+const analysisPreview = reactive({
+  open: false,
+  current: 0,
+});
 
 const filters = reactive({
   subject: undefined as string | undefined,
-  school_id: "",
+  school_id: undefined as string | undefined,
   grade: undefined as string | undefined,
   class_id: undefined as string | undefined,
   test_paper_id: undefined as number | undefined,
@@ -287,7 +362,7 @@ const filters = reactive({
   knowledge_keyword: "",
 });
 
-const pagination = reactive({ page: 1, size: 10, total: 0 });
+const pagination = reactive({ page: 1, size: 5, total: 0 });
 
 const subjectOptions: Option[] = ["语文", "数学", "英语", "物理", "化学", "生物", "政治", "历史", "地理"].map((item) => ({
   label: item,
@@ -301,6 +376,13 @@ const questionTypeOptions: Option[] = ["单选题", "多选题", "填空题", "�
 
 const canChooseClass = computed(() => Boolean(filters.subject && filters.school_id && filters.grade));
 const canChoosePaper = computed(() => Boolean(filters.subject && filters.school_id && filters.grade && filters.class_id));
+const analysisViewerTitle = computed(() => {
+  const record = analysisViewer.record;
+  const question = text(record?.string_number || record?.question_key || "-");
+  return `${question} 题解析`;
+});
+const questionPreviewImages = computed(() => (questionPreview.record ? stringList(questionPreview.record.images).map(fileUrl).filter(Boolean) : []));
+const analysisPreviewImages = computed(() => (analysisViewer.record ? markdownImageUrls(analysisViewer.record.analysis) : []));
 const ruleText = computed(() =>
   mode.value === "class"
     ? "筛选班级错题前，需要先确定科目、学校、年级和班级；试卷可作为进一步筛选。"
@@ -311,11 +393,23 @@ const text = (value: unknown) => String(value ?? "").trim();
 const normalizeGradeForApi = (value: unknown) => {
   const grade = text(value);
   if (!grade) return undefined;
-  return grade.endsWith("\u7ea7") || !/^\d{4}$/.test(grade) ? grade : `${grade}\u7ea7`;
+  return grade.endsWith("级") || !/^\d{4}$/.test(grade) ? grade : `${grade}级`;
 };
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
 const filterOption = (input: string, option: any) => text(option?.label).toLowerCase().includes(input.toLowerCase());
 const sortOptions = (a: Option, b: Option) => String(a.label).localeCompare(String(b.label), "zh-Hans-CN", { numeric: true });
+const schoolOptions = computed(() =>
+  schoolList.value
+    .map((item: any) => {
+      const value = text(item.school_id || item.id);
+      return {
+        label: text(item.name || item.school_name || item.school) || value,
+        value,
+      };
+    })
+    .filter((item: Option) => item.value)
+    .sort(sortOptions)
+);
 
 const getLocalSchoolId = () => {
   const user = userStore.getUserInfo();
@@ -361,6 +455,19 @@ const refreshClassOptions = () => {
     .filter((item) => !grade || item.grade === grade)
     .map(({ label, value }) => ({ label, value }))
     .sort(sortOptions);
+};
+
+const loadSchools = async () => {
+  schoolLoading.value = true;
+  try {
+    const res = await getSchoolApi({ page: 1, size: 1000 } as any);
+    const data = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.records) ? res.data.records : [];
+    schoolList.value = data;
+  } catch {
+    message.error("学校列表加载失败");
+  } finally {
+    schoolLoading.value = false;
+  }
 };
 
 const loadClasses = async () => {
@@ -489,7 +596,6 @@ const loadRecommend = async () => {
     if (Number(res?.code) !== 200) throw new Error(res?.msg || "推荐失败");
     recommendKnowledge.value = Array.isArray(res?.data?.knowledge_points) ? res.data.knowledge_points : [];
     recommendTypes.value = Array.isArray(res?.data?.question_types) ? res.data.question_types : [];
-    recommendText.value = `匹配题量 ${Number(res?.data?.matched_total || 0)}`;
   } catch (error: any) {
     message.error(error?.message || "推荐加载失败");
   } finally {
@@ -504,7 +610,6 @@ const clearQueryResult = () => {
   pagination.total = 0;
   recommendKnowledge.value = [];
   recommendTypes.value = [];
-  recommendText.value = "";
 };
 const handleModeChange = () => {
   filters.student_id = undefined;
@@ -587,7 +692,6 @@ const resetFilters = async () => {
   pagination.total = 0;
   recommendKnowledge.value = [];
   recommendTypes.value = [];
-  recommendText.value = "";
   paperOptions.value = [];
   await loadClasses();
 };
@@ -598,6 +702,34 @@ const useKnowledge = async (name: string) => {
 const useType = async (name: string) => {
   filters.question_type = name;
   await search(true);
+};
+const openQuestionViewer = async (record: WrongQuestionRecord) => {
+  questionPreview.record = record;
+  questionPreview.current = 0;
+  await nextTick();
+  questionPreview.open = true;
+};
+const openAnalysisViewer = (record: WrongQuestionRecord) => {
+  analysisViewer.record = record;
+  analysisViewer.open = true;
+};
+const handleQuestionPreviewVisibleChange = (visible: boolean) => {
+  questionPreview.open = visible;
+};
+const handleAnalysisPreviewVisibleChange = (visible: boolean) => {
+  analysisPreview.open = visible;
+};
+const openAnalysisImagePreview = async (src: string) => {
+  const index = analysisPreviewImages.value.findIndex((item) => item === src);
+  if (index < 0) return;
+  analysisPreview.current = index;
+  await nextTick();
+  analysisPreview.open = true;
+};
+const handleAnalysisImageClick = (event: MouseEvent) => {
+  const target = event.target;
+  if (!(target instanceof HTMLImageElement) || !target.classList.contains("markdown-image")) return;
+  openAnalysisImagePreview(target.dataset.previewSrc || target.currentSrc || target.src);
 };
 
 const stringList = (value: unknown): string[] => {
@@ -628,8 +760,19 @@ const formatPercent = (value: unknown) => {
 };
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const createMarkdownImagePattern = () => /!\[([^\]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
+const markdownImageUrls = (value: unknown) => {
+  const urls: string[] = [];
+  let match: RegExpExecArray | null;
+  const pattern = createMarkdownImagePattern();
+  while ((match = pattern.exec(text(value))) !== null) {
+    const src = fileUrl(match[2]);
+    if (src) urls.push(src);
+  }
+  return urls;
+};
 const renderMarkdownLine = (line: string) => {
-  const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
+  const imagePattern = createMarkdownImagePattern();
   let cursor = 0;
   let html = "";
   let match: RegExpExecArray | null;
@@ -638,7 +781,7 @@ const renderMarkdownLine = (line: string) => {
     html += escapeHtml(line.slice(cursor, match.index));
     const src = fileUrl(match[2]);
     if (src) {
-      html += `<img class="markdown-image" src="${escapeHtml(src)}" alt="${escapeHtml(match[1] || "answer image")}" />`;
+      html += `<img class="markdown-image" src="${escapeHtml(src)}" data-preview-src="${escapeHtml(src)}" alt="${escapeHtml(match[1] || "answer image")}" loading="lazy" decoding="async" />`;
     }
     cursor = match.index + match[0].length;
   }
@@ -673,6 +816,7 @@ const recordKey = (record: WrongQuestionRecord) =>
   [record.exam_id, record.test_paper_id, record.class_id, record.student_id, record.question_key || record.string_number].map(text).join("-");
 
 onMounted(async () => {
+  await loadSchools();
   filters.school_id = getLocalSchoolId();
   await loadSchools();
   if (filters.school_id) await loadClasses();
@@ -765,11 +909,6 @@ onMounted(async () => {
   padding: 12px 16px;
 }
 
-.recommend-summary {
-  color: #40566f;
-  font-weight: 600;
-}
-
 .click-tag {
   cursor: pointer;
 }
@@ -843,8 +982,8 @@ onMounted(async () => {
 }
 
 .media-box,
-.analysis-box,
-.answer-row {
+.answer-box,
+.analysis-box {
   min-width: 0;
   border: 1px solid #e4ebf3;
   border-radius: 8px;
@@ -852,7 +991,7 @@ onMounted(async () => {
   background: #f8fafc;
 }
 
-.answer-row {
+.analysis-box {
   margin-top: 12px;
 }
 
@@ -862,19 +1001,27 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+.box-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .image-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
+.question-image,
 :deep(.question-image) {
   width: 420px;
   max-width: 100%;
   border: 1px solid #dce6f1;
   border-radius: 6px;
-  overflow: hidden;
   background: #fff;
+  cursor: zoom-in;
 }
 
 :deep(.question-image img) {
@@ -905,22 +1052,38 @@ onMounted(async () => {
   object-fit: contain;
 }
 
-.analysis-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.analysis-viewer-body {
+  max-height: min(72vh, 760px);
+  padding: 16px;
+  font-size: 16px;
 }
 
-.analysis-text {
-  color: #26384c;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
+.analysis-viewer-body :deep(.markdown-image) {
+  max-height: none;
+  margin: 12px 0;
+  cursor: zoom-in;
+}
+
+:global(.analysis-viewer-modal .ant-modal) {
+  max-width: calc(100vw - 32px);
+}
+
+:global(.analysis-viewer-modal .ant-modal-body) {
+  padding-top: 12px;
 }
 
 .pagination-wrap {
   margin-top: 16px;
   text-align: right;
+}
+
+.hidden-preview-group {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
 @media (max-width: 900px) {

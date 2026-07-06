@@ -22,6 +22,14 @@
             class="filter-control"
           />
           <a-select
+            v-model:value="filters.paper_semester"
+            :options="paperSemesterOptions"
+            :placeholder="'按学期筛选'"
+            :disabled="!filters.student_grade"
+            allow-clear
+            class="filter-control-sm"
+          />
+          <a-select
             v-model:value="filters.subject"
             :options="availableSubjectOptions"
             placeholder="按科目筛选"
@@ -46,7 +54,7 @@
         <template #title>
           <div class="list-title">
             <span>试卷列表</span>
-            <small>点击操作栏可预览 PDF</small>
+            <small>点击操作栏可下载试卷文件</small>
           </div>
         </template>
 
@@ -59,14 +67,9 @@
           size="middle"
         >
           <template #bodyCell="{ column, record }">
-            <template v-if="column.dataIndex === 'status'">
-              <a-tag :color="statusColor(record.status)">
-                {{ record.status || 'unknown' }}
-              </a-tag>
-            </template>
-            <template v-else-if="column.key === 'action'">
-              <a-button type="link" class="pdf-link" @click.stop="openPdfPreview(record)">
-                查看 PDF
+            <template v-if="column.key === 'action'">
+              <a-button type="link" class="download-link" @click.stop="downloadPaperFile(record)">
+                查看/下载
               </a-button>
             </template>
           </template>
@@ -85,17 +88,6 @@
         </div>
       </a-card>
     </section>
-
-    <a-modal
-      v-model:open="pdfPreviewOpen"
-      title="试卷PDF预览"
-      :footer="null"
-      width="92%"
-      destroy-on-close
-    >
-      <iframe v-if="pdfPreviewUrl" :src="pdfPreviewUrl" class="pdf-frame"></iframe>
-    </a-modal>
-
   </div>
 </template>
 
@@ -116,17 +108,29 @@ import {
   getTeacherWrongQuestionSearch as searchTeacherWrongQuestionApi,
 } from "@/servers/api/wrongQuestion";
 import { useUserStore } from "@/store";
+import {
+  buildPaperSemesterOptions,
+  getPaperGrade,
+  getPaperSemesterQuery,
+} from "./semesterOptions";
+import { createPaperColumns } from "./paperColumns";
 
 type PaperItem = {
   id: number;
   exam_id: number;
   exam_name?: string;
   exam_student_grade?: string;
+  student_grade?: string;
+  grade?: string;
+  year?: string | number;
+  semester?: string;
   name: string;
   subject?: string;
-  status?: string;
   file_path?: string;
   pdf_file_path?: string;
+  word_file_path?: string;
+  doc_file_path?: string;
+  document_file_path?: string;
   create_time?: string;
   [key: string]: any;
 };
@@ -194,8 +198,6 @@ const allPaperOptions = ref<PaperItem[]>([]);
 const questionList = ref<QuestionItem[]>([]);
 const selectedPaper = ref<PaperItem | null>(null);
 const examOptions = ref<{ label: string; value: number }[]>([]);
-const pdfPreviewOpen = ref(false);
-const pdfPreviewUrl = ref("");
 const loadingQuestionScores = ref(false);
 const questionScoreRecords = ref<QuestionScoreRecord[]>([]);
 const studentQuestionScoreMap = ref<ScoreMap>({});
@@ -243,10 +245,12 @@ const wrongQuestionRecommendKnowledge = ref<{ name: string; count: number }[]>([
 
 const filters = reactive<{
   student_grade?: string;
+  paper_semester?: string;
   subject?: string;
   name?: string;
 }>({
   student_grade: undefined,
+  paper_semester: undefined,
   subject: undefined,
   name: undefined,
 });
@@ -257,6 +261,25 @@ const pagination = reactive({
   total: 0,
 });
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
+const getPaperFilePath = (paper: PaperItem) =>
+  String(
+    paper.pdf_file_path ||
+      paper.word_file_path ||
+      paper.doc_file_path ||
+      paper.document_file_path ||
+      paper.file_path ||
+      ""
+  ).trim();
+const getPaperDownloadName = (paper: PaperItem, path: string) => {
+  const rawName = (path.split(/[\\/]/).pop() || "").split("?")[0].trim();
+  let fileName = rawName;
+  try {
+    fileName = decodeURIComponent(rawName);
+  } catch (_error) {
+    fileName = rawName;
+  }
+  return fileName || paper.name || `试卷${paper.id}`;
+};
 const getStudentTestPaperApi = (student_uid: string, params: Record<string, any>) =>
   getStudentTestPaper({ student_uid, ...params });
 const getTestPaperQuestionsApi = (test_paper_id: number) =>
@@ -283,9 +306,6 @@ const subjectOptions = [
   { label: "地理", value: "地理" },
 ];
 
-const getPaperGrade = (paper: PaperItem) =>
-  String(paper.exam_student_grade || paper.student_grade || "").trim();
-
 const sortLabelOptions = <T extends { label: string }>(options: T[]) =>
   options.sort((a, b) => b.label.localeCompare(a.label, "zh-Hans-CN", { numeric: true }));
 
@@ -298,10 +318,24 @@ const gradeOptions = computed(() => {
   return sortLabelOptions(Array.from(gradeMap.values()).map((grade) => ({ label: grade, value: grade })));
 });
 
+const paperSemesterOptions = computed(() =>
+  buildPaperSemesterOptions(allPaperOptions.value, filters.student_grade)
+);
+
+const selectedPaperSemesterQuery = computed(() => getPaperSemesterQuery(filters.paper_semester));
+
+const matchesSelectedPaperSemester = (paper: PaperItem) => {
+  const { year, semester } = selectedPaperSemesterQuery.value;
+  if (year && String(paper.year ?? "").trim() !== year) return false;
+  if (semester && String(paper.semester ?? "").trim() !== semester) return false;
+  return true;
+};
+
 const availableSubjectOptions = computed(() => {
   const subjectMap = new Map<string, string>();
   for (const paper of allPaperOptions.value) {
     if (filters.student_grade && getPaperGrade(paper) !== filters.student_grade) continue;
+    if (!matchesSelectedPaperSemester(paper)) continue;
     const subject = String(paper.subject || "").trim();
     if (subject) subjectMap.set(subject, subject);
   }
@@ -316,6 +350,7 @@ const paperNameOptions = computed(() => {
   const nameMap = new Map<string, string>();
   for (const paper of allPaperOptions.value) {
     if (filters.student_grade && getPaperGrade(paper) !== filters.student_grade) continue;
+    if (!matchesSelectedPaperSemester(paper)) continue;
     if (filters.subject && paper.subject !== filters.subject) continue;
     const name = String(paper.name || "").trim();
     if (name) nameMap.set(name, name);
@@ -323,16 +358,7 @@ const paperNameOptions = computed(() => {
   return sortLabelOptions(Array.from(nameMap.values()).map((name) => ({ label: name, value: name })));
 });
 
-const paperColumns = [
-  { title: "试卷ID", dataIndex: "id", width: 92 },
-  { title: "试卷名称", dataIndex: "name", ellipsis: true },
-  { title: "考试", dataIndex: "exam_name", ellipsis: true },
-  { title: "年级", dataIndex: "exam_student_grade", width: 110 },
-  { title: "科目", dataIndex: "subject", width: 90 },
-  { title: "状态", dataIndex: "status", width: 100 },
-  { title: "创建时间", dataIndex: "create_time", width: 170 },
-  { title: "操作", key: "action", width: 90 },
-];
+const paperColumns = createPaperColumns();
 
 const wrongStudentColumns = [
   { title: "学号", dataIndex: "student_id", width: 150 },
@@ -527,19 +553,6 @@ const buildAverageScoreMap = (records: QuestionScoreRecord[]): ScoreMap => {
     result[questionKey] = Number(average.toFixed(2));
   }
   return result;
-};
-
-const statusColor = (status?: string) => {
-  switch (status) {
-    case "success":
-      return "green";
-    case "processing":
-      return "blue";
-    case "fail":
-      return "red";
-    default:
-      return "default";
-  }
 };
 
 const displayedQuestionScoreMap = computed<ScoreMap>(() => {
@@ -1066,6 +1079,11 @@ const buildQueryParams = () => {
     size: pagination.size,
   };
   if (filters.student_grade) params.student_grade = filters.student_grade;
+  if (filters.paper_semester) {
+    const { year, semester } = getPaperSemesterQuery(filters.paper_semester);
+    if (year) params.year = year;
+    if (semester) params.semester = semester;
+  }
   if (filters.subject) params.subject = filters.subject;
   if (filters.name) params.name = filters.name;
   return params;
@@ -1144,13 +1162,19 @@ const rowClassName = (record: PaperItem) => {
   return Number(record.id) === Number(selectedPaper.value.id) ? "selected-row" : "";
 };
 
-const openPdfPreview = (paper: PaperItem) => {
-  if (!paper.pdf_file_path) {
-    message.warning("该试卷暂无PDF路径");
+const downloadPaperFile = (paper: PaperItem) => {
+  const filePath = getPaperFilePath(paper);
+  if (!filePath) {
+    message.warning("该试卷暂无可下载文件");
     return;
   }
-  pdfPreviewUrl.value = getTestPaperFileUrl(paper.pdf_file_path);
-  pdfPreviewOpen.value = true;
+  const link = document.createElement("a");
+  link.href = getTestPaperFileUrl(filePath);
+  link.download = getPaperDownloadName(paper, filePath);
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 const handlePageChange = async (page: number) => {
@@ -1166,6 +1190,7 @@ const handleSizeChange = async (_current: number, size: number) => {
 
 const resetFilters = async () => {
   filters.student_grade = undefined;
+  filters.paper_semester = undefined;
   filters.subject = undefined;
   filters.name = undefined;
   pagination.page = 1;
@@ -1174,6 +1199,15 @@ const resetFilters = async () => {
 
 watch(
   () => filters.student_grade,
+  () => {
+    filters.paper_semester = undefined;
+    filters.subject = undefined;
+    filters.name = undefined;
+  }
+);
+
+watch(
+  () => filters.paper_semester,
   () => {
     filters.subject = undefined;
     filters.name = undefined;
@@ -1311,7 +1345,7 @@ onMounted(async () => {
   }
 }
 
-.pdf-link {
+.download-link {
   padding: 0;
   font-weight: 600;
 }
@@ -1319,12 +1353,6 @@ onMounted(async () => {
 .pagination-wrap {
   margin-top: 16px;
   text-align: right;
-}
-
-.pdf-frame {
-  width: 100%;
-  height: 76vh;
-  border: none;
 }
 
 :deep(.ant-table-thead > tr > th) {

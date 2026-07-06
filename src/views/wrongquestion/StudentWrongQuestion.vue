@@ -32,8 +32,7 @@
       <a-button @click="resetFilters">重置</a-button>
     </section>
 
-    <section v-if="recommendText || recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
-      <span class="recommend-summary">{{ recommendText }}</span>
+    <section v-if="recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
       <a-tag
         v-for="item in recommendKnowledge"
         :key="`k-${item.name}`"
@@ -41,7 +40,7 @@
         class="click-tag"
         @click="useKnowledge(item.name)"
       >
-        {{ item.name }} {{ item.count }}
+        {{ item.name }}
       </a-tag>
       <a-tag
         v-for="item in recommendTypes"
@@ -50,7 +49,7 @@
         class="click-tag"
         @click="useType(item.name)"
       >
-        {{ item.name }} {{ item.count }}
+        {{ item.name }}
       </a-tag>
     </section>
 
@@ -66,7 +65,7 @@
           <article v-for="record in rows" :key="recordKey(record)" class="question-card">
             <div class="question-main">
               <div class="question-title">
-                <strong>第 {{ record.string_number || record.question_key || "-" }} 题</strong>
+                <strong>{{ record.string_number || record.question_key || "-" }} 题</strong>
                 <a-tag v-if="record.subject" color="blue">{{ record.subject }}</a-tag>
                 <a-tag v-if="record.question_type" color="gold">{{ record.question_type }}</a-tag>
                 <a-tag v-if="record.year" color="green">{{ record.year }}</a-tag>
@@ -94,13 +93,20 @@
 
             <div class="content-grid">
               <div class="media-box">
-                <div class="box-title">题目图片</div>
+                <div class="box-title box-title-row">
+                  <span>题目图片</span>
+                  <a-button v-if="stringList(record.images).length" type="link" size="small" @click="openQuestionViewer(record)">放大</a-button>
+                </div>
                 <div v-if="stringList(record.images).length" class="image-row">
-                  <a-image
+                  <img
                     v-for="(image, index) in stringList(record.images)"
                     :key="`${recordKey(record)}-${index}`"
                     :src="fileUrl(image)"
                     class="question-image"
+                    loading="lazy"
+                    decoding="async"
+                    alt="question image"
+                    @click="openQuestionViewer(record)"
                   />
                 </div>
                 <a-empty v-else description="暂无题图" />
@@ -126,6 +132,15 @@
               <div v-if="text(record.answer)" class="markdown-body" v-html="renderMarkdown(record.answer)"></div>
               <a-empty v-else description="暂无答案" />
             </div>
+
+            <div class="analysis-box">
+              <div class="box-title box-title-row">
+                <span>解析</span>
+                <a-button v-if="text(record.analysis)" type="link" size="small" @click="openAnalysisViewer(record)">放大</a-button>
+              </div>
+              <div v-if="text(record.analysis)" class="markdown-body" v-html="renderMarkdown(record.analysis)"></div>
+              <a-empty v-else description="暂无解析" />
+            </div>
           </article>
         </div>
       </a-spin>
@@ -142,11 +157,42 @@
         />
       </div>
     </section>
+
+    <a-modal
+      v-model:open="analysisViewer.open"
+      :title="analysisViewerTitle"
+      :footer="null"
+      :width="960"
+      wrap-class-name="analysis-viewer-modal"
+    >
+      <div
+        v-if="analysisViewer.record && text(analysisViewer.record.analysis)"
+        class="markdown-body analysis-viewer-body"
+        @click="handleAnalysisImageClick"
+        v-html="renderMarkdown(analysisViewer.record.analysis)"
+      ></div>
+      <a-empty v-else description="暂无解析" />
+    </a-modal>
+
+    <div class="hidden-preview-group" aria-hidden="true">
+      <a-image-preview-group
+        v-if="questionPreviewImages.length"
+        :preview="{ visible: questionPreview.open, current: questionPreview.current, onVisibleChange: handleQuestionPreviewVisibleChange }"
+      >
+        <a-image v-for="(src, index) in questionPreviewImages" :key="`question-preview-${index}-${src}`" :src="src" />
+      </a-image-preview-group>
+      <a-image-preview-group
+        v-if="analysisPreviewImages.length"
+        :preview="{ visible: analysisPreview.open, current: analysisPreview.current, onVisibleChange: handleAnalysisPreviewVisibleChange }"
+      >
+        <a-image v-for="(src, index) in analysisPreviewImages" :key="`analysis-preview-${index}-${src}`" :src="src" />
+      </a-image-preview-group>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { computed, nextTick, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import router from "@/router";
 import { useUserStore } from "@/store";
@@ -184,10 +230,22 @@ const recommendLoading = ref(false);
 const recommendKnowledge = ref<CountItem[]>([]);
 const recommendTypes = ref<CountItem[]>([]);
 const questionTypeOptions = ref<Option[]>([]);
-const recommendText = ref("");
 const studentUid = ref("");
 const studentName = ref("");
 const reviewUpdatingKey = ref("");
+const questionPreview = reactive<{ open: boolean; current: number; record: WrongQuestionRecord | null }>({
+  open: false,
+  current: 0,
+  record: null,
+});
+const analysisViewer = reactive<{ open: boolean; record: WrongQuestionRecord | null }>({
+  open: false,
+  record: null,
+});
+const analysisPreview = reactive({
+  open: false,
+  current: 0,
+});
 
 const filters = reactive({
   year: "",
@@ -196,7 +254,7 @@ const filters = reactive({
   is_reviewed: undefined as string | undefined,
 });
 
-const pagination = reactive({ page: 1, size: 10, total: 0 });
+const pagination = reactive({ page: 1, size: 5, total: 0 });
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
 const reviewStatusOptions: Option[] = [
   { label: "未复习", value: "false" },
@@ -205,6 +263,13 @@ const reviewStatusOptions: Option[] = [
 
 const text = (value: unknown) => String(value ?? "").trim();
 const filterOption = (input: string, option: any) => text(option?.label).toLowerCase().includes(input.toLowerCase());
+const analysisViewerTitle = computed(() => {
+  const record = analysisViewer.record;
+  const question = text(record?.string_number || record?.question_key || "-");
+  return `${question} 题解析`;
+});
+const questionPreviewImages = computed(() => (questionPreview.record ? stringList(questionPreview.record.images).map(fileUrl).filter(Boolean) : []));
+const analysisPreviewImages = computed(() => (analysisViewer.record ? markdownImageUrls(analysisViewer.record.analysis) : []));
 const buildParams = () => ({
   page: pagination.page,
   size: pagination.size,
@@ -248,7 +313,6 @@ const loadRecommend = async () => {
     recommendKnowledge.value = Array.isArray(res?.data?.knowledge_points) ? res.data.knowledge_points : [];
     recommendTypes.value = Array.isArray(res?.data?.question_types) ? res.data.question_types : [];
     questionTypeOptions.value = recommendTypes.value.map((item) => ({ label: item.name, value: item.name }));
-    recommendText.value = `匹配题量 ${Number(res?.data?.matched_total || 0)}`;
   } catch (error: any) {
     message.error(error?.message || "推荐加载失败");
   } finally {
@@ -272,7 +336,6 @@ const resetFilters = () => {
   filters.is_reviewed = undefined;
   recommendKnowledge.value = [];
   recommendTypes.value = [];
-  recommendText.value = "";
   search(true);
 };
 const useKnowledge = async (name: string) => {
@@ -282,6 +345,34 @@ const useKnowledge = async (name: string) => {
 const useType = async (name: string) => {
   filters.question_type = name;
   await search(true);
+};
+const openQuestionViewer = async (record: WrongQuestionRecord) => {
+  questionPreview.record = record;
+  questionPreview.current = 0;
+  await nextTick();
+  questionPreview.open = true;
+};
+const openAnalysisViewer = (record: WrongQuestionRecord) => {
+  analysisViewer.record = record;
+  analysisViewer.open = true;
+};
+const handleQuestionPreviewVisibleChange = (visible: boolean) => {
+  questionPreview.open = visible;
+};
+const handleAnalysisPreviewVisibleChange = (visible: boolean) => {
+  analysisPreview.open = visible;
+};
+const openAnalysisImagePreview = async (src: string) => {
+  const index = analysisPreviewImages.value.findIndex((item) => item === src);
+  if (index < 0) return;
+  analysisPreview.current = index;
+  await nextTick();
+  analysisPreview.open = true;
+};
+const handleAnalysisImageClick = (event: MouseEvent) => {
+  const target = event.target;
+  if (!(target instanceof HTMLImageElement) || !target.classList.contains("markdown-image")) return;
+  openAnalysisImagePreview(target.dataset.previewSrc || target.currentSrc || target.src);
 };
 
 const stringList = (value: unknown): string[] => {
@@ -307,8 +398,19 @@ const formatScore = (value: unknown) => {
 };
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const createMarkdownImagePattern = () => /!\[([^\]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
+const markdownImageUrls = (value: unknown) => {
+  const urls: string[] = [];
+  let match: RegExpExecArray | null;
+  const pattern = createMarkdownImagePattern();
+  while ((match = pattern.exec(text(value))) !== null) {
+    const src = fileUrl(match[2]);
+    if (src) urls.push(src);
+  }
+  return urls;
+};
 const renderMarkdownLine = (line: string) => {
-  const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
+  const imagePattern = createMarkdownImagePattern();
   let cursor = 0;
   let html = "";
   let match: RegExpExecArray | null;
@@ -317,7 +419,7 @@ const renderMarkdownLine = (line: string) => {
     html += escapeHtml(line.slice(cursor, match.index));
     const src = fileUrl(match[2]);
     if (src) {
-      html += `<img class="markdown-image" src="${escapeHtml(src)}" alt="${escapeHtml(match[1] || "answer image")}" />`;
+      html += `<img class="markdown-image" src="${escapeHtml(src)}" data-preview-src="${escapeHtml(src)}" alt="${escapeHtml(match[1] || "answer image")}" loading="lazy" decoding="async" />`;
     }
     cursor = match.index + match[0].length;
   }
@@ -465,11 +567,6 @@ onMounted(async () => {
   padding: 12px 16px;
 }
 
-.recommend-summary {
-  color: #40566f;
-  font-weight: 600;
-}
-
 .click-tag {
   cursor: pointer;
 }
@@ -540,7 +637,8 @@ onMounted(async () => {
 
 .media-box,
 .analysis-box,
-.answer-row {
+.answer-row,
+.analysis-box {
   min-width: 0;
   border: 1px solid #e4ebf3;
   border-radius: 8px;
@@ -548,7 +646,7 @@ onMounted(async () => {
   background: #f8fafc;
 }
 
-.answer-row {
+.analysis-box {
   margin-top: 12px;
 }
 
@@ -558,19 +656,27 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+.box-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .image-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
+.question-image,
 :deep(.question-image) {
   width: 420px;
   max-width: 100%;
   border: 1px solid #dce6f1;
   border-radius: 6px;
-  overflow: hidden;
   background: #fff;
+  cursor: zoom-in;
 }
 
 :deep(.question-image img) {
@@ -614,9 +720,38 @@ onMounted(async () => {
   word-break: break-word;
 }
 
+.analysis-viewer-body {
+  max-height: min(72vh, 760px);
+  padding: 16px;
+  font-size: 16px;
+}
+
+.analysis-viewer-body :deep(.markdown-image) {
+  max-height: none;
+  margin: 12px 0;
+  cursor: zoom-in;
+}
+
+:global(.analysis-viewer-modal .ant-modal) {
+  max-width: calc(100vw - 32px);
+}
+
+:global(.analysis-viewer-modal .ant-modal-body) {
+  padding-top: 12px;
+}
+
 .pagination-wrap {
   margin-top: 16px;
   text-align: right;
+}
+
+.hidden-preview-group {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
 @media (max-width: 900px) {

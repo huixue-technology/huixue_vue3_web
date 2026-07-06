@@ -600,7 +600,7 @@ const calculateStats = () => {
 const fetchPassLine = async (examId: number) => {
   loadingPassLine.value = true; // 开始加载，标记为true
   try {
-    const res = await getPassLine({ exam_id: examId });
+    const res = await getPassLine({ exam_id: examId, size: 20 });
     if (res.data && res.data.length > 0) {
       let targetLine = null;
       const subjectSel = classInfo.value?.subject_selection || '';
@@ -730,7 +730,7 @@ const fetchGradeExams = async (classId: number) => {
 
 const fetchPassLineList = async (examId: number) => {
   try {
-    const res = await getPassLine({ exam_id: examId });
+    const res = await getPassLine({ exam_id: examId, size: 20 });
     let passLines = res.data || [];
     
     // 根据班级选科筛选分数线
