@@ -12,11 +12,12 @@ console.log(`[vue.config] /api proxy target: ${apiProxyTarget}`);
 
 module.exports = defineConfig({
   lintOnSave: false,
-  transpileDependencies: true,
+  transpileDependencies: ["docx"],
   configureWebpack: {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),
+        docx$: path.resolve(__dirname, "node_modules/docx/dist/index.mjs"),
       },
     },
   },

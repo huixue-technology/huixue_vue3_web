@@ -204,24 +204,6 @@
               <div v-if="text(record.answer)" class="markdown-body" v-html="renderMarkdown(record.answer)"></div>
               <a-empty v-else description="暂无答案" />
             </div>
-
-            <div class="analysis-box">
-              <div class="box-title box-title-row">
-                <span>解析</span>
-                <a-button v-if="text(record.analysis)" type="link" size="small" @click="openAnalysisViewer(record)">放大</a-button>
-              </div>
-              <div v-if="text(record.analysis)" class="markdown-body" v-html="renderMarkdown(record.analysis)"></div>
-              <a-empty v-else description="暂无解析" />
-            </div>
-
-            <div class="analysis-box">
-              <div class="box-title box-title-row">
-                <span>解析</span>
-                <a-button v-if="text(record.analysis)" type="link" size="small" @click="openAnalysisViewer(record)">放大</a-button>
-              </div>
-              <div v-if="text(record.analysis)" class="markdown-body" v-html="renderMarkdown(record.analysis)"></div>
-              <a-empty v-else description="暂无解析" />
-            </div>
           </article>
         </div>
       </a-spin>
@@ -420,17 +402,11 @@ const getLocalSchoolId = () => {
 const loadSchools = async () => {
   schoolLoading.value = true;
   try {
-    const res = await getSchoolApi({ page: 1, size: 1000 });
-    const data = Array.isArray(res?.data) ? res.data : [];
-    schoolOptions.value = data
-      .map((item: any) => ({
-        label: text(item.name) || `学校 ${text(item.school_id)}`,
-        value: text(item.school_id),
-      }))
-      .filter((item) => item.value)
-      .sort(sortOptions);
+    const res = await getSchoolApi({ page: 1, size: 1000 } as any);
+    const data = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.records) ? res.data.records : [];
+    schoolList.value = data;
   } catch {
-    message.error("学校加载失败");
+    message.error("学校列表加载失败");
   } finally {
     schoolLoading.value = false;
   }
@@ -455,19 +431,6 @@ const refreshClassOptions = () => {
     .filter((item) => !grade || item.grade === grade)
     .map(({ label, value }) => ({ label, value }))
     .sort(sortOptions);
-};
-
-const loadSchools = async () => {
-  schoolLoading.value = true;
-  try {
-    const res = await getSchoolApi({ page: 1, size: 1000 } as any);
-    const data = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.records) ? res.data.records : [];
-    schoolList.value = data;
-  } catch {
-    message.error("学校列表加载失败");
-  } finally {
-    schoolLoading.value = false;
-  }
 };
 
 const loadClasses = async () => {
@@ -818,7 +781,6 @@ const recordKey = (record: WrongQuestionRecord) =>
 onMounted(async () => {
   await loadSchools();
   filters.school_id = getLocalSchoolId();
-  await loadSchools();
   if (filters.school_id) await loadClasses();
 });
 </script>
@@ -982,8 +944,8 @@ onMounted(async () => {
 }
 
 .media-box,
-.answer-box,
-.analysis-box {
+.analysis-box,
+.answer-row {
   min-width: 0;
   border: 1px solid #e4ebf3;
   border-radius: 8px;
@@ -991,7 +953,7 @@ onMounted(async () => {
   background: #f8fafc;
 }
 
-.analysis-box {
+.answer-row {
   margin-top: 12px;
 }
 

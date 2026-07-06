@@ -132,15 +132,6 @@
               <div v-if="text(record.answer)" class="markdown-body" v-html="renderMarkdown(record.answer)"></div>
               <a-empty v-else description="暂无答案" />
             </div>
-
-            <div class="analysis-box">
-              <div class="box-title box-title-row">
-                <span>解析</span>
-                <a-button v-if="text(record.analysis)" type="link" size="small" @click="openAnalysisViewer(record)">放大</a-button>
-              </div>
-              <div v-if="text(record.analysis)" class="markdown-body" v-html="renderMarkdown(record.analysis)"></div>
-              <a-empty v-else description="暂无解析" />
-            </div>
           </article>
         </div>
       </a-spin>
