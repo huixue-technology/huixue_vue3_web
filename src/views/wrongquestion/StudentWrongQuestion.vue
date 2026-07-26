@@ -5,7 +5,20 @@
         <h2>我的错题</h2>
         <p>只展示当前账号的小题得分低于满分的题目。</p>
       </div>
-      <div class="student-badge">{{ studentName || studentUid || "学生" }}</div>
+      <div class="header-right">
+        <a-badge :count="cartCount" :overflow-count="99" :show-zero="false">
+          <a-button @click="handleGoToCart">购物车</a-button>
+        </a-badge>
+        <a-button
+          type="primary"
+          :disabled="!selectedQuestionKeys.size"
+          :loading="addingToCart"
+          @click="handleAddToCart"
+        >
+          加入购物车 ({{ selectedQuestionKeys.size }})
+        </a-button>
+        <div class="student-badge">{{ studentName || studentUid || "学生" }}</div>
+      </div>
     </header>
 
     <section class="filter-panel">
@@ -55,7 +68,12 @@
 
     <section class="result-panel">
       <div class="result-head">
-        <h3>错题列表</h3>
+        <div class="result-head-left">
+          <a-checkbox v-model:checked="selectAllQuestions" :indeterminate="selectedQuestionKeys.size > 0 && selectedQuestionKeys.size < rows.length" @change="handleSelectAllQuestions">
+            全选
+          </a-checkbox>
+          <h3>错题列表</h3>
+        </div>
         <span>共 {{ pagination.total }} 题</span>
       </div>
 
@@ -64,6 +82,12 @@
         <div v-else class="question-list">
           <article v-for="record in rows" :key="recordKey(record)" class="question-card">
             <div class="question-main">
+              <a-checkbox
+                :checked="selectedQuestionKeys.has(recordKey(record))"
+                class="question-checkbox"
+                @change="toggleQuestionSelection(record)"
+              />
+              <div class="question-main-content">
               <div class="question-title">
                 <strong>{{ record.string_number || record.question_key || "-" }} 题</strong>
                 <a-tag v-if="record.subject" color="blue">{{ record.subject }}</a-tag>
@@ -84,6 +108,7 @@
                 >
                   {{ record.is_reviewed ? "标记未复习" : "确认已复习" }}
                 </a-button>
+              </div>
               </div>
             </div>
 
@@ -179,6 +204,9 @@
         <a-image v-for="(src, index) in analysisPreviewImages" :key="`analysis-preview-${index}-${src}`" :src="src" />
       </a-image-preview-group>
     </div>
+
+    <!-- 错题购物车抽屉 -->
+    <WrongQuestionCartDrawer v-model:open="cartDrawerOpen" :student-id="studentUid" />
   </div>
 </template>
 
@@ -192,6 +220,9 @@ import {
   getStudentWrongQuestionSearch as searchStudentWrongQuestionApi,
   putStudentWrongQuestionReview,
 } from "@/servers/api/wrongQuestion";
+import { postCartList } from "@/servers/api/cart";
+import { useWrongQuestionCart } from "@/composables/useWrongQuestionCart";
+import WrongQuestionCartDrawer from "./components/WrongQuestionCartDrawer.vue";
 
 type CountItem = { name: string; count: number };
 type Option = { label: string; value: string };
@@ -210,12 +241,17 @@ type WrongQuestionRecord = {
   student_score?: number | string;
   full_score?: number | string;
   class_id?: string;
+  question_id?: number | string;
   is_reviewed?: boolean;
   year?: string;
 };
 
 const userStore = useUserStore();
+const { cartCount, incrementCount, fetchCartCount } = useWrongQuestionCart();
 const rows = ref<WrongQuestionRecord[]>([]);
+const selectedQuestionKeys = ref<Set<string>>(new Set());
+const addingToCart = ref(false);
+const cartDrawerOpen = ref(false);
 const loading = ref(false);
 const recommendLoading = ref(false);
 const recommendKnowledge = ref<CountItem[]>([]);
@@ -443,6 +479,74 @@ const extractAnalysisText = (value: unknown): string => {
 const recordKey = (record: WrongQuestionRecord) =>
   [record.exam_id, record.test_paper_id, record.question_key || record.string_number].map(text).join("-");
 
+// ===== 购物车选择相关 =====
+
+const selectAllQuestions = computed({
+  get: () => rows.value.length > 0 && selectedQuestionKeys.value.size === rows.value.length,
+  set: () => {},
+});
+
+const handleSelectAllQuestions = () => {
+  if (selectedQuestionKeys.value.size === rows.value.length) {
+    selectedQuestionKeys.value = new Set();
+  } else {
+    selectedQuestionKeys.value = new Set(rows.value.map((r) => recordKey(r)));
+  }
+};
+
+const toggleQuestionSelection = (record: WrongQuestionRecord) => {
+  const key = recordKey(record);
+  const next = new Set(selectedQuestionKeys.value);
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+  selectedQuestionKeys.value = next;
+};
+
+/** 将选中的错题添加到购物车 */
+const handleAddToCart = async () => {
+  if (!selectedQuestionKeys.value.size) {
+    message.warning("请先勾选要加入购物车的题目");
+    return;
+  }
+  addingToCart.value = true;
+  let added = 0;
+  const keys = Array.from(selectedQuestionKeys.value);
+  try {
+    for (const key of keys) {
+      const record = rows.value.find((r) => recordKey(r) === key);
+      if (!record) continue;
+      try {
+        const res = await postCartList({
+          student_id: studentUid.value,
+          test_question_id: String(record.question_id || record.question_key || record.string_number || ""),
+          test_paper_id: String(record.test_paper_id || ""),
+        });
+        if (Number(res?.code) === 200) added++;
+      } catch {
+        // 跳过添加失败的，继续处理
+      }
+    }
+    if (added > 0) {
+      incrementCount(added);
+      message.success(`成功添加 ${added} 道错题到购物车`);
+      selectedQuestionKeys.value = new Set();
+    } else {
+      message.warning("添加失败，请稍后重试");
+    }
+  } catch {
+    message.error("添加购物车出错");
+  } finally {
+    addingToCart.value = false;
+  }
+};
+
+const handleGoToCart = () => {
+  cartDrawerOpen.value = true;
+};
+
 const toggleReviewed = async (record: WrongQuestionRecord) => {
   if (!studentUid.value) return;
   const currentKey = recordKey(record);
@@ -487,7 +591,7 @@ onMounted(async () => {
   }
   studentUid.value = text(user?.student?.uid || user?.role);
   studentName.value = text(user?.student?.name || user?.nickname || user?.username);
-  await Promise.all([search(true), loadRecommend()]);
+  await Promise.all([search(true), loadRecommend(), fetchCartCount(studentUid.value)]);
 });
 </script>
 
@@ -523,6 +627,12 @@ onMounted(async () => {
     margin: 6px 0 0;
     color: #65758b;
   }
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .student-badge {
@@ -756,5 +866,25 @@ onMounted(async () => {
   .content-grid {
     grid-template-columns: 1fr;
   }
+
+  .header-right {
+    flex-wrap: wrap;
+  }
+}
+
+.result-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.question-checkbox {
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.question-main-content {
+  flex: 1;
+  min-width: 0;
 }
 </style>

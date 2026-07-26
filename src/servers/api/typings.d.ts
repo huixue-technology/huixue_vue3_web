@@ -36,6 +36,36 @@ declare namespace API {
     stuName: string;
   };
 
+  type CartAdd = {
+    /** 学生 ID */
+    student_id: string;
+    /** 题目 ID */
+    test_question_id: string;
+    /** 试卷 ID */
+    test_paper_id?: string;
+    /** 是否需要答案解析 */
+    require_analysis?: boolean;
+  };
+
+  type CartBatchRemove = {
+    /** 要移除的购物车条目 ID 列表 */
+    ids: number[];
+  };
+
+  type CartMarkReviewed = {
+    /** 是否已复习 */
+    reviewed?: boolean;
+  };
+
+  type CartUpdate = {
+    /** 试卷 ID */
+    test_paper_id?: string;
+    /** 是否需要答案解析 */
+    require_analysis?: boolean;
+    /** 是否已复习 */
+    is_reviewed?: boolean;
+  };
+
   type ClassAnalysis = {
     /** 班级ID */
     class_ids: number[];
@@ -61,6 +91,10 @@ declare namespace API {
     class_id: string;
   };
 
+  type deleteCartItemParams = {
+    cart_id: number;
+  };
+
   type deleteClassesDetailApiParams = {
     class_id: number;
   };
@@ -83,26 +117,26 @@ declare namespace API {
   };
 
   type deleteQuickAdminClassDeleteParams = {
-    /** school id */
+    /** 学校ID */
     school_id: string;
-    /** grade */
+    /** 年级 */
     grade?: string;
   };
 
   type deleteQuickAdminPassLineDeleteParams = {
-    /** exam id */
+    /** 考试ID */
     exam_id: number;
   };
 
   type deleteQuickAdminScoreDeleteParams = {
-    /** exam id */
+    /** 考试ID */
     exam_id: number;
   };
 
   type deleteQuickAdminStudentDeleteParams = {
-    /** school id */
+    /** 学校ID */
     school_id: string;
-    /** grade */
+    /** 年级 */
     grade?: string;
   };
 
@@ -190,6 +224,23 @@ declare namespace API {
     page_size?: number;
     /** 页码 */
     page?: number;
+  };
+
+  type getCartListParams = {
+    /** 学生 ID */
+    student_id: string;
+    /** 试卷 ID 筛选 */
+    test_paper_id?: string;
+    /** 是否已复习 (true/false) */
+    is_reviewed?: string;
+    /** 是否需要解析 (true/false) */
+    require_analysis?: string;
+    /** 仅查看已移出条目 (true/false) */
+    only_removed?: string;
+    /** 页码 */
+    page?: number;
+    /** 每页数量 */
+    size?: number;
   };
 
   type getClassAnalysisParams = {
@@ -409,41 +460,41 @@ declare namespace API {
   };
 
   type getQuickAdminExamListParams = {
-    /** page */
+    /** 页码 */
     page?: number;
-    /** page size */
+    /** 每页数量 */
     size?: number;
-    /** school id */
+    /** 学校ID */
     school_id?: string;
-    /** grade */
+    /** 年级 */
     student_grade?: string;
-    /** grade alias */
+    /** 年级别名 */
     grade?: string;
-    /** semester */
+    /** 学期 */
     semester?: string;
-    /** exam year/time */
+    /** 考试年份/时间 */
     exam_time?: string;
-    /** exam time alias */
+    /** 考试时间别名 */
     time?: string;
-    /** year alias */
+    /** 年份别名 */
     year?: string;
-    /** exam category */
+    /** 考试类别 */
     exam_category?: string;
-    /** exam category alias */
+    /** 考试类别别名 */
     exam_type?: string;
-    /** exam name */
+    /** 考试名称 */
     name?: string;
-    /** exam name alias */
+    /** 考试名称别名 */
     exam_name?: string;
   };
 
   type getQuickAdminGradeClassCountParams = {
-    /** school id */
+    /** 学校ID */
     school_id: string;
   };
 
   type getQuickAdminGradeStudentCountParams = {
-    /** school id */
+    /** 学校ID */
     school_id: string;
   };
 
@@ -947,7 +998,7 @@ declare namespace API {
   };
 
   type postClassUploadApiParams = {
-    /** 学校id */
+    /** 学校ID */
     school_id: string;
   };
 
@@ -997,60 +1048,60 @@ declare namespace API {
   };
 
   type postQuickAdminClassImportParams = {
-    /** school id */
+    /** 学校ID */
     school_id: string;
-    /** grade */
+    /** 年级 */
     grade: string;
   };
 
   type postQuickAdminPassLineImportParams = {
-    /** exam id */
+    /** 考试ID */
     exam_id: number;
   };
 
   type postQuickAdminScoreImportParams = {
-    /** exam id */
+    /** 考试ID */
     exam_id: number;
-    /** school id */
+    /** 学校ID */
     school_id?: string;
-    /** grade */
+    /** 年级 */
     student_grade?: string;
-    /** grade alias */
+    /** 年级别名 */
     grade?: string;
-    /** semester */
+    /** 学期 */
     semester?: string;
-    /** exam year/time */
+    /** 考试年份/时间 */
     exam_time?: string;
-    /** exam time alias */
+    /** 考试时间别名 */
     time?: string;
-    /** year alias */
+    /** 年份别名 */
     year?: string;
-    /** exam category */
+    /** 考试类别 */
     exam_category?: string;
-    /** exam category alias */
+    /** 考试类别别名 */
     exam_type?: string;
-    /** exam name */
+    /** 考试名称 */
     name?: string;
-    /** exam name alias */
+    /** 考试名称别名 */
     exam_name?: string;
   };
 
   type postQuickAdminStudentImportParams = {
-    /** school id */
+    /** 学校ID */
     school_id: string;
-    /** grade */
+    /** 年级 */
     grade?: string;
-    /** grade alias */
+    /** 年级别名 */
     student_grade?: string;
   };
 
   type postScoreLineUploadApiParams = {
-    /** 考试id */
+    /** 考试ID */
     exam_id: number;
   };
 
   type postStudentUploadApiParams = {
-    /** 学校id */
+    /** 学校ID */
     school_id: string;
     /** 年级 */
     grade: string;
@@ -1069,7 +1120,7 @@ declare namespace API {
   };
 
   type postTestPaperAnswerImageParams = {
-    /** test paper id */
+    /** 试卷ID */
     test_paper_id: number;
   };
 
@@ -1092,21 +1143,42 @@ declare namespace API {
     description?: string;
   };
 
+  type postTestPaperPdfAnswerParams = {
+    /** 试卷ID */
+    test_paper_id: number;
+  };
+
   type postTestPaperPdfParams = {
-    /** test paper id */
+    /** 试卷ID */
     test_paper_id: number;
   };
 
   type postTestPaperQuestionImageParams = {
-    /** test paper id */
+    /** 试卷ID */
     test_paper_id: number;
-    /** question id */
+    /** 题目ID */
     question_id?: number;
   };
 
   type postWrongQuestionDownloadParams = {
     /** 错题 question_id 列表 */
     question_ids: number[];
+  };
+
+  type putCartItemParams = {
+    cart_id: number;
+  };
+
+  type putCartMarkReviewedParams = {
+    cart_id: number;
+  };
+
+  type putCartRestoreParams = {
+    cart_id: number;
+  };
+
+  type putCartToggleAnalysisParams = {
+    cart_id: number;
   };
 
   type putClassesDetailApiParams = {
@@ -1203,9 +1275,9 @@ declare namespace API {
 
   type StudentWrongQuestionReview = {
     /** 试卷ID */
-    test_paper_id: Record<string, any>;
+    test_paper_id: number | string;
     /** 试卷ID别名 */
-    paper_id?: Record<string, any>;
+    paper_id?: number | string;
     /** 题号 */
     question_key: string;
     /** 题号别名 */
@@ -1264,6 +1336,8 @@ declare namespace API {
     correct_rate?: number;
     /** 分值 */
     score?: number;
+    /** 达标分值（错误线），低于该分值视为错题，由每个学科自主决定；置空表示按满分判定 */
+    pass_score?: number;
   };
 
   type updateFeedbackStatusParams = {

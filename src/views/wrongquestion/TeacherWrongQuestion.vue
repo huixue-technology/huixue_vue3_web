@@ -5,10 +5,24 @@
         <h2>错题模块</h2>
         <p>按班级或学生查看未得满分的小题，支持题型和关键词继续筛选。</p>
       </div>
-      <a-radio-group v-model:value="mode" button-style="solid" @change="handleModeChange">
-        <a-radio-button value="class">班级错题</a-radio-button>
-        <a-radio-button value="student">学生错题</a-radio-button>
-      </a-radio-group>
+      <div class="header-right">
+        <a-badge v-if="mode === 'student'" :count="cartCount" :overflow-count="99" :show-zero="false">
+          <a-button @click="cartDrawerOpen = true">购物车</a-button>
+        </a-badge>
+        <a-button
+          v-if="mode === 'student'"
+          type="primary"
+          :disabled="!selectedQuestionKeys.size"
+          :loading="addingToCart"
+          @click="handleAddToCart"
+        >
+          加入购物车 ({{ selectedQuestionKeys.size }})
+        </a-button>
+        <a-radio-group v-model:value="mode" button-style="solid" @change="handleModeChange">
+          <a-radio-button value="class">班级错题</a-radio-button>
+          <a-radio-button value="student">学生错题</a-radio-button>
+        </a-radio-group>
+      </div>
     </header>
 
     <section class="filter-panel">
@@ -134,7 +148,17 @@
 
     <section class="result-panel">
       <div class="result-head">
-        <h3>{{ mode === "class" ? "班级错题" : "学生错题" }}</h3>
+        <div class="result-head-left">
+          <a-checkbox
+            v-if="mode === 'student'"
+            v-model:checked="selectAllQuestions"
+            :indeterminate="selectedQuestionKeys.size > 0 && selectedQuestionKeys.size < rows.length"
+            @change="handleSelectAllQuestions"
+          >
+            全选
+          </a-checkbox>
+          <h3>{{ mode === "class" ? "班级错题" : "学生错题" }}</h3>
+        </div>
         <span>共 {{ pagination.total }} 题</span>
       </div>
 
@@ -145,6 +169,13 @@
         <div v-else class="question-list">
           <article v-for="record in rows" :key="recordKey(record)" class="question-card">
             <div class="question-main">
+              <a-checkbox
+                v-if="mode === 'student'"
+                :checked="selectedQuestionKeys.has(recordKey(record))"
+                class="question-checkbox"
+                @change="toggleQuestionSelection(record)"
+              />
+              <div class="question-main-content">
               <div class="question-title">
                 <strong>{{ record.string_number || record.question_key || "-" }} 题</strong>
                 <a-tag v-if="record.subject" color="blue">{{ record.subject }}</a-tag>
@@ -156,6 +187,7 @@
                 <span v-else>错题人数 {{ record.wrong_count ?? "-" }}</span>
                 <span v-if="record.participant_count">参与 {{ record.participant_count }}</span>
                 <span v-if="record.wrong_rate !== undefined && record.wrong_rate !== null">错率 {{ formatPercent(record.wrong_rate) }}</span>
+              </div>
               </div>
             </div>
 
@@ -259,6 +291,9 @@
       :question-list="rows"
       :query-params="buildParams()"
     />
+
+    <!-- 错题购物车抽屉 -->
+    <WrongQuestionCartDrawer v-model:open="cartDrawerOpen" :student-id="filters.student_id" />
   </div>
 </template>
 
@@ -273,8 +308,11 @@ import {
   getTeacherWrongQuestionRecommend as getTeacherWrongQuestionRecommendApi,
   getTeacherWrongQuestionSearch as searchTeacherWrongQuestionApi,
 } from "@/servers/api/wrongQuestion";
+import { postCartList } from "@/servers/api/cart";
+import { useWrongQuestionCart } from "@/composables/useWrongQuestionCart";
 import { useUserStore } from "@/store";
 import WrongQuestionDownloadModal from "./components/WrongQuestionDownloadModal.vue";
+import WrongQuestionCartDrawer from "./components/WrongQuestionCartDrawer.vue";
 
 type Option = { label: string; value: string | number };
 type CountItem = { name: string; count: number };
@@ -293,6 +331,7 @@ type WrongQuestionRecord = {
   images?: string[] | string;
   answer?: string;
   analysis?: string;
+  question_id?: number | string;
   student_score?: number | string;
   full_score?: number | string;
   wrong_count?: number | string;
@@ -301,7 +340,11 @@ type WrongQuestionRecord = {
 };
 
 const userStore = useUserStore();
+const { cartCount, incrementCount, fetchCartCount } = useWrongQuestionCart();
 const mode = ref<"class" | "student">("class");
+const cartDrawerOpen = ref(false);
+const selectedQuestionKeys = ref<Set<string>>(new Set());
+const addingToCart = ref(false);
 const rows = ref<WrongQuestionRecord[]>([]);
 const loading = ref(false);
 const schoolLoading = ref(false);
@@ -542,6 +585,9 @@ const search = async (resetPage = false) => {
     if (Number(res?.code) !== 200) throw new Error(res?.msg || "查询失败");
     rows.value = Array.isArray(res?.data) ? res.data : [];
     pagination.total = Number(res?.total || rows.value.length || 0);
+    if (mode.value === "student" && filters.student_id) {
+      fetchCartCount(filters.student_id);
+    }
   } catch (error: any) {
     rows.value = [];
     pagination.total = 0;
@@ -566,7 +612,7 @@ const loadRecommend = async () => {
   }
 };
 
-const handleSearch = () => search(true);
+const handleSearch = () => { selectedQuestionKeys.value = new Set(); search(true); };
 const clearQueryResult = () => {
   rows.value = [];
   pagination.page = 1;
@@ -576,6 +622,7 @@ const clearQueryResult = () => {
 };
 const handleModeChange = () => {
   filters.student_id = undefined;
+  selectedQuestionKeys.value = new Set();
   clearQueryResult();
   if (mode.value === "student" && filters.class_id) {
     loadStudents();
@@ -778,10 +825,77 @@ const extractAnalysisText = (value: unknown): string => {
 const recordKey = (record: WrongQuestionRecord) =>
   [record.exam_id, record.test_paper_id, record.class_id, record.student_id, record.question_key || record.string_number].map(text).join("-");
 
+// ===== 购物车相关 =====
+
+const selectAllQuestions = computed({
+  get: () => rows.value.length > 0 && selectedQuestionKeys.value.size === rows.value.length,
+  set: () => {},
+});
+
+const handleSelectAllQuestions = () => {
+  if (selectedQuestionKeys.value.size === rows.value.length) {
+    selectedQuestionKeys.value = new Set();
+  } else {
+    selectedQuestionKeys.value = new Set(rows.value.map((r) => recordKey(r)));
+  }
+};
+
+const toggleQuestionSelection = (record: WrongQuestionRecord) => {
+  const key = recordKey(record);
+  const next = new Set(selectedQuestionKeys.value);
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+  selectedQuestionKeys.value = next;
+};
+
+/** 将选中的错题加入购物车 */
+const handleAddToCart = async () => {
+  if (!selectedQuestionKeys.value.size) {
+    message.warning("请先勾选要加入购物车的题目");
+    return;
+  }
+  if (!filters.student_id) {
+    message.warning("请先选择学生");
+    return;
+  }
+  addingToCart.value = true;
+  let added = 0;
+  const keys = Array.from(selectedQuestionKeys.value);
+  try {
+    for (const key of keys) {
+      const record = rows.value.find((r) => recordKey(r) === key);
+      if (!record) continue;
+      try {
+        const res = await postCartList({
+          student_id: String(filters.student_id || ""),
+          test_question_id: String(record.question_id || record.question_key || record.string_number || ""),
+          test_paper_id: String(record.test_paper_id || ""),
+        });
+        if (Number(res?.code) === 200) added++;
+      } catch { /* skip failed */ }
+    }
+    if (added > 0) {
+      incrementCount(added);
+      message.success(`成功添加 ${added} 道错题到购物车`);
+      selectedQuestionKeys.value = new Set();
+    } else {
+      message.warning("添加失败，请稍后重试");
+    }
+  } catch {
+    message.error("添加购物车出错");
+  } finally {
+    addingToCart.value = false;
+  }
+};
+
 onMounted(async () => {
   await loadSchools();
   filters.school_id = getLocalSchoolId();
   if (filters.school_id) await loadClasses();
+  fetchCartCount();
 });
 </script>
 
@@ -1064,5 +1178,28 @@ onMounted(async () => {
   .keyword-control {
     grid-column: span 1;
   }
+}
+
+/* 购物车相关样式 */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.result-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.question-checkbox {
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.question-main-content {
+  flex: 1;
+  min-width: 0;
 }
 </style>

@@ -2,7 +2,7 @@
 /* eslint-disable */
 import request from "@/utils/request";
 
-/** 此处后端没有提供注释 DELETE /api/quick_admin/class */
+/** 按学校 + 年级删除班级。 DELETE /api/quick_admin/class */
 export async function deleteQuickAdminClassDelete(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.deleteQuickAdminClassDeleteParams,
@@ -17,7 +17,7 @@ export async function deleteQuickAdminClassDelete(
   });
 }
 
-/** 此处后端没有提供注释 POST /api/quick_admin/class_import */
+/** 班级导入：上传班级 Excel，后台 Celery 异步入库。 POST /api/quick_admin/class_import */
 export async function postQuickAdminClassImport(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postQuickAdminClassImportParams,
@@ -39,7 +39,10 @@ export async function postQuickAdminClassImport(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(ele, JSON.stringify(item));
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
         }
       } else {
         formData.append(ele, item);
@@ -58,7 +61,7 @@ export async function postQuickAdminClassImport(
   });
 }
 
-/** 此处后端没有提供注释 GET /api/quick_admin/exams */
+/** 查询考试列表，支持按学校、年级、学期等条件筛选。 GET /api/quick_admin/exams */
 export async function getQuickAdminExamList(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getQuickAdminExamListParams,
@@ -103,7 +106,7 @@ export async function getQuickAdminGradeStudentCount(
   });
 }
 
-/** 此处后端没有提供注释 DELETE /api/quick_admin/pass_line */
+/** 按考试 ID 删除全部分数线数据。 DELETE /api/quick_admin/pass_line */
 export async function deleteQuickAdminPassLineDelete(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.deleteQuickAdminPassLineDeleteParams,
@@ -118,7 +121,7 @@ export async function deleteQuickAdminPassLineDelete(
   });
 }
 
-/** 此处后端没有提供注释 POST /api/quick_admin/pass_line_import */
+/** 分数线导入：上传分数线 Excel，接口同步入库。 POST /api/quick_admin/pass_line_import */
 export async function postQuickAdminPassLineImport(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postQuickAdminPassLineImportParams,
@@ -140,7 +143,10 @@ export async function postQuickAdminPassLineImport(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(ele, JSON.stringify(item));
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
         }
       } else {
         formData.append(ele, item);
@@ -159,7 +165,7 @@ export async function postQuickAdminPassLineImport(
   });
 }
 
-/** 此处后端没有提供注释 DELETE /api/quick_admin/score */
+/** 按考试 ID 删除全部成绩数据和分数线缓存。 DELETE /api/quick_admin/score */
 export async function deleteQuickAdminScoreDelete(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.deleteQuickAdminScoreDeleteParams,
@@ -174,7 +180,7 @@ export async function deleteQuickAdminScoreDelete(
   });
 }
 
-/** 此处后端没有提供注释 POST /api/quick_admin/score_import */
+/** 成绩导入：上传成绩 Excel，后台 Celery 异步入库。 POST /api/quick_admin/score_import */
 export async function postQuickAdminScoreImport(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postQuickAdminScoreImportParams,
@@ -196,7 +202,10 @@ export async function postQuickAdminScoreImport(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(ele, JSON.stringify(item));
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
         }
       } else {
         formData.append(ele, item);
@@ -215,7 +224,7 @@ export async function postQuickAdminScoreImport(
   });
 }
 
-/** 此处后端没有提供注释 DELETE /api/quick_admin/student */
+/** 按学校 + 年级删除学生。 DELETE /api/quick_admin/student */
 export async function deleteQuickAdminStudentDelete(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.deleteQuickAdminStudentDeleteParams,
@@ -230,7 +239,7 @@ export async function deleteQuickAdminStudentDelete(
   });
 }
 
-/** 此处后端没有提供注释 POST /api/quick_admin/student_import */
+/** 学生导入：上传学生 Excel，后台 Celery 异步入库。 POST /api/quick_admin/student_import */
 export async function postQuickAdminStudentImport(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postQuickAdminStudentImportParams,
@@ -252,7 +261,10 @@ export async function postQuickAdminStudentImport(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(ele, JSON.stringify(item));
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
         }
       } else {
         formData.append(ele, item);

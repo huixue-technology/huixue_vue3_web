@@ -25,6 +25,7 @@ export async function postTestPaper(
   params: API.postTestPaperParams,
   body: {},
   pdf_file?: File,
+  pdf_answer_file?: File,
   file?: File,
   options?: { [key: string]: any }
 ) {
@@ -32,6 +33,10 @@ export async function postTestPaper(
 
   if (pdf_file) {
     formData.append("pdf_file", pdf_file);
+  }
+
+  if (pdf_answer_file) {
+    formData.append("pdf_answer_file", pdf_answer_file);
   }
 
   if (file) {
@@ -46,7 +51,10 @@ export async function postTestPaper(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(ele, JSON.stringify(item));
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
         }
       } else {
         formData.append(ele, item);
@@ -81,7 +89,7 @@ export async function deleteTestPaper(
   });
 }
 
-/** Upload a Markdown answer image and return a preview URL. POST /api/tp/answer-image */
+/** 上传 Markdown 解析图片，返回预览地址。 POST /api/tp/answer-image */
 export async function postTestPaperAnswerImage(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postTestPaperAnswerImageParams,
@@ -103,7 +111,10 @@ export async function postTestPaperAnswerImage(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(ele, JSON.stringify(item));
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
         }
       } else {
         formData.append(ele, item);
@@ -138,7 +149,7 @@ export async function getTestPaperFile(
   });
 }
 
-/** Upload or replace the PDF file for an existing test paper. POST /api/tp/pdf */
+/** 上传或替换已有试卷的 PDF/Word 试卷原卷扫描件。 上传或替换已有试卷的 PDF/Word 试卷原卷文件。 POST /api/tp/pdf */
 export async function postTestPaperPdf(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postTestPaperPdfParams,
@@ -160,7 +171,10 @@ export async function postTestPaperPdf(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(ele, JSON.stringify(item));
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
         }
       } else {
         formData.append(ele, item);
@@ -179,7 +193,51 @@ export async function postTestPaperPdf(
   });
 }
 
-/** Upload a question image and return a storage path that can be saved on test_question.images. POST /api/tp/question-image */
+/** 上传或替换已有试卷的 PDF/Word 答案文档，状态同步更新为 uploaded。 上传或替换已有试卷的 PDF/Word 答案文档。 POST /api/tp/pdf-answer */
+export async function postTestPaperPdfAnswer(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.postTestPaperPdfAnswerParams,
+  body: {},
+  file?: File,
+  options?: { [key: string]: any }
+) {
+  const formData = new FormData();
+
+  if (file) {
+    formData.append("file", file);
+  }
+
+  Object.keys(body).forEach((ele) => {
+    const item = (body as any)[ele];
+
+    if (item !== undefined && item !== null) {
+      if (typeof item === "object" && !(item instanceof File)) {
+        if (item instanceof Array) {
+          item.forEach((f) => formData.append(ele, f || ""));
+        } else {
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
+        }
+      } else {
+        formData.append(ele, item);
+      }
+    }
+  });
+
+  return request<any>("/api/tp/pdf-answer", {
+    method: "POST",
+    params: {
+      ...params,
+    },
+    data: formData,
+    requestType: "form",
+    ...(options || {}),
+  });
+}
+
+/** 上传题目图片，返回可保存到 test_question.images 的存储路径。 POST /api/tp/question-image */
 export async function postTestPaperQuestionImage(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postTestPaperQuestionImageParams,
@@ -201,7 +259,10 @@ export async function postTestPaperQuestionImage(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(ele, JSON.stringify(item));
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
         }
       } else {
         formData.append(ele, item);
@@ -255,7 +316,10 @@ export async function postTestPaperQuestionKeywords(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(ele, JSON.stringify(item));
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
         }
       } else {
         formData.append(ele, item);

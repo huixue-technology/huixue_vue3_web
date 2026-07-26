@@ -16,7 +16,7 @@ const router = createRouter({
 
 const whiteList = ["/user/login", "/user/register", "/user/teacher-register", "/404"];
 const teacherOnlyRoutes = ["/teacher_info", "/student_analysis", "/student_compare", "/wrong_question"];
-const studentOnlyRoutes = ["/student_wrong_question"];
+const studentOnlyRoutes = ["/student_wrong_question", "/student_wrong_question_cart"];
 
 router.beforeEach((to, _from, next) => {
   if (whiteList.includes(to.path)) {
