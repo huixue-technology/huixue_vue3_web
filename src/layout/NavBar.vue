@@ -12,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, ref } from "vue";
+import { computed, h, onMounted, ref } from "vue";
 import type { MenuProps } from "ant-design-vue";
 import {
   AppstoreOutlined,
@@ -23,17 +23,20 @@ import {
   MergeCellsOutlined,
   MessageOutlined,
   SecurityScanOutlined,
+  ShoppingCartOutlined,
   ThunderboltOutlined,
   UsergroupAddOutlined,
   UserOutlined,
 } from "@ant-design/icons-vue";
 import router from "@/router";
 import { useLogout } from "@/composables/useLogout";
+import { useWrongQuestionCart } from "@/composables/useWrongQuestionCart";
 import { useUserStore } from "@/store";
 
 const current = ref<string[]>(["grade"]);
 const userStore = useUserStore();
 const { logout } = useLogout();
+const { cartCount, fetchCartCount } = useWrongQuestionCart();
 
 const items = computed<MenuProps["items"]>(() => {
   const path = window.location.hash.slice(1);
@@ -77,6 +80,12 @@ const items = computed<MenuProps["items"]>(() => {
         label: "错题模块",
         title: "错题模块",
       },
+      {
+        key: "student_wrong_question_cart",
+        icon: () => h(ShoppingCartOutlined),
+        label: `错题购物车${cartCount.value > 0 ? ` (${cartCount.value})` : ""}`,
+        title: "错题购物车",
+      },
       { key: "student_paper_view", icon: () => h(ForkOutlined), label: "试卷查看", title: "试卷查看" }
     );
   }
@@ -96,6 +105,14 @@ const handleClick = (event: any) => {
   router.replace("/" + event.key);
   current.value = [event.key];
 };
+
+onMounted(() => {
+  const user = userStore.getUserInfo();
+  const isTeacher = user?.role_type === "teacher" || user?.teacher !== undefined;
+  if (!isTeacher) {
+    fetchCartCount();
+  }
+});
 </script>
 
 <style scoped lang="less">

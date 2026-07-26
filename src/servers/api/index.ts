@@ -4,6 +4,7 @@
 // API 唯一标识：
 import * as analysis from "./analysis";
 import * as average from "./average";
+import * as cart from "./cart";
 import * as classes from "./classes";
 import * as classUpload from "./classUpload";
 import * as exam from "./exam";
@@ -44,5 +45,6 @@ export default {
   teacherUpload,
   tp,
   user,
+  cart,
   wrongQuestion,
 };

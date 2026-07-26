@@ -23,6 +23,7 @@
     "yarn": "^1.22.22"
   },
   "devDependencies": {
+    "@types/node": "^26.1.1",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
     "@umijs/openapi": "^1.13.0",
@@ -37,7 +38,7 @@
     "less": "^4.3.0",
     "less-loader": "^12.3.0",
     "ts-node": "^10.9.2",
-    "typescript": "~4.5.5"
+    "typescript": "~4.9.0"
   },
   "eslintConfig": {
     "root": true,

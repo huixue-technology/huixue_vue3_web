@@ -2,7 +2,7 @@
 /* eslint-disable */
 import request from "@/utils/request";
 
-/** 此处后端没有提供注释 GET /api/wrong-question/class-question-stat */
+/** 班级题目统计：查询某次考试某班各题的得分/错误率。 GET /api/wrong-question/class-question-stat */
 export async function getClassQuestionStat(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getClassQuestionStatParams,
@@ -17,7 +17,7 @@ export async function getClassQuestionStat(
   });
 }
 
-/** 此处后端没有提供注释 POST /api/wrong-question/class-question-stat/rebuild */
+/** 重建班级题目统计数据缓存。 POST /api/wrong-question/class-question-stat/rebuild */
 export async function postClassQuestionStatRebuild(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postClassQuestionStatRebuildParams,
@@ -32,7 +32,7 @@ export async function postClassQuestionStatRebuild(
   });
 }
 
-/** 此处后端没有提供注释 GET /api/wrong-question/class-question-wrong-students */
+/** 班级题目错题学生名单：查询某题做错的学生列表。 GET /api/wrong-question/class-question-wrong-students */
 export async function getClassQuestionWrongStudents(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getClassQuestionWrongStudentsParams,
@@ -47,7 +47,7 @@ export async function getClassQuestionWrongStudents(
   });
 }
 
-/** 此处后端没有提供注释 POST /api/wrong-question/download */
+/** 批量下载错题 PDF，传入 question_id 列表。 POST /api/wrong-question/download */
 export async function postWrongQuestionDownload(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postWrongQuestionDownloadParams,
@@ -62,7 +62,7 @@ export async function postWrongQuestionDownload(
   });
 }
 
-/** 此处后端没有提供注释 GET /api/wrong-question/recommend/student/${param0} */
+/** 学生端错题推荐，基于个人错题记录推荐练习。 GET /api/wrong-question/recommend/student/${param0} */
 export async function getStudentWrongQuestionRecommend(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getStudentWrongQuestionRecommendParams,
@@ -78,7 +78,7 @@ export async function getStudentWrongQuestionRecommend(
   });
 }
 
-/** 此处后端没有提供注释 GET /api/wrong-question/recommend/teacher */
+/** 教师端错题推荐，基于高频错误知识点推荐练习。 GET /api/wrong-question/recommend/teacher */
 export async function getTeacherWrongQuestionRecommend(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getTeacherWrongQuestionRecommendParams,
@@ -93,7 +93,7 @@ export async function getTeacherWrongQuestionRecommend(
   });
 }
 
-/** 此处后端没有提供注释 PUT /api/wrong-question/review/student/${param0} */
+/** 学生标记错题已复习。 PUT /api/wrong-question/review/student/${param0} */
 export async function putStudentWrongQuestionReview(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.putStudentWrongQuestionReviewParams,
@@ -112,7 +112,7 @@ export async function putStudentWrongQuestionReview(
   });
 }
 
-/** 此处后端没有提供注释 GET /api/wrong-question/search/student/${param0} */
+/** 学生端错题搜索，只能查看自己的错题。 GET /api/wrong-question/search/student/${param0} */
 export async function getStudentWrongQuestionSearch(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getStudentWrongQuestionSearchParams,
@@ -128,7 +128,7 @@ export async function getStudentWrongQuestionSearch(
   });
 }
 
-/** 此处后端没有提供注释 GET /api/wrong-question/search/teacher */
+/** 教师端错题搜索，支持按科目、年级、班级、题型、关键词等筛选。 GET /api/wrong-question/search/teacher */
 export async function getTeacherWrongQuestionSearch(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getTeacherWrongQuestionSearchParams,

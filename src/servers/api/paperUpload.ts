@@ -9,6 +9,7 @@ export async function postPaperUploadApi(
   body: {},
   file?: File,
   pdf?: File,
+  pdf_answer?: File,
   options?: { [key: string]: any }
 ) {
   const formData = new FormData();
@@ -21,6 +22,10 @@ export async function postPaperUploadApi(
     formData.append("pdf", pdf);
   }
 
+  if (pdf_answer) {
+    formData.append("pdf_answer", pdf_answer);
+  }
+
   Object.keys(body).forEach((ele) => {
     const item = (body as any)[ele];
 
@@ -29,7 +34,10 @@ export async function postPaperUploadApi(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(ele, JSON.stringify(item));
+          formData.append(
+            ele,
+            new Blob([JSON.stringify(item)], { type: "application/json" })
+          );
         }
       } else {
         formData.append(ele, item);
