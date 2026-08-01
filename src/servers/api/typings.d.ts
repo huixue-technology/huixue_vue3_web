@@ -1160,11 +1160,6 @@ declare namespace API {
     question_id?: number;
   };
 
-  type postWrongQuestionDownloadParams = {
-    /** 错题 question_id 列表 */
-    question_ids: number[];
-  };
-
   type putCartItemParams = {
     cart_id: number;
   };
@@ -1275,9 +1270,9 @@ declare namespace API {
 
   type StudentWrongQuestionReview = {
     /** 试卷ID */
-    test_paper_id: number | string;
+    test_paper_id: Record<string, any>;
     /** 试卷ID别名 */
-    paper_id?: number | string;
+    paper_id?: Record<string, any>;
     /** 题号 */
     question_key: string;
     /** 题号别名 */
@@ -1372,5 +1367,16 @@ declare namespace API {
     email: string;
     /** 绑定状态 */
     bind_state?: boolean;
+  };
+
+  type WrongQuestionDownload = {
+    /** 错题 question_id 列表 */
+    question_ids: number[];
+    /** 学生 student_id */
+    student_id: string;
+    /** 是否包含答案 */
+    is_need_answer?: boolean;
+    /** 是否包含解析 */
+    is_need_analysis?: boolean;
   };
 }

@@ -6,11 +6,7 @@
         <p>按班级或学生查看未得满分的小题，支持题型和关键词继续筛选。</p>
       </div>
       <div class="header-right">
-        <a-badge v-if="mode === 'student'" :count="cartCount" :overflow-count="99" :show-zero="false">
-          <a-button @click="cartDrawerOpen = true">购物车</a-button>
-        </a-badge>
         <a-button
-          v-if="mode === 'student'"
           type="primary"
           :disabled="!selectedQuestionKeys.size"
           :loading="addingToCart"
@@ -93,7 +89,7 @@
           allow-clear
           show-search
           :filter-option="filterOption"
-          @change="handleSearch"
+          @change="handleStudentChange"
         />
         <a-select
           v-model:value="filters.question_type"
@@ -117,7 +113,9 @@
       <div class="filter-actions">
         <span class="rule-text">{{ ruleText }}</span>
         <div class="button-row">
-          <a-button type="primary" ghost @click="downloadOpen = true">错题下载</a-button>
+          <a-badge :count="displayedCartCount" :overflow-count="99" :show-zero="false">
+            <a-button type="primary" ghost @click="handleOpenCart">购物车</a-button>
+          </a-badge>
           <a-button type="primary" :loading="loading" @click="handleSearch">查询</a-button>
           <a-button :loading="recommendLoading" @click="loadRecommend">推荐筛选</a-button>
           <a-button @click="resetFilters">重置</a-button>
@@ -150,7 +148,6 @@
       <div class="result-head">
         <div class="result-head-left">
           <a-checkbox
-            v-if="mode === 'student'"
             v-model:checked="selectAllQuestions"
             :indeterminate="selectedQuestionKeys.size > 0 && selectedQuestionKeys.size < rows.length"
             @change="handleSelectAllQuestions"
@@ -170,7 +167,6 @@
           <article v-for="record in rows" :key="recordKey(record)" class="question-card">
             <div class="question-main">
               <a-checkbox
-                v-if="mode === 'student'"
                 :checked="selectedQuestionKeys.has(recordKey(record))"
                 class="question-checkbox"
                 @change="toggleQuestionSelection(record)"
@@ -284,16 +280,13 @@
       </a-image-preview-group>
     </div>
 
-    <!-- 错题下载弹窗 -->
-    <WrongQuestionDownloadModal
-      v-model:open="downloadOpen"
-      :total="pagination.total"
-      :question-list="rows"
-      :query-params="buildParams()"
-    />
-
     <!-- 错题购物车抽屉 -->
-    <WrongQuestionCartDrawer v-model:open="cartDrawerOpen" :student-id="filters.student_id" />
+    <WrongQuestionCartDrawer
+      v-model:open="cartDrawerOpen"
+      :local-items="mode === 'class' ? classCartItems : undefined"
+      :student-id="mode === 'student' ? filters.student_id : undefined"
+      @update:local-items="updateClassCartItems"
+    />
   </div>
 </template>
 
@@ -311,7 +304,6 @@ import {
 import { postCartList } from "@/servers/api/cart";
 import { useWrongQuestionCart } from "@/composables/useWrongQuestionCart";
 import { useUserStore } from "@/store";
-import WrongQuestionDownloadModal from "./components/WrongQuestionDownloadModal.vue";
 import WrongQuestionCartDrawer from "./components/WrongQuestionCartDrawer.vue";
 
 type Option = { label: string; value: string | number };
@@ -332,6 +324,8 @@ type WrongQuestionRecord = {
   answer?: string;
   analysis?: string;
   question_id?: number | string;
+  id?: number | string;
+  test_question_id?: number | string;
   student_score?: number | string;
   full_score?: number | string;
   wrong_count?: number | string;
@@ -343,6 +337,7 @@ const userStore = useUserStore();
 const { cartCount, incrementCount, fetchCartCount } = useWrongQuestionCart();
 const mode = ref<"class" | "student">("class");
 const cartDrawerOpen = ref(false);
+const classCartItems = ref<WrongQuestionRecord[]>([]);
 const selectedQuestionKeys = ref<Set<string>>(new Set());
 const addingToCart = ref(false);
 const rows = ref<WrongQuestionRecord[]>([]);
@@ -353,7 +348,6 @@ const paperLoading = ref(false);
 const studentLoading = ref(false);
 const recommendLoading = ref(false);
 const errorText = ref("");
-const downloadOpen = ref(false);
 const allClasses = ref<Array<Option & { grade: string }>>([]);
 const gradeOptions = ref<Option[]>([]);
 const classOptions = ref<Option[]>([]);
@@ -410,9 +404,10 @@ const questionPreviewImages = computed(() => (questionPreview.record ? stringLis
 const analysisPreviewImages = computed(() => (analysisViewer.record ? markdownImageUrls(analysisViewer.record.analysis) : []));
 const ruleText = computed(() =>
   mode.value === "class"
-    ? "筛选班级错题前，需要先确定科目、学校、年级和班级；试卷可作为进一步筛选。"
+    ? "筛选班级错题前，需要先确定科目、学校、年级和班级；可直接把列表错题加入购物车。"
     : "先用学校、年级、班级定位学生，再选择科目和试卷查看个人错题。"
 );
+const displayedCartCount = computed(() => (mode.value === "class" ? classCartItems.value.length : cartCount.value));
 
 const text = (value: unknown) => String(value ?? "").trim();
 const normalizeGradeForApi = (value: unknown) => {
@@ -623,8 +618,9 @@ const clearQueryResult = () => {
 const handleModeChange = () => {
   filters.student_id = undefined;
   selectedQuestionKeys.value = new Set();
+  if (mode.value === "student") fetchCartCount();
   clearQueryResult();
-  if (mode.value === "student" && filters.class_id) {
+  if (filters.class_id) {
     loadStudents();
   }
 };
@@ -677,8 +673,15 @@ const handleClassChange = async () => {
   }
   errorText.value = "";
   await loadPapers();
-  if (mode.value === "student") await loadStudents();
-  else await search(true);
+  await loadStudents();
+  if (mode.value === "class") await search(true);
+};
+const handleStudentChange = async () => {
+  selectedQuestionKeys.value = new Set();
+  await fetchCartCount(filters.student_id);
+  if (mode.value === "student") {
+    await search(true);
+  }
 };
 const handlePageChange = async (page: number) => {
   pagination.page = page;
@@ -851,34 +854,65 @@ const toggleQuestionSelection = (record: WrongQuestionRecord) => {
   selectedQuestionKeys.value = next;
 };
 
+const handleOpenCart = () => {
+  if (mode.value === "student" && !filters.student_id) {
+    message.warning("请先选择学生，再查看购物车");
+    return;
+  }
+  cartDrawerOpen.value = true;
+};
+
+const updateClassCartItems = (items: WrongQuestionRecord[]) => {
+  classCartItems.value = items;
+};
+
 /** 将选中的错题加入购物车 */
 const handleAddToCart = async () => {
   if (!selectedQuestionKeys.value.size) {
     message.warning("请先勾选要加入购物车的题目");
     return;
   }
-  if (!filters.student_id) {
-    message.warning("请先选择学生");
+  if (mode.value === "student" && !filters.student_id) {
+    message.warning("请先选择学生，再加入购物车");
     return;
   }
   addingToCart.value = true;
   let added = 0;
   const keys = Array.from(selectedQuestionKeys.value);
   try {
-    for (const key of keys) {
-      const record = rows.value.find((r) => recordKey(r) === key);
-      if (!record) continue;
-      try {
-        const res = await postCartList({
-          student_id: String(filters.student_id || ""),
+    if (mode.value === "class") {
+      const existingKeys = new Set(classCartItems.value.map((item) => String(item.id || item.question_id || item.test_question_id || "")));
+      const newItems = keys
+        .map((key) => rows.value.find((r) => recordKey(r) === key))
+        .filter((record): record is WrongQuestionRecord => Boolean(record))
+        .map((record) => ({
+          ...record,
+          id: recordKey(record),
           test_question_id: String(record.question_id || record.question_key || record.string_number || ""),
-          test_paper_id: String(record.test_paper_id || ""),
-        });
-        if (Number(res?.code) === 200) added++;
-      } catch { /* skip failed */ }
+          add_cart_time: new Date().toLocaleString("zh-CN"),
+        }))
+        .filter((item) => !existingKeys.has(String(item.id || item.question_id || item.test_question_id || "")));
+
+      if (newItems.length) {
+        classCartItems.value = [...classCartItems.value, ...newItems];
+        added = newItems.length;
+      }
+    } else {
+      for (const key of keys) {
+        const record = rows.value.find((r) => recordKey(r) === key);
+        if (!record) continue;
+        try {
+          const res = await postCartList({
+            student_id: String(filters.student_id || ""),
+            test_question_id: String(record.question_id || record.question_key || record.string_number || ""),
+            test_paper_id: String(record.test_paper_id || ""),
+          });
+          if (Number(res?.code) === 200) added++;
+        } catch { /* skip failed */ }
+      }
     }
     if (added > 0) {
-      incrementCount(added);
+      if (mode.value === "student") incrementCount(added);
       message.success(`成功添加 ${added} 道错题到购物车`);
       selectedQuestionKeys.value = new Set();
     } else {
