@@ -6,8 +6,7 @@
     :width="720"
     @close="emit('update:open', false)"
   >
-    <!-- 操作栏 -->
-    <div class="cart-toolbar" v-if="cartTotal">
+    <div v-if="cartTotal" class="cart-toolbar">
       <div class="toolbar-left">
         <a-checkbox
           v-model:checked="selectAll"
@@ -28,70 +27,53 @@
       </div>
     </div>
 
-    <!-- 列表 -->
     <a-spin :spinning="loading" class="cart-spin">
-      <a-empty v-if="!cartTotal && !loading" description="购物车空空如也，去错题页添加吧" />
+      <a-empty v-if="!cartTotal && !loading" description="购物车为空，请先到错题页添加" />
       <div v-else class="cart-list">
         <div
           v-for="item in cartItems"
-          :key="item.id"
+          :key="itemKey(item)"
           class="cart-item"
-          :class="{ 'cart-item-selected': selectedIds.includes(item.id) }"
+          :class="{ 'cart-item-selected': selectedIds.includes(itemKey(item)) }"
         >
           <a-checkbox
-            :checked="selectedIds.includes(item.id)"
+            :checked="selectedIds.includes(itemKey(item))"
             class="cart-item-check"
-            @change="toggleSelect(item.id)"
+            @change="toggleSelect(itemKey(item))"
           />
 
           <div class="cart-item-body">
-            <!-- 字段 2: test_question_id -->
             <div class="cart-item-row">
               <span class="cart-label">题目ID</span>
-              <span class="cart-value">{{ item.test_question_id || '-' }}</span>
+              <span class="cart-value">{{ item.test_question_id || item.question_id || '-' }}</span>
             </div>
-            <!-- 字段 3: student_id -->
-            <div class="cart-item-row">
+            <div v-if="item.student_id" class="cart-item-row">
               <span class="cart-label">学生ID</span>
-              <span class="cart-value">{{ item.student_id || '-' }}</span>
+              <span class="cart-value">{{ item.student_id }}</span>
             </div>
-            <!-- 字段 4: test_paper_id -->
+            <div v-if="item.class_id" class="cart-item-row">
+              <span class="cart-label">班级ID</span>
+              <span class="cart-value">{{ item.class_id }}</span>
+            </div>
             <div class="cart-item-row">
               <span class="cart-label">试卷ID</span>
               <span class="cart-value">{{ item.test_paper_id || '-' }}</span>
             </div>
-            <!-- 字段 5: require_analysis -->
-            <div class="cart-item-row">
-              <span class="cart-label">需解析</span>
-              <span class="cart-value">
-                <a-tag :color="item.require_analysis ? 'blue' : 'default'">
-                  {{ item.require_analysis ? '是' : '否' }}
-                </a-tag>
-              </span>
+            <div v-if="item.string_number || item.question_key" class="cart-item-row">
+              <span class="cart-label">题号</span>
+              <span class="cart-value">{{ item.string_number || item.question_key }}</span>
             </div>
-            <!-- 字段 6: add_cart_time -->
+            <div v-if="item.question_type" class="cart-item-row">
+              <span class="cart-label">题型</span>
+              <span class="cart-value">{{ item.question_type }}</span>
+            </div>
+            <div v-if="item.subject" class="cart-item-row">
+              <span class="cart-label">科目</span>
+              <span class="cart-value">{{ item.subject }}</span>
+            </div>
             <div class="cart-item-row">
               <span class="cart-label">加入时间</span>
-              <span class="cart-value">{{ item.add_cart_time || '-' }}</span>
-            </div>
-            <!-- 字段 7: is_reviewed -->
-            <div class="cart-item-row">
-              <span class="cart-label">复习状态</span>
-              <span class="cart-value">
-                <a-tag :color="item.is_reviewed ? 'green' : 'orange'">
-                  {{ item.is_reviewed ? '已复习' : '未复习' }}
-                </a-tag>
-              </span>
-            </div>
-            <!-- 字段 8: create_time -->
-            <div class="cart-item-row">
-              <span class="cart-label">创建时间</span>
-              <span class="cart-value">{{ item.create_time || '-' }}</span>
-            </div>
-            <!-- 字段 9: update_time -->
-            <div class="cart-item-row">
-              <span class="cart-label">更新时间</span>
-              <span class="cart-value">{{ item.update_time || '-' }}</span>
+              <span class="cart-value">{{ item.add_cart_time || item.create_time || '-' }}</span>
             </div>
           </div>
 
@@ -102,8 +84,7 @@
       </div>
     </a-spin>
 
-    <!-- 分页 -->
-    <div class="cart-pagination" v-if="cartTotal > pagination.size">
+    <div v-if="cartTotal > pagination.size" class="cart-pagination">
       <a-pagination
         size="small"
         :current="pagination.page"
@@ -114,11 +95,12 @@
       />
     </div>
 
-    <!-- 下载弹窗 -->
     <WrongQuestionDownloadModal
       v-model:open="downloadOpen"
       :total="selectedItems.length"
       :question-list="selectedItems"
+      :student-id="studentId"
+      @download-success="handleDownloadSuccess"
     />
   </a-drawer>
 </template>
@@ -126,19 +108,22 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { message } from "ant-design-vue";
-import { deleteCartItem, getCartList } from "@/servers/api/cart";
+import { deleteCartItem, getCartList, postCartBatchRemove } from "@/servers/api/cart";
 import { useWrongQuestionCart } from "@/composables/useWrongQuestionCart";
 import WrongQuestionDownloadModal from "./WrongQuestionDownloadModal.vue";
 
 type CartItem = Record<string, any>;
+type CartItemId = number | string;
 
 const props = defineProps<{
   open: boolean;
   studentId?: string;
+  localItems?: CartItem[];
 }>();
 
 const emit = defineEmits<{
   (e: "update:open", val: boolean): void;
+  (e: "update:localItems", val: CartItem[]): void;
 }>();
 
 const { decrementCount } = useWrongQuestionCart();
@@ -148,12 +133,15 @@ const cartTotal = ref(0);
 const loading = ref(false);
 const removing = ref(false);
 const downloadOpen = ref(false);
-const selectedIds = ref<number[]>([]);
+const selectedIds = ref<CartItemId[]>([]);
 const pagination = ref({ page: 1, size: 8 });
 const text = (value: unknown) => String(value ?? "").trim();
+const isLocalCart = computed(() => Array.isArray(props.localItems));
+
+const itemKey = (item: CartItem): CartItemId => item.id || item.question_id || item.test_question_id || "";
 
 const selectedItems = computed(() =>
-  cartItems.value.filter((item) => selectedIds.value.includes(item.id))
+  cartItems.value.filter((item) => selectedIds.value.includes(itemKey(item)))
 );
 
 const selectAll = computed({
@@ -165,7 +153,25 @@ const indeterminate = computed(
   () => selectedIds.value.length > 0 && selectedIds.value.length < cartItems.value.length
 );
 
+const loadLocalCart = (page = 1) => {
+  const list = props.localItems ?? [];
+  const total = list.length;
+  const maxPage = Math.max(1, Math.ceil(total / pagination.value.size));
+  const currentPage = Math.min(page, maxPage);
+  const start = (currentPage - 1) * pagination.value.size;
+
+  cartItems.value = list.slice(start, start + pagination.value.size);
+  cartTotal.value = total;
+  pagination.value.page = currentPage;
+  selectedIds.value = [];
+};
+
 const loadCart = async (page = 1) => {
+  if (isLocalCart.value) {
+    loadLocalCart(page);
+    return;
+  }
+
   loading.value = true;
   selectedIds.value = [];
   try {
@@ -189,11 +195,11 @@ const handleSelectAll = () => {
   if (selectedIds.value.length === cartItems.value.length) {
     selectedIds.value = [];
   } else {
-    selectedIds.value = cartItems.value.map((item) => item.id).filter(Boolean);
+    selectedIds.value = cartItems.value.map(itemKey).filter((id) => id !== "");
   }
 };
 
-const toggleSelect = (id: number) => {
+const toggleSelect = (id: CartItemId) => {
   const idx = selectedIds.value.indexOf(id);
   if (idx >= 0) {
     selectedIds.value.splice(idx, 1);
@@ -202,13 +208,35 @@ const toggleSelect = (id: number) => {
   }
 };
 
+const removeLocalItems = (ids: CartItemId[]) => {
+  const removeSet = new Set(ids.map(String));
+  const next = (props.localItems ?? []).filter((item) => !removeSet.has(String(itemKey(item))));
+  const maxPage = Math.max(1, Math.ceil(next.length / pagination.value.size));
+  const currentPage = Math.min(pagination.value.page, maxPage);
+  const start = (currentPage - 1) * pagination.value.size;
+
+  emit("update:localItems", next);
+  cartItems.value = next.slice(start, start + pagination.value.size);
+  cartTotal.value = next.length;
+  pagination.value.page = currentPage;
+  selectedIds.value = [];
+};
+
 const handleRemove = async (item: CartItem) => {
-  if (!item.id) return;
+  const id = itemKey(item);
+  if (!id) return;
+
+  if (isLocalCart.value) {
+    removeLocalItems([id]);
+    message.success("已移除");
+    return;
+  }
+
   try {
-    const res = await deleteCartItem({ cart_id: item.id });
+    const res = await deleteCartItem({ cart_id: Number(id) });
     if (Number(res?.code) !== 200) throw new Error(res?.msg || "移除失败");
-    cartItems.value = cartItems.value.filter((i) => i.id !== item.id);
-    selectedIds.value = selectedIds.value.filter((id) => id !== item.id);
+    cartItems.value = cartItems.value.filter((i) => itemKey(i) !== id);
+    selectedIds.value = selectedIds.value.filter((selectedId) => selectedId !== id);
     cartTotal.value = Math.max(0, cartTotal.value - 1);
     decrementCount(1);
     message.success("已移除");
@@ -219,12 +247,20 @@ const handleRemove = async (item: CartItem) => {
 
 const handleBatchRemove = async () => {
   if (!selectedIds.value.length) return;
+
+  if (isLocalCart.value) {
+    const removed = selectedIds.value.length;
+    removeLocalItems([...selectedIds.value]);
+    message.success(`已移除 ${removed} 项`);
+    return;
+  }
+
   removing.value = true;
   let removed = 0;
   try {
     for (const id of selectedIds.value) {
       try {
-        const res = await deleteCartItem({ cart_id: id });
+        const res = await deleteCartItem({ cart_id: Number(id) });
         if (Number(res?.code) === 200) removed++;
       } catch { /* skip */ }
     }
@@ -242,12 +278,43 @@ const handlePageChange = async (page: number) => {
   await loadCart(page);
 };
 
-// 打开抽屉时自动加载
+const handleDownloadSuccess = async () => {
+  const ids = [...selectedIds.value];
+  if (!ids.length) return;
+
+  if (isLocalCart.value) {
+    removeLocalItems(ids);
+    return;
+  }
+
+  try {
+    const res = await postCartBatchRemove({ ids: ids.map(Number) });
+    if (Number(res?.code) !== 200) {
+      throw new Error(res?.msg || "下载后清空购物车失败");
+    }
+
+    decrementCount(ids.length);
+    selectedIds.value = [];
+
+    await loadCart(1);
+  } catch (error: any) {
+    message.warning(error?.message || "下载成功，但购物车清空失败，请手动移除");
+  }
+};
+
 watch(
   () => props.open,
   (val) => {
     if (val) loadCart(1);
   }
+);
+
+watch(
+  () => props.localItems,
+  () => {
+    if (props.open && isLocalCart.value) loadLocalCart(pagination.value.page);
+  },
+  { deep: true }
 );
 </script>
 
@@ -345,5 +412,16 @@ watch(
 .cart-pagination {
   margin-top: 16px;
   text-align: right;
+}
+
+@media (max-width: 640px) {
+  .cart-item {
+    flex-direction: column;
+  }
+
+  .cart-item-body {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -63,10 +63,5 @@ export default [
         path: '/simulate',
         name: 'gradeSimulate',
         component: () => import('@/views/simulate/gradeSimulate.vue')
-    },
-    {
-        path: '/student_wrong_question_cart',
-        name: 'student_wrong_question_cart',
-        component: () => import('@/views/wrongquestion/StudentWrongQuestionCart.vue')
     }
 ]

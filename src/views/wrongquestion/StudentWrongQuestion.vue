@@ -120,13 +120,13 @@
               <div class="media-box">
                 <div class="box-title box-title-row">
                   <span>题目图片</span>
-                  <a-button v-if="stringList(record.images).length" type="link" size="small" @click="openQuestionViewer(record)">放大</a-button>
+                  <a-button v-if="questionImagePaths(record).length" type="link" size="small" @click="openQuestionViewer(record)">放大</a-button>
                 </div>
-                <div v-if="stringList(record.images).length" class="image-row">
+                <div v-if="questionImagePaths(record).length" class="image-row">
                   <img
-                    v-for="(image, index) in stringList(record.images)"
+                    v-for="(image, index) in questionImagePaths(record)"
                     :key="`${recordKey(record)}-${index}`"
-                    :src="fileUrl(image)"
+                    :src="displayImageUrl(image)"
                     class="question-image"
                     loading="lazy"
                     decoding="async"
@@ -138,13 +138,13 @@
               </div>
               <div class="analysis-box">
                 <div class="box-title">解析</div>
-                <div v-if="text(record.analysis)" class="analysis-body">
-                  <div v-if="extractAnalysisText(record.analysis)" class="analysis-text">{{ extractAnalysisText(record.analysis) }}</div>
-                  <div v-if="extractImageUrls(record.analysis).length" class="image-row">
+                <div v-if="text(analysisContent(record))" class="analysis-body">
+                  <div v-if="extractAnalysisText(analysisContent(record))" class="analysis-text">{{ extractAnalysisText(analysisContent(record)) }}</div>
+                  <div v-if="extractImageUrls(analysisContent(record)).length" class="image-row">
                     <a-image
-                      v-for="(url, index) in extractImageUrls(record.analysis)"
+                      v-for="(url, index) in extractImageUrls(analysisContent(record))"
                       :key="`analysis-${index}`"
-                      :src="url"
+                      :src="displayImageUrl(url)"
                       class="question-image"
                     />
                   </div>
@@ -182,10 +182,10 @@
       wrap-class-name="analysis-viewer-modal"
     >
       <div
-        v-if="analysisViewer.record && text(analysisViewer.record.analysis)"
+        v-if="analysisViewer.record && text(analysisContent(analysisViewer.record))"
         class="markdown-body analysis-viewer-body"
         @click="handleAnalysisImageClick"
-        v-html="renderMarkdown(analysisViewer.record.analysis)"
+        v-html="renderMarkdown(analysisContent(analysisViewer.record))"
       ></div>
       <a-empty v-else description="暂无解析" />
     </a-modal>
@@ -211,7 +211,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import router from "@/router";
 import { useUserStore } from "@/store";
@@ -227,6 +227,7 @@ import WrongQuestionCartDrawer from "./components/WrongQuestionCartDrawer.vue";
 type CountItem = { name: string; count: number };
 type Option = { label: string; value: string };
 type WrongQuestionRecord = {
+  [key: string]: unknown;
   exam_id?: number | string;
   exam_name?: string;
   test_paper_id?: number | string;
@@ -295,8 +296,8 @@ const analysisViewerTitle = computed(() => {
   const question = text(record?.string_number || record?.question_key || "-");
   return `${question} 题解析`;
 });
-const questionPreviewImages = computed(() => (questionPreview.record ? stringList(questionPreview.record.images).map(fileUrl).filter(Boolean) : []));
-const analysisPreviewImages = computed(() => (analysisViewer.record ? markdownImageUrls(analysisViewer.record.analysis) : []));
+const questionPreviewImages = computed(() => (questionPreview.record ? questionImagePaths(questionPreview.record).map(displayImageUrl).filter(Boolean) : []));
+const analysisPreviewImages = computed(() => (analysisViewer.record ? extractImageUrls(analysisContent(analysisViewer.record)).map(displayImageUrl).filter(Boolean) : []));
 const buildParams = () => ({
   page: pagination.page,
   size: pagination.size,
@@ -318,6 +319,7 @@ const search = async (resetPage = false) => {
     if (Number(res?.code) !== 200) throw new Error(res?.msg || "查询失败");
     rows.value = Array.isArray(res?.data) ? res.data : [];
     pagination.total = Number(res?.total || rows.value.length || 0);
+    preloadRecordImages(rows.value);
   } catch (error: any) {
     rows.value = [];
     pagination.total = 0;
@@ -402,6 +404,12 @@ const handleAnalysisImageClick = (event: MouseEvent) => {
   openAnalysisImagePreview(target.dataset.previewSrc || target.currentSrc || target.src);
 };
 
+const transparentImage =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+const protectedImageUrls = reactive<Record<string, string>>({});
+const loadingImageUrls = new Set<string>();
+const failedImageUrls = new Set<string>();
+
 const stringList = (value: unknown): string[] => {
   if (Array.isArray(value)) return value.map(text).filter(Boolean);
   const raw = text(value);
@@ -412,11 +420,104 @@ const stringList = (value: unknown): string[] => {
   } catch {}
   return [raw];
 };
-const fileUrl = (path: unknown) => {
+
+const imageFieldList = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.flatMap(imageFieldList);
+  if (value && typeof value === "object") {
+    const item = value as Record<string, unknown>;
+    return imageFieldList(
+      item.url ??
+        item.src ??
+        item.path ??
+        item.file_path ??
+        item.filePath ??
+        item.image_url ??
+        item.imageUrl ??
+        item.file_url ??
+        item.fileUrl
+    );
+  }
+
+  const raw = text(value).replace(/^['"<]+|['">]+$/g, "");
+  if (!raw) return [];
+  try {
+    return imageFieldList(JSON.parse(raw));
+  } catch {}
+
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:") || raw.startsWith("/api/tp/file")) {
+    return [raw];
+  }
+
+  return raw
+    .split(/[,，;\n\r]+/)
+    .map((item) => item.trim().replace(/^['"<]+|['">]+$/g, ""))
+    .filter(Boolean);
+};
+
+const uniqueList = (values: string[]) => Array.from(new Set(values.map(text).filter(Boolean)));
+
+const questionImagePaths = (record: WrongQuestionRecord) =>
+  uniqueList(
+    [
+      record.images,
+      record.question_images,
+      record.questionImages,
+      record.image_urls,
+      record.imageUrls,
+      record.question_image_urls,
+      record.questionImageUrls,
+      record.image,
+      record.question_image,
+      record.image_path,
+      record.question_image_path,
+    ].flatMap(imageFieldList)
+  );
+
+const analysisContent = (record?: WrongQuestionRecord | null) =>
+  text(
+    record?.analysis ??
+      record?.answer_analysis ??
+      record?.answerAnalysis ??
+      record?.analysis_content ??
+      record?.analysisContent ??
+      record?.explanation ??
+      ""
+  );
+
+const fileRequestUrl = (path: unknown) => {
   const value = text(path);
   if (!value) return "";
-  if (/^(https?:)?\/\//i.test(value) || value.startsWith("data:") || value.startsWith("/api/tp/file")) return value;
+  if (/^(https?:)?\/\//i.test(value) || value.startsWith("data:") || value.startsWith("blob:")) return value;
+  if (value.startsWith("/api/tp/file")) return value;
   return getTestPaperFileUrl(value);
+};
+
+const isProtectedFileUrl = (url: string) => url.startsWith("/api/tp/file");
+
+const fetchProtectedImageUrl = async (requestUrl: string) => {
+  if (!requestUrl || protectedImageUrls[requestUrl] || loadingImageUrls.has(requestUrl) || failedImageUrls.has(requestUrl)) return;
+  loadingImageUrls.add(requestUrl);
+  try {
+    const token = localStorage.getItem("token");
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    const response = await fetch(requestUrl, { headers, credentials: "include" });
+    if (!response.ok) throw new Error(`图片加载失败：${response.status}`);
+    const blob = await response.blob();
+    protectedImageUrls[requestUrl] = URL.createObjectURL(blob);
+  } catch {
+    failedImageUrls.add(requestUrl);
+  } finally {
+    loadingImageUrls.delete(requestUrl);
+  }
+};
+
+const displayImageUrl = (path: unknown) => {
+  const requestUrl = fileRequestUrl(path);
+  if (!requestUrl) return "";
+  if (!isProtectedFileUrl(requestUrl)) return requestUrl;
+  if (failedImageUrls.has(requestUrl)) return "";
+  if (!protectedImageUrls[requestUrl]) fetchProtectedImageUrl(requestUrl);
+  return protectedImageUrls[requestUrl] || transparentImage;
 };
 const formatScore = (value: unknown) => {
   const num = Number(value);
@@ -425,16 +526,21 @@ const formatScore = (value: unknown) => {
 };
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-const createMarkdownImagePattern = () => /!\[([^\]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
-const markdownImageUrls = (value: unknown) => {
+const createMarkdownImagePattern = () => /!\[([^\]]*)\]\(\s*(?:<([^>]+)>|"([^"]+)"|'([^']+)'|([^)]+?))\s*(?:\s+["'][^"']*["'])?\)/g;
+const markdownImagePaths = (value: unknown) => {
   const urls: string[] = [];
   let match: RegExpExecArray | null;
   const pattern = createMarkdownImagePattern();
   while ((match = pattern.exec(text(value))) !== null) {
-    const src = fileUrl(match[2]);
+    const src = text(match[2] ?? match[3] ?? match[4] ?? match[5]);
     if (src) urls.push(src);
   }
-  return urls;
+  const htmlPattern = /<img\b[^>]*\bsrc=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/gi;
+  while ((match = htmlPattern.exec(text(value))) !== null) {
+    const src = text(match[1] ?? match[2] ?? match[3]);
+    if (src) urls.push(src);
+  }
+  return uniqueList(urls);
 };
 const renderMarkdownLine = (line: string) => {
   const imagePattern = createMarkdownImagePattern();
@@ -444,7 +550,7 @@ const renderMarkdownLine = (line: string) => {
 
   while ((match = imagePattern.exec(line)) !== null) {
     html += escapeHtml(line.slice(cursor, match.index));
-    const src = fileUrl(match[2]);
+    const src = displayImageUrl(match[2] ?? match[3] ?? match[4] ?? match[5]);
     if (src) {
       html += `<img class="markdown-image" src="${escapeHtml(src)}" data-preview-src="${escapeHtml(src)}" alt="${escapeHtml(match[1] || "answer image")}" loading="lazy" decoding="async" />`;
     }
@@ -458,16 +564,7 @@ const renderMarkdown = (value: unknown) => text(value).split(/\r?\n/).map(render
 
 // 从解析文本中提取出图片URL
 const extractImageUrls = (value: unknown): string[] => {
-  const raw = text(value);
-  if (!raw) return [];
-  const imagePattern = /!\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
-  const urls: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = imagePattern.exec(raw)) !== null) {
-    const src = fileUrl(match[1]);
-    if (src) urls.push(src);
-  }
-  return urls;
+  return markdownImagePaths(value);
 };
 
 // 从解析文本中提取纯文本部分（不含图片标记）
@@ -476,6 +573,20 @@ const extractAnalysisText = (value: unknown): string => {
   if (!raw) return "";
   return raw.replace(/!\[[^\]]*\]\([^)\s]+(?:\s+["'][^"']*["'])?\)/g, "").trim();
 };
+const preloadRecordImages = (records: WrongQuestionRecord[]) => {
+  for (const record of records) {
+    for (const path of [...questionImagePaths(record), ...extractImageUrls(analysisContent(record)), ...extractImageUrls(record.answer)]) {
+      const requestUrl = fileRequestUrl(path);
+      if (isProtectedFileUrl(requestUrl)) fetchProtectedImageUrl(requestUrl);
+    }
+  }
+};
+
+onBeforeUnmount(() => {
+  for (const url of Object.values(protectedImageUrls)) {
+    if (url) URL.revokeObjectURL(url);
+  }
+});
 const recordKey = (record: WrongQuestionRecord) =>
   [record.exam_id, record.test_paper_id, record.question_key || record.string_number].map(text).join("-");
 
@@ -559,6 +670,7 @@ const toggleReviewed = async (record: WrongQuestionRecord) => {
   reviewUpdatingKey.value = currentKey;
   try {
     const nextValue = !record.is_reviewed;
+    // 生成类型 StudentWrongQuestionReview.test_paper_id 被错误定义为 Record<string, any>，实际后端接收 string
     const res = await putStudentWrongQuestionReview(
       { student_uid: studentUid.value },
       {
@@ -566,7 +678,7 @@ const toggleReviewed = async (record: WrongQuestionRecord) => {
         question_key: questionKey,
         class_id: record.class_id,
         is_reviewed: nextValue,
-      }
+      } as any
     );
     if (Number(res?.code) !== 200) throw new Error(res?.msg || "更新复习状态失败");
     record.is_reviewed = nextValue;
