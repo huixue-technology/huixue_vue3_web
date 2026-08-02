@@ -932,6 +932,11 @@ declare namespace API {
     exam_id: number;
   };
 
+  type postPaperParseUploadApiParams = {
+    /** 试卷ID */
+    test_paper_id: number;
+  };
+
   type postPaperQuestionScoreParams = {
     /** 学校ID */
     school_id: string;
@@ -1057,11 +1062,6 @@ declare namespace API {
     name?: string;
     /** 试卷备注 */
     description?: string;
-  };
-
-  type postTestPaperPdfAnswerParams = {
-    /** 试卷ID */
-    test_paper_id: number;
   };
 
   type postTestPaperPdfParams = {
