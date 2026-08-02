@@ -294,6 +294,7 @@ import { postSimulateGrade } from '@/servers/api/analysis';
 import { getGradeApi } from '@/servers/api/grade';
 import { getStudentExamApi, getStudentApi } from '@/servers/api/student';
 import { getClassesApi } from '@/servers/api/classes';
+import { getTotalScore, getTotalClassRank, getTotalSchoolRank, getSubjectScore, getSubjectClassRank, getSubjectSchoolRank } from '@/utils/subjects';
 import { useUserStore } from '@/store/modules/user';
 import type { ColumnType } from 'ant-design-vue/es/table';
 
@@ -354,18 +355,18 @@ const studentInfo = ref<any>(null);
 const schoolId = ref<string>('');
 const subjectSelection = ref<string>(''); // 学生或班级的选科信息
 
-// 科目映射
+// 科目映射（中文科目名）
 const subjectMap: Record<string, { name: string; max: number }> = {
-  'yuwen': { name: '语文', max: 150 },
-  'shuxue': { name: '数学', max: 150 },
-  'yingyu': { name: '英语', max: 150 },
-  'wuli': { name: '物理', max: 100 },
-  'huaxue': { name: '化学', max: 100 },
-  'shengwu': { name: '生物', max: 100 },
-  'lishi': { name: '历史', max: 100 },
-  'zhengzhi': { name: '政治', max: 100 },
-  'dili': { name: '地理', max: 100 },
-  'sum_': { name: '总分', max: 750 }
+  '语文': { name: '语文', max: 150 },
+  '数学': { name: '数学', max: 150 },
+  '英语': { name: '英语', max: 150 },
+  '物理': { name: '物理', max: 100 },
+  '化学': { name: '化学', max: 100 },
+  '生物': { name: '生物', max: 100 },
+  '历史': { name: '历史', max: 100 },
+  '政治': { name: '政治', max: 100 },
+  '地理': { name: '地理', max: 100 },
+  '总分': { name: '总分', max: 750 }
 };
 
 // 表格列定义
@@ -740,17 +741,17 @@ const shouldShowSubject = (subjectKey: string): boolean => {
 
   // 根据科目key判断是否应该显示
   switch (subjectKey) {
-    case 'wuli':
+    case '物理':
       return subjectSelection.value.includes('物') || subjectSelection.value.includes('理');
-    case 'huaxue':
+    case '化学':
       return subjectSelection.value.includes('化');
-    case 'shengwu':
+    case '生物':
       return subjectSelection.value.includes('生');
-    case 'lishi':
+    case '历史':
       return subjectSelection.value.includes('史');
-    case 'zhengzhi':
+    case '政治':
       return subjectSelection.value.includes('政');
-    case 'dili':
+    case '地理':
       return subjectSelection.value.includes('地');
     default:
       // 语数英等主科以及总分 always 显示
@@ -761,25 +762,25 @@ const shouldShowSubject = (subjectKey: string): boolean => {
 // 解析成绩数据
 const parseGradeData = (gradeData: any) => {
   const scores: ScoreRecord[] = [];
-  
+
   // 添加总分
   scores.push({
-    key: 'sum_',
+    key: '总分',
     subject: '总分',
-    subjectKey: 'sum_',
-    score: gradeData.sum_ || 0,
-    classRank: gradeData.sumb || 0,
-    gradeRank: gradeData.sumd || 0
+    subjectKey: '总分',
+    score: getTotalScore(gradeData),
+    classRank: getTotalClassRank(gradeData),
+    gradeRank: getTotalSchoolRank(gradeData)
   });
 
   // 添加各科成绩
-  const subjects = ['yuwen', 'shuxue', 'yingyu', 'wuli', 'huaxue', 'shengwu', 'lishi', 'zhengzhi', 'dili'];
-  
+  const subjects = ['语文', '数学', '英语', '物理', '化学', '生物', '历史', '政治', '地理'];
+
   subjects.forEach(subjectKey => {
-    const score = gradeData[subjectKey];
-    const classRank = gradeData[`${subjectKey}b`];
-    const gradeRank = gradeData[`${subjectKey}d`];
-    
+    const score = getSubjectScore(gradeData, subjectKey);
+    const classRank = getSubjectClassRank(gradeData, subjectKey);
+    const gradeRank = getSubjectSchoolRank(gradeData, subjectKey);
+
     // 只显示有成绩且符合选科要求的科目
     if ((score > 0 || classRank > 0 || gradeRank > 0) && shouldShowSubject(subjectKey)) {
       scores.push({
@@ -827,16 +828,16 @@ const handleSimulate = async () => {
       exam_id: selectedExamId.value,
       school_id: schoolId.value,
       class_id: currentClassId.value,
-      yuwen: 0,
-      shuxue: 0,
-      yingyu: 0,
-      wuli: 0,
-      huaxue: 0,
-      shengwu: 0,
-      lishi: 0,
-      zhengzhi: 0,
-      dili: 0,
-      sum_: 0
+      '语文': 0,
+      '数学': 0,
+      '英语': 0,
+      '物理': 0,
+      '化学': 0,
+      '生物': 0,
+      '历史': 0,
+      '政治': 0,
+      '地理': 0,
+      '总分': 0
     };
 
     // 填充成绩数据

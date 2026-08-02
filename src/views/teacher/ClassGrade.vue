@@ -106,10 +106,10 @@
 		  <a-col :span="24" :md="6">
 		      <ScoreRangeFilter
 		        :passLineOffset="passLineOffset || 0"
-		        :selectedPassLineId="selectedPassLineId"
+		        :selectedLineGroupId="selectedLineGroupId"
 		        :passLineList="passLineList"
 		        @update:passLineOffset="val => handlePassLineOffsetChange(val)"
-		        @update:selectedPassLineId="val => handlePassLineIdChange(val)"
+		        @update:selectedLineGroupId="val => handlePassLineIdChange(val)"
 		        :disabled="isFiltering"
 		      />
 		  </a-col>
@@ -127,7 +127,7 @@
             :subject="selectedSubject"
             :orderDirection="sortOrder"
             :passLineOffset="passLineOffset"
-            :passLineId="selectedPassLineId"
+            :lineGroupId="selectedLineGroupId"
             :studentId="currentStudentId"
             @update:selectedType="val => selectedRangeType = val"
             @update:selectedRange="val => selectedRange = val"
@@ -268,6 +268,7 @@ import { getClassExam } from "@/servers/api/grade";
 import { getExamApi } from "@/servers/api/exam";
 import { getClassGrade } from "@/servers/api/grade";
 import { getPassLine } from "@/servers/api/analysis";
+import { getGradeSubjects, getTotalScore, getTotalClassRank, getTotalSchoolRank, getSubjectScore, getSubjectClassRank, getSubjectSchoolRank, groupPassLine, getPassLineTotal, getPassLineValue } from "@/utils/subjects";
 import ScoreRangeFilter from '@/components/ScoreRangeFilter.vue';
 import GradeRangeFilter from '@/components/GradeRangeFilter.vue'
 import ExamSummarize from "@/views/teacher/ExamSummarize.vue";
@@ -275,32 +276,31 @@ import ExamSummarize from "@/views/teacher/ExamSummarize.vue";
 interface ScoreItem {
   studentId: string;
   studentName: string;
-  totalScore: number; 
+  totalScore: number;
   classRank: number;
-  sumD: number; 
-  [key: string]: any; 
+  schoolRank: number;
+  [key: string]: any;
 }
 
 interface ClassStats {
   totalScore: number;
-  [key: string]: number; 
+  [key: string]: number;
 }
 
 interface PassLineItem {
   id: number;
-  exam_id: number;
-  school_id: string;
-  sum_: number;
+  line_group_id: number;
   line_name: string;
-  yuwen?: number;
-  shuxue?: number;
-  yingyu?: number;
-  wuli?: number;
-  lishi?: number;
-  huaxue?: number;
-  shengwu?: number;
-  zhengzhi?: number;
-  dili?: number;
+  '总分'?: number;
+  '语文'?: number;
+  '数学'?: number;
+  '英语'?: number;
+  '物理'?: number;
+  '历史'?: number;
+  '化学'?: number;
+  '生物'?: number;
+  '政治'?: number;
+  '地理'?: number;
   [key: string]: any;
 }
 
@@ -330,55 +330,54 @@ const subjects = ref<string[]>([]);
 const currentStudentId = ref('');
 const loadingPassLine = ref(true); // 标记分数线是否加载完成
 const classSearchKeyword = ref(''); // 班级搜索关键词
-// 科目映射配置
+// 科目映射配置（中文科目名）
 const subject_list = {
-  yuwen: '语文',
-  shuxue: '数学',
-  yingyu: '英语',
-  wuli: '物理',
-  lishi: '历史',
-  huaxue: '化学',
-  shengwu: '生物',
-  zhengzhi: '政治',
-  dili: '地理',
+  '语文': '语文',
+  '数学': '数学',
+  '英语': '英语',
+  '物理': '物理',
+  '历史': '历史',
+  '化学': '化学',
+  '生物': '生物',
+  '政治': '政治',
+  '地理': '地理',
 };
 const filteredSubjectList = computed(() => {
   // 定义所有可能的科目
   const allSubjects = { ...subject_list };
-  console.log(classInfo.value)
   // 没有分科信息时，返回所有科目
   if (!classInfo.value?.subject_selection || classInfo.value.subject_selection.trim() === '未选科') {
     return allSubjects;
   }
-  
+
   const subjectSelection = classInfo.value.subject_selection;
   const filtered: Record<string, string> = {};
-  
+
   // 语文、数学、英语为必选科目
-  filtered.yuwen = subject_list.yuwen;
-  filtered.shuxue = subject_list.shuxue;
-  filtered.yingyu = subject_list.yingyu;
-  
+  filtered['语文'] = subject_list['语文'];
+  filtered['数学'] = subject_list['数学'];
+  filtered['英语'] = subject_list['英语'];
+
   // 根据班级科目选择添加其他科目
   if (subjectSelection.includes('物')) {
-    filtered.wuli = subject_list.wuli;
+    filtered['物理'] = subject_list['物理'];
   }
   if (subjectSelection.includes('史')) {
-    filtered.lishi = subject_list.lishi;
+    filtered['历史'] = subject_list['历史'];
   }
   if (subjectSelection.includes('化')) {
-    filtered.huaxue = subject_list.huaxue;
+    filtered['化学'] = subject_list['化学'];
   }
   if (subjectSelection.includes('生')) {
-    filtered.shengwu = subject_list.shengwu;
+    filtered['生物'] = subject_list['生物'];
   }
   if (subjectSelection.includes('政')) {
-    filtered.zhengzhi = subject_list.zhengzhi;
+    filtered['政治'] = subject_list['政治'];
   }
   if (subjectSelection.includes('地')) {
-    filtered.dili = subject_list.dili;
+    filtered['地理'] = subject_list['地理'];
   }
-  
+
   return filtered;
 });
 
@@ -391,7 +390,7 @@ const sortOrder = ref<string>('desc'); // 排序方向（仅需此参数）
 const minScore = ref<number | null>(null); // 最低分数
 const maxScore = ref<number | null>(null); // 最高分数
 const passLineOffset = ref<number | null>(null); // 分数线上下范围
-const selectedPassLineId = ref<number | null>(null); // 选中的分数线ID
+const selectedLineGroupId = ref<number | null>(null); // 选中的分数线组ID
 const gradeExamList = ref<any[]>([]); // 年级考试列表
 const passLineList = ref<PassLineItem[]>([]); // 分数线列表
 
@@ -406,38 +405,6 @@ const studentList = ref<any[]>([]); // 所有学生列表
 const filteredStudents = ref<any[]>([]); // 筛选后的学生列表
 const searchKeyword = ref(''); // 学生搜索关键词
 const selectedStudentId = ref(''); // 选中的学生ID
-const subjectMap: Record<string, string> = {
-  // 分数字段
-  yuwen: '语文',
-  shuxue: '数学',
-  yingyu: '英语',
-  wuli: '物理',
-  lishi: '历史',
-  huaxue: '化学',
-  shengwu: '生物',
-  zhengzhi: '政治',
-  dili: '地理',
-  // 班级排名字段
-  yuwenb: '班名',
-  shuxueb: '班名',
-  yingyub: '班名',
-  wulib: '班名',
-  lishib: '班名',
-  huaxueb: '班名',
-  shengwub: '班名',
-  zhengzhib: '班名',
-  dilib: '班名',
-  // 学校排名字段
-  yuwend: '校名',
-  shuxued: '校名',
-  yingyud: '校名',
-  wulid: '校名',
-  lishid: '校名',
-  huaxued: '校名',
-  shengwud: '校名',
-  zhengzhid: '校名',
-  dilid: '校名',
-};
 
 // 区间筛选相关状态
 const selectedRangeType = ref<null | 'score' | 'gradeRank' | 'classRank'>(null);
@@ -450,51 +417,36 @@ const maxClassRank = ref<number | null>(null);
 const minRank = ref<number | null>(null);
 const maxRank = ref<number | null>(null);
 
-
-const sortFieldsByChinese = (fields: string[]) => {
-  const scoreFields = fields.filter(field => !/[bd]$/.test(field));
-  const rankFields = fields.filter(field => /[bd]$/.test(field));
-  const sortedFields: string[] = [];
-  scoreFields.forEach(scoreField => {
-    sortedFields.push(scoreField); // 分数字段
-    if (rankFields.includes(`${scoreField}b`)) sortedFields.push(`${scoreField}b`); // 班级排名
-    if (rankFields.includes(`${scoreField}d`)) sortedFields.push(`${scoreField}d`); // 学校排名
-  });
-  return sortedFields;
-};
-
 const columns = computed(() => {
   const baseColumns = [
     { title: '学号', dataIndex: 'studentId', key: 'studentId', width: 100 },
     { title: '姓名', dataIndex: 'studentName', key: 'studentName', width: 150 },
   ];
-  const sortedSubjectFields = sortFieldsByChinese(subjects.value);
-  const subjectColumns = sortedSubjectFields.map(field => ({
-    title: subjectMap[field] || field,
-    dataIndex: field,
-    key: field,
-    width: 120,
-    sorter: false // 明确禁用前端排序
-  }));
+  // 每个科目生成 分数/班名/校名 三列
+  const subjectColumns = subjects.value.flatMap(subject => [
+    { title: subject, dataIndex: subject, key: subject, width: 120, sorter: false },
+    { title: '班名', dataIndex: `${subject}b`, key: `${subject}b`, width: 100, sorter: false },
+    { title: '校名', dataIndex: `${subject}d`, key: `${subject}d`, width: 100, sorter: false },
+  ]);
   const sumColumns = [
-    { 
-      title: '总分', 
-      dataIndex: 'totalScore', 
-      key: 'totalScore', 
+    {
+      title: '总分',
+      dataIndex: 'totalScore',
+      key: 'totalScore',
       width: 100,
       sorter: false
     },
-    { 
-      title: '班名', 
-      dataIndex: 'classRank', 
-      key: 'classRank', 
+    {
+      title: '班名',
+      dataIndex: 'classRank',
+      key: 'classRank',
       width: 100,
       sorter: false
     },
-    { 
-      title: '校名', 
-      dataIndex: 'sumd', 
-      key: 'sumd', 
+    {
+      title: '校名',
+      dataIndex: 'schoolRank',
+      key: 'schoolRank',
       width: 100,
       sorter: false
     }
@@ -602,41 +554,49 @@ const fetchPassLine = async (examId: number) => {
   try {
     const res = await getPassLine({ exam_id: examId, size: 20 });
     if (res.data && res.data.length > 0) {
-      let targetLine = null;
+      const rows: any[] = res.data;
       const subjectSel = classInfo.value?.subject_selection || '';
       const trimmedSel = subjectSel.trim(); // 去除首尾空格，兼容空字符串场景
-      
-      // 精准匹配选科对应的特控线
+
+      // 行式下按 line_group_id 分组，匹配选科对应的特控线组
+      const grouped = new Map<number, any[]>();
+      rows.forEach((row: any) => {
+        const gid = row.line_group_id;
+        if (gid == null) return;
+        if (!grouped.has(gid)) grouped.set(gid, []);
+        grouped.get(gid)!.push(row);
+      });
+      const groups = Array.from(grouped.values());
+
+      // 找到匹配选科的特控线组（取该组任意一行的 line_name 判断）
+      let targetGroup: any[] | null = null;
+      const matchGroup = (pred: (line_name: string) => boolean): any[] | null => {
+        return groups.find((g: any[]) => {
+          const name = g[0]?.line_name || '';
+          return pred(name);
+        }) || null;
+      };
+
       if (trimmedSel === '' || trimmedSel === '未选科') {
-        // 空选科/未选科 → 匹配含"未选科"且含"特控"的分数线
-        targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('未选科') && line.line_name.includes('特控')
-        );
+        targetGroup = matchGroup((n) => n.includes('未选科') && n.includes('特控'));
       } else if (subjectSel.includes('物')) {
-        // 物理类 → 匹配含"物/理"且含"特控"的分数线
-        targetLine = res.data.find((line: any) => 
-          line.line_name && (line.line_name.includes('物') || line.line_name.includes('理')) && line.line_name.includes('特控')
-        );
+        targetGroup = matchGroup((n) => (n.includes('物') || n.includes('理')) && n.includes('特控'));
       } else if (subjectSel.includes('史')) {
-        // 历史类 → 匹配含"史"且含"特控"的分数线
-        targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('史') && line.line_name.includes('特控')
-        );
+        targetGroup = matchGroup((n) => n.includes('史') && n.includes('特控'));
       } else {
-        // 无明确选科时查找包含"特控"的分数线
-        targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('特控')
-        ) || res.data[0];
+        targetGroup = matchGroup((n) => n.includes('特控')) || groups[0] || null;
       }
-      
-      if (targetLine) {
+
+      if (targetGroup && targetGroup.length > 0) {
+        // 组装成 {科目: 分数}
+        const lineDict = groupPassLine(targetGroup);
         // 设置总分特控线
-        passLine.value = targetLine.sum_ || 0;
-        
-        // 设置各科特控线
+        passLine.value = getPassLineTotal(lineDict);
+
+        // 设置各科特控线（中文科目键）
         const subjectKeys = Object.keys(filteredSubjectList.value);
         subjectKeys.forEach(key => {
-          subjectPassLines.value[key] = targetLine[key] || 0;
+          subjectPassLines.value[key] = getPassLineValue(lineDict, key);
         });
       } else {
         passLine.value = 0;
@@ -656,60 +616,29 @@ const fetchPassLine = async (examId: number) => {
   }
 };
 
+// 从 subjects 对象提取实际存在的科目（中文科目名）
 const extractAllFields = (rawItem: any) => {
-  const excludeFields = ['student_id', 'student_name','name', 'sum_', 'sumb', 'sumd', 'class_id', 'exam_id', 'id', 'school_id', 'show'];
-  const allFields = Object.keys(rawItem);
-  const subjectSelection = classInfo.value?.subject_selection || '';
-  
-  // 判断是否存在文理科区分（包含物理/理或历史视为有区分）
-  const hasScienceOrArts = 
-    subjectSelection.includes('物') || 
-    subjectSelection.includes('理') || 
-    subjectSelection.includes('史');
-  
-  // 只有存在文理科区分时才过滤未选科目
-  if (hasScienceOrArts) {
-    if (!subjectSelection.includes('物') && !subjectSelection.includes('理')) {
-      excludeFields.push('wuli');
-    }
-    if (!subjectSelection.includes('史')) {
-      excludeFields.push('lishi');
-    }
-    if (!subjectSelection.includes('地')) {
-      excludeFields.push('dili');
-    }
-    if (!subjectSelection.includes('政')) {
-      excludeFields.push('zhengzhi');
-    }
-    if (!subjectSelection.includes('化')) {
-      excludeFields.push('huaxue');
-    }
-    if (!subjectSelection.includes('生')) {
-      excludeFields.push('shengwu');
-    }
-  }
-  
-  return allFields.filter(field => !excludeFields.includes(field));
+  return getGradeSubjects(rawItem);
 };
 
+// 过滤无效科目（所有行 score===0 且 classRank===1 视为无效）
 const filterInvalidSubjects = (allFields: string[], rawData: any[]) => {
-  const mainSubjects = allFields.filter(field => !/[BD]$/.test(field));
   const excludedFields: string[] = [];
-  
-  mainSubjects.forEach(subject => {
+
+  allFields.forEach(subject => {
     const hasInvalid = rawData.some(item => {
-      const score = item[subject] || 0;
-      const classRank = item[`${subject}B`] || 0;
+      const score = getSubjectScore(item, subject);
+      const classRank = getSubjectClassRank(item, subject);
       return score === 0 && classRank === 1;
     });
-    
+
     if (hasInvalid) {
       excludedFields.push(subject);
-      excludedFields.push(`${subject}B`);
-      excludedFields.push(`${subject}D`);
+      excludedFields.push(`${subject}b`);
+      excludedFields.push(`${subject}d`);
     }
   });
-  
+
   return allFields.filter(field => !excludedFields.includes(field));
 };
 
@@ -732,31 +661,49 @@ const fetchPassLineList = async (examId: number) => {
   try {
     const res = await getPassLine({ exam_id: examId, size: 20 });
     let passLines = res.data || [];
-    
-    // 根据班级选科筛选分数线
+
+    // 根据班级选科筛选分数线（行式，每行一个科目）
     if (classInfo.value?.subject_selection) {
       const subjectSel = classInfo.value.subject_selection;
-      const trimmedSel = subjectSel.trim(); 
-	  console.log('班级选科:', trimmedSel);
+      const trimmedSel = subjectSel.trim();
+      console.log('班级选科:', trimmedSel);
 
       if (trimmedSel === '' || trimmedSel === '未选科') {
-        passLines = passLines.filter((line: any) => 
+        passLines = passLines.filter((line: any) =>
           line.line_name && line.line_name.includes('未选科')
         );
       } else if (subjectSel.includes('物')) {
         // 筛选物理类分数线（line_name包含"物"）
-        passLines = passLines.filter((line: any) => 
+        passLines = passLines.filter((line: any) =>
           line.line_name && line.line_name.includes('物')
         );
       } else if (subjectSel.includes('史')) {
         // 筛选历史类分数线（line_name包含"史"）
-        passLines = passLines.filter((line: any) => 
+        passLines = passLines.filter((line: any) =>
           line.line_name && line.line_name.includes('史')
         );
       }
     }
-    
-    passLineList.value = passLines;
+
+    // 行式按 line_group_id 分组组装成每条线一个对象：{id, line_group_id, line_name, 总分, 语文, ...}
+    const grouped = new Map<number, PassLineItem>();
+    passLines.forEach((row: any) => {
+      const gid = row.line_group_id;
+      if (gid == null) return;
+      if (!grouped.has(gid)) {
+        grouped.set(gid, {
+          id: gid,
+          line_group_id: gid,
+          line_name: row.line_name || '',
+        } as PassLineItem);
+      }
+      const item = grouped.get(gid)!;
+      if (row.subject != null && row.score != null) {
+        (item as any)[row.subject] = row.score;
+      }
+    });
+
+    passLineList.value = Array.from(grouped.values());
   } catch (err) {
     console.error('获取分数线列表失败:', err);
     passLineList.value = [];
@@ -810,7 +757,7 @@ const resetAllFiltersExceptClass = () => {
   
   // 分数线筛选
   passLineOffset.value = null;
-  selectedPassLineId.value = null;
+  selectedLineGroupId.value = null;
   passLineList.value = [];
   subjectPassLines.value = {}; // 重置各科分数线
   
@@ -907,9 +854,9 @@ const handlePassLineOffsetChange = (value: number | null) => {
   filteredStudents.value = [...studentList.value];
 };
 
-// 当分数线ID变化时，重置学生筛选
+// 当分数线组ID变化时，重置学生筛选
 const handlePassLineIdChange = (value: number | null) => {
-  selectedPassLineId.value = value;
+  selectedLineGroupId.value = value;
   // 重置学生筛选为全体学生
   selectedStudentId.value = '';
   searchKeyword.value = '';
@@ -920,14 +867,14 @@ const add_filter = (params: any) => {
   if (selectedSubject.value) params.subject = selectedSubject.value;
   // 严格按照接口要求传递排序方向参数
   params.order_direction = sortOrder.value;
-  
+
   // 其他筛选参数保持不变
   if (minScore.value !== null) params.min_score = minScore.value;
   if (maxScore.value !== null) params.max_score = maxScore.value;
   if (minRank.value !== null) params.min_rank = minRank.value;
   if (maxRank.value !== null) params.max_rank = maxRank.value;
   if (passLineOffset.value !== null) params.pass_line_offset = passLineOffset.value;
-  if (selectedPassLineId.value !== null) params.pass_line_id = selectedPassLineId.value;
+  if (selectedLineGroupId.value !== null) params.pass_line_id = selectedLineGroupId.value;
   if (selectedStudentId.value) params.student_id = selectedStudentId.value;
   if (minClassRank.value !== null) params.min_class_rank = minClassRank.value;
   if (maxClassRank.value !== null) params.max_class_rank = maxClassRank.value;
@@ -986,14 +933,15 @@ const handleExamChange = async (examId: number) => {
           const scoreItem: ScoreItem = {
             studentId: "*" + String(item.student_id || item.studentId || '').slice(-5, -1),
             studentName: item.student_name || item.studentName || '未知学生',
-            totalScore: item.sum_ !== undefined && item.sum_ !== null ? Number(item.sum_) : 0,
-            classRank: item.sumb !== undefined && item.sumb !== null ? Number(item.sumb) : 0,
-            sumd: item.sumd !== undefined && item.sumd !== null ? Number(item.sumd) : 0,
+            totalScore: getTotalScore(item),
+            classRank: getTotalClassRank(item),
+            schoolRank: getTotalSchoolRank(item),
           };
           validFields.forEach(field => {
-            // 确保所有字段的空值都显示为0，并转换为数字类型
-            const value = item[field];
-            scoreItem[field] = (value !== undefined && value !== null && value !== '') ? Number(value) : 0;
+            // 分数 + 班名 + 校名
+            scoreItem[field] = getSubjectScore(item, field);
+            scoreItem[`${field}b`] = getSubjectClassRank(item, field);
+            scoreItem[`${field}d`] = getSubjectSchoolRank(item, field);
           });
           return scoreItem;
         });
@@ -1014,14 +962,15 @@ const handleExamChange = async (examId: number) => {
           const scoreItem: ScoreItem = {
             studentId: "*" + String(item.student_id || item.studentId || '').slice(-5, -1),
             studentName: item.student_name || item.studentName || '未知学生',
-            totalScore: item.sum_ !== undefined && item.sum_ !== null ? Number(item.sum_) : 0,
-            classRank: item.sumb !== undefined && item.sumb !== null ? Number(item.sumb) : 0,
-            sumd: item.sumd !== undefined && item.sumd !== null ? Number(item.sumd) : 0,
+            totalScore: getTotalScore(item),
+            classRank: getTotalClassRank(item),
+            schoolRank: getTotalSchoolRank(item),
           };
           validFields.forEach(field => {
-            // 确保所有字段的空值都显示为0，并转换为数字类型
-            const value = item[field];
-            scoreItem[field] = (value !== undefined && value !== null && value !== '') ? Number(value) : 0;
+            // 分数 + 班名 + 校名
+            scoreItem[field] = getSubjectScore(item, field);
+            scoreItem[`${field}b`] = getSubjectClassRank(item, field);
+            scoreItem[`${field}d`] = getSubjectSchoolRank(item, field);
           });
           return scoreItem;
         });
@@ -1055,7 +1004,7 @@ const resetFilters = () => {
   maxClassRank.value = null;
   // 分数线筛选
   passLineOffset.value = null;
-  selectedPassLineId.value = null;
+  selectedLineGroupId.value = null;
   // 学生筛选
   selectedStudentId.value = '';
   searchKeyword.value = '';
@@ -1100,7 +1049,7 @@ const handleStudentChange = (studentId: string) => {
   if (studentId) {
     // 清空分数线筛选
     passLineOffset.value = null;
-    selectedPassLineId.value = null;
+    selectedLineGroupId.value = null;
     
     // 清空成绩区间筛选
     selectedRangeType.value = null;

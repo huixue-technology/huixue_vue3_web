@@ -58,6 +58,7 @@ const router = useRouter();
 import { getPassLine, getUpDownDetailAnalysis } from '@/servers/api/analysis'
 import { getGradeApi } from '@/servers/api/grade';
 import { getStudentExamApi } from '@/servers/api/student';
+import { getSubjectScore } from '@/utils/subjects';
 import { ref, onMounted, computed, watch } from 'vue';
 import { Button as AButton, Table as ATable, Card as ACard } from 'ant-design-vue';
 import type { ColumnType } from 'ant-design-vue/es/table';
@@ -155,36 +156,24 @@ onMounted(() => {
 const selectedExamScore = ref<Record<string, number>>({});
 const allExamScores = ref<any[]>([]); // 保存所有考试成绩
 
-const baseSubjects = ['总分', '语文', '数学', '外语'];
+const baseSubjects = ['总分', '语文', '数学', '英语'];
 const scienceSubjects = ['物理', '化学', '生物'];
 const artsSubjects = ['政治', '历史', '地理'];
-const subjectFieldMap: Record<string, string> = {
-  '总分': 'sum_',
-  '语文': 'yuwen',
-  '数学': 'shuxue',
-  '外语': 'yingyu',
-  '物理': 'wuli',
-  '化学': 'huaxue',
-  '生物': 'shengwu',
-  '政治': 'zhengzhi',
-  '历史': 'lishi',
-  '地理': 'dili'
-};
 const currentSubjects = ref<string[]>(baseSubjects);
 
 function handleGradeDetail(gradeData: any) {
-  // 判断文理科
-  if (gradeData.wuli != null || gradeData.huaxue != null || gradeData.shengwu != null) {
+  // 判断文理科（subjects 对象中存在该科目即视为已选）
+  const hasSubject = (cn: string) => gradeData?.subjects?.[cn] != null;
+  if (hasSubject('物理') || hasSubject('化学') || hasSubject('生物')) {
     currentSubjects.value = [...baseSubjects, ...scienceSubjects];
-  } else if (gradeData.zhengzhi != null || gradeData.lishi != null || gradeData.dili != null) {
+  } else if (hasSubject('政治') || hasSubject('历史') || hasSubject('地理')) {
     currentSubjects.value = [...baseSubjects, ...artsSubjects];
   } else {
     currentSubjects.value = baseSubjects;
   }
   selectedExamScore.value = {};
   currentSubjects.value.forEach(sub => {
-    const field = subjectFieldMap[sub];
-    selectedExamScore.value[sub] = gradeData[field] ?? 0;
+    selectedExamScore.value[sub] = getSubjectScore(gradeData, sub) ?? 0;
   });
 }
 
@@ -215,8 +204,7 @@ const compareExamDiffs = computed(() => {
   return allExamScores.value.filter(e => e.examId !== Number(currentExamId.value)).map(e => {
     const diff: Record<string, number> = {};
     currentSubjects.value.forEach(sub => {
-      const field = subjectFieldMap[sub];
-      diff[sub] = (e.grade?.[field] ?? 0) - (base?.[field] ?? 0);
+      diff[sub] = (getSubjectScore(e.grade, sub) ?? 0) - (getSubjectScore(base, sub) ?? 0);
     });
     return diff;
   });
@@ -225,8 +213,7 @@ const baseExamScore = computed(() => {
   const base = allExamScores.value.find(e => e.examId === Number(currentExamId.value))?.grade || {};
   const result: Record<string, number> = {};
   currentSubjects.value.forEach(sub => {
-    const field = subjectFieldMap[sub];
-    result[sub] = base?.[field] ?? 0;
+    result[sub] = getSubjectScore(base, sub) ?? 0;
   });
   return result;
 });
@@ -246,8 +233,7 @@ const allExamScoresMap = computed(() => {
   return allExamScores.value.map(e => {
     const row: Record<string, number> = {};
     currentSubjects.value.forEach(sub => {
-      const field = subjectFieldMap[sub];
-      row[sub] = e.grade?.[field] ?? 0;
+      row[sub] = getSubjectScore(e.grade, sub) ?? 0;
     });
     return {
       examId: e.examId,

@@ -114,6 +114,7 @@ import api from '@/servers/api';
 import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
 import { getStudentExamApi } from '@/servers/api/student';
+import { getTotalScore, getTotalClassRank, getTotalSchoolRank, getSubjectScore, getSubjectClassRank, getSubjectSchoolRank } from '@/utils/subjects';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -369,36 +370,36 @@ const transformGradeToStudent = (grade: any) => {
   const baseData: any = {
     studentId: grade.student_id,
     name: grade.student_name || '',
-    totalScore: grade.sum_,
-    classRank: grade.sumb,
-    overallRank: grade.sumd,
-    chineseScore: grade.yuwen,
-    chineseClassRank: grade.yuwenb,
-    chineseOverallRank: grade.yuwend,
-    mathScore: grade.shuxue,
-    mathClassRank: grade.shuxueb,
-    mathOverallRank: grade.shuxued,
-    englishScore: grade.yingyu,
-    englishClassRank: grade.yingyub,
-    englishOverallRank: grade.yingyud
+    totalScore: getTotalScore(grade),
+    classRank: getTotalClassRank(grade),
+    overallRank: getTotalSchoolRank(grade),
+    chineseScore: getSubjectScore(grade, '语文'),
+    chineseClassRank: getSubjectClassRank(grade, '语文'),
+    chineseOverallRank: getSubjectSchoolRank(grade, '语文'),
+    mathScore: getSubjectScore(grade, '数学'),
+    mathClassRank: getSubjectClassRank(grade, '数学'),
+    mathOverallRank: getSubjectSchoolRank(grade, '数学'),
+    englishScore: getSubjectScore(grade, '英语'),
+    englishClassRank: getSubjectClassRank(grade, '英语'),
+    englishOverallRank: getSubjectSchoolRank(grade, '英语')
   };
 
   // 动态添加选考科目数据
   dynamicSubjects.value.forEach(subject => {
     const subjectKeyMap: Record<string, string> = {
-      'physics': 'wuli',
-      'chemistry': 'huaxue',
-      'biology': 'shengwu',
-      'history': 'lishi',
-      'geography': 'dili',
-      'politics': 'zhengzhi'
+      'physics': '物理',
+      'chemistry': '化学',
+      'biology': '生物',
+      'history': '历史',
+      'geography': '地理',
+      'politics': '政治'
     };
-    
-    const apiKey = subjectKeyMap[subject.key];
-    if (apiKey) {
-      baseData[`${subject.key}Score`] = grade[apiKey];
-      baseData[`${subject.key}ClassRank`] = grade[`${apiKey}b`];
-      baseData[`${subject.key}OverallRank`] = grade[`${apiKey}d`];
+
+    const cnName = subjectKeyMap[subject.key];
+    if (cnName) {
+      baseData[`${subject.key}Score`] = getSubjectScore(grade, cnName);
+      baseData[`${subject.key}ClassRank`] = getSubjectClassRank(grade, cnName);
+      baseData[`${subject.key}OverallRank`] = getSubjectSchoolRank(grade, cnName);
     }
   });
 

@@ -54,28 +54,29 @@ type tableRuleProp = {
 
 // 3. 科目列表
 const subjects = ['总分','语文', '数学', '英语', '物理', '化学', '生物', '历史', '地理', '政治']
+// 排名模式字段映射（扁平中文键：`${科目}段次`）
 const fieldMappingRank = {
-    '语文': 'yuwend',
-    '数学': 'shuxued',
-    '英语': 'yingyud',
-    '物理': 'wulid',
-    '化学': 'huaxued',
-    '生物': 'shengwud',
-    '历史': 'lishid',
-    '地理': 'dilid',
-    '政治': 'zhengzhid'
+    '语文': '语文段次',
+    '数学': '数学段次',
+    '英语': '英语段次',
+    '物理': '物理段次',
+    '化学': '化学段次',
+    '生物': '生物段次',
+    '历史': '历史段次',
+    '地理': '地理段次',
+    '政治': '政治段次'
   }
-  // 字段映射
+  // 分数模式字段映射（扁平中文键：科目名）
 const fieldMappingScore = {
-    '语文': 'yuwen',
-    '数学': 'shuxue',
-    '英语': 'yingyu',
-    '物理': 'wuli',
-    '化学': 'huaxue',
-    '生物': 'shengwu',
-    '历史': 'lishi',
-    '地理': 'dili',
-    '政治': 'zhengzhi'
+    '语文': '语文',
+    '数学': '数学',
+    '英语': '英语',
+    '物理': '物理',
+    '化学': '化学',
+    '生物': '生物',
+    '历史': '历史',
+    '地理': '地理',
+    '政治': '政治'
   }
 // 定义类型接口
 interface ScoreItem {
@@ -192,53 +193,62 @@ const generateTable = async (examData : any[], types: Object)=>{
       console.error('获取特控线数据失败，考试ID:', examId, error);
     }
     
-    // 处理特控线数据，确保正确处理数组格式
+    // 处理特控线数据（行式：每行一个科目，按 line_group_id 分组聚合）
     let selectedPassLine = null;
     if (passLine && passLine.data && Array.isArray(passLine.data) && passLine.data.length > 0) {
-      // 如果返回的是数组，需要根据学生选科来选择正确的特控线
-      // 简化处理：优先选择包含学生实际考试科目的特控线
       const passLineData = passLine.data;
-      
+
+      // 行式按 line_group_id 分组组装成 {科目: 分数} dict
+      const groups = new Map<number, Record<string, number>>();
+      passLineData.forEach((row: any) => {
+        const gid = row?.line_group_id;
+        if (gid == null) return;
+        if (!groups.has(gid)) groups.set(gid, {});
+        if (row.subject != null && row.score != null) {
+          groups.get(gid)![row.subject] = row.score;
+        }
+      });
+
       // 查找最适合的特控线（根据学生是否有该科目成绩来判断）
-      for (const line of passLineData) {
+      for (const [gid, lineDict] of groups) {
         let matchCount = 0;
         // 检查理科科目
-        if (item.wuli !== undefined || item.huaxue !== undefined || item.shengwu !== undefined) {
-          if ((item.wuli !== undefined && line.wuli !== undefined) ||
-              (item.huaxue !== undefined && line.huaxue !== undefined) ||
-              (item.shengwu !== undefined && line.shengwu !== undefined)) {
+        if (item['物理'] !== undefined || item['化学'] !== undefined || item['生物'] !== undefined) {
+          if ((item['物理'] !== undefined && lineDict['物理'] !== undefined) ||
+              (item['化学'] !== undefined && lineDict['化学'] !== undefined) ||
+              (item['生物'] !== undefined && lineDict['生物'] !== undefined)) {
             matchCount++;
           }
         }
         // 检查文科科目
-        if (item.lishi !== undefined || item.zhengzhi !== undefined || item.dili !== undefined) {
-          if ((item.lishi !== undefined && line.lishi !== undefined) ||
-              (item.zhengzhi !== undefined && line.zhengzhi !== undefined) ||
-              (item.dili !== undefined && line.dili !== undefined)) {
+        if (item['历史'] !== undefined || item['政治'] !== undefined || item['地理'] !== undefined) {
+          if ((item['历史'] !== undefined && lineDict['历史'] !== undefined) ||
+              (item['政治'] !== undefined && lineDict['政治'] !== undefined) ||
+              (item['地理'] !== undefined && lineDict['地理'] !== undefined)) {
             matchCount++;
           }
         }
-        
+
         if (matchCount > 0) {
-          selectedPassLine = line;
+          selectedPassLine = lineDict;
           break;
         }
       }
-      
+
       // 如果没有找到匹配的，就使用第一个
       if (!selectedPassLine) {
-        selectedPassLine = passLineData[0];
+        selectedPassLine = groups.values().next().value || null;
       }
     } else if (passLine && passLine.data) {
-      // 如果返回的是对象
+      // 如果返回的是对象（已聚合）
       selectedPassLine = passLine.data;
     }
-    
+
     // 处理总分 - 添加默认值处理
     tempData['总分']['x_name'].push(examName);
     tempData['总分']['y_score'].push({
-      score: item.sum_ !== null ? item.sum_ : 0,
-      line: selectedPassLine && selectedPassLine.sum_ !== undefined && selectedPassLine.sum_ !== null ? selectedPassLine.sum_ : 0,
+      score: item['总分'] !== null ? item['总分'] : 0,
+      line: selectedPassLine && selectedPassLine['总分'] !== undefined && selectedPassLine['总分'] !== null ? selectedPassLine['总分'] : 0,
     });
 
     // 处理各科目成绩 - 添加默认值处理

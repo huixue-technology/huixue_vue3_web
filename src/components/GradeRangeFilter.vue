@@ -98,7 +98,7 @@ const props = defineProps<{
   subject?: string;
   orderDirection?: string;
   passLineOffset?: number;
-  passLineId?: number;
+  lineGroupId?: number;
   studentId?: string;
 }>();
 
@@ -106,19 +106,19 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:selectedType', value: 'score' | 'gradeRank' | 'classRank' | null): void;
   (e: 'update:selectedRange', value: { start: number; end: number } | null): void;
-  (e: 'filterChange', data: { 
+  (e: 'filterChange', data: {
     type?: 'score' | 'gradeRank' | 'classRank' | null;
     range?: { start: number; end: number } | null;
     class_id?: string;
     selected_exam_id?: string;
     subject?: string;
     order_direction?: string;
-    min_score?: number;     
-    max_score?: number;   
-    min_rank?: number;      
-    max_rank?: number;     
-    min_class_rank?: number; 
-    max_class_rank?: number; 
+    min_score?: number;
+    max_score?: number;
+    min_rank?: number;
+    max_rank?: number;
+    min_class_rank?: number;
+    max_class_rank?: number;
     pass_line_offset?: number;
     pass_line_id?: number;
     student_id?: string;
@@ -183,7 +183,7 @@ const handleReset = () => {
     subject: props.subject,
     order_direction: props.orderDirection,
     pass_line_offset: props.passLineOffset,
-    pass_line_id: props.passLineId,
+    pass_line_id: props.lineGroupId,
     student_id: props.studentId,
     // 重置时清除所有区间参数
     min_score: undefined,
@@ -229,7 +229,7 @@ const handleTypeSelect = ({ key }: { key: string }) => {
     subject: props.subject,
     order_direction: props.orderDirection,
     pass_line_offset: props.passLineOffset,
-    pass_line_id: props.passLineId,
+    pass_line_id: props.lineGroupId,
     student_id: props.studentId,
     min_score: undefined,
     max_score: undefined,
@@ -258,7 +258,7 @@ const handleRangeChange = () => {
       subject: props.subject,
       order_direction: props.orderDirection,
       pass_line_offset: props.passLineOffset,
-      pass_line_id: props.passLineId,
+      pass_line_id: props.lineGroupId,
       student_id: props.studentId,
       // 清除所有区间相关参数，避免冲突
       min_score: undefined,

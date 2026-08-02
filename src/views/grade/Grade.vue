@@ -109,7 +109,8 @@ import router from '@/router';
 import { message } from 'ant-design-vue';
 import CompareTable from './components/ExamAnalysis.vue';
 import RadarChart from './components/Radar.vue';
-import subjects_inflection from '@/utils/inflection';
+import { getSubjectScore, getTotalScore, getSubjectClassRank, getSubjectSchoolRank, groupPassLine } from '@/utils/subjects';
+import type { GradeDetail } from '@/utils/gradeTypes';
 
 // 计算距离高考的天数
 const calculateDaysUntilExam = () => {
@@ -124,7 +125,7 @@ const calculateDaysUntilExam = () => {
     return diffDays;
 };
 
-const currentExamData = ref<API.Grade>();
+const currentExamData = ref<GradeDetail>();
 const studentId = ref('');
 const studentInfo = ref<any>(null);
 const daysUntilExam = ref(calculateDaysUntilExam());
@@ -143,8 +144,7 @@ const currentExamDataArray = computed(() => {
     let tmp: number[] = [];
     if(currentExamData.value) {
         for(let i of dynamicSubjectNames.value){
-            // @ts-ignore 过滤异常值，科目满分不超过150
-            const score = currentExamData.value[subjects_inflection[i.name]];
+            const score = getSubjectScore(currentExamData.value, i.name);
             tmp.push(isFinite(score) && score <= 150 ? score : 0);
         }
     }
@@ -159,12 +159,12 @@ const dynamicSubjectNames = computed(() => {
         { name: '数学', max: 150 }
     ];
     const extras = [
-        { short: '物', label: '物理', key: 'wuli' },
-        { short: '化', label: '化学', key: 'huaxue' },
-        { short: '生', label: '生物', key: 'shengwu' },
-        { short: '史', label: '历史', key: 'lishi' },
-        { short: '地', label: '地理', key: 'dili' },
-        { short: '政', label: '政治', key: 'zhengzhi' }
+        { short: '物', label: '物理' },
+        { short: '化', label: '化学' },
+        { short: '生', label: '生物' },
+        { short: '史', label: '历史' },
+        { short: '地', label: '地理' },
+        { short: '政', label: '政治' }
     ] as const;
     const selection = studentInfo.value?.subject_selection;
     const hasSelection = typeof selection === 'string' && selection.length > 0;
@@ -205,12 +205,12 @@ interface Exam {
 type TableData = {
     field: string;
     name: string;
-    sum_: number;
-    sumb: number;
-    sumd: number;
+    score: number;
+    classRank: number;
+    schoolRank: number;
     maxB: number;
     passLine: number | string;
-}; 
+};
 
 const examList = ref<Exam[]>([])
 const currentExamId = ref<string>('')
@@ -267,10 +267,24 @@ const fetchPassLine = async (examId: string) => {
     try {
         const res = await getPassLine({ exam_id: parseInt(examId), size: 100 });
         if (res.code !== 200 || !Array.isArray(res.data)) return;
-        passLineData.value = res.data.find((line: any) => {
-            const lineName = String(line?.line_name || '');
-            return lineName.includes('特控') || lineName.includes('一段');
-        }) || {};
+        // 行式数据按 line_group_id 分组，匹配含「特控/一段」的分数线组
+        const grouped = new Map<number, any[]>();
+        res.data.forEach((row: any) => {
+            const gid = row?.line_group_id;
+            if (gid == null) return;
+            if (!grouped.has(gid)) grouped.set(gid, []);
+            grouped.get(gid)!.push(row);
+        });
+        let targetGroup: any[] | null = null;
+        for (const rows of grouped.values()) {
+            const lineName = String(rows[0]?.line_name || '');
+            if (lineName.includes('特控') || lineName.includes('一段')) {
+                targetGroup = rows;
+                break;
+            }
+        }
+        if (!targetGroup) targetGroup = grouped.values().next().value || null;
+        passLineData.value = targetGroup ? groupPassLine(targetGroup) : {};
     } catch (err) {
         passLineData.value = {};
     }
@@ -281,71 +295,71 @@ const getPassLineValue = (field: string) => {
     return value ?? '-';
 }
 
-const handleGradeDetail = (gradeData:API.Grade) => {
+const handleGradeDetail = (gradeData:GradeDetail) => {
     tableData.value = []
     currentExamData.value = gradeData
     // 过滤异常成绩（比如超过满分的数值）
     const safeScore = (score: any, max: number) => isFinite(score) && score <= max ? score : 0;
-    
+
     tableData.value = [
     {
-        field: 'sum_',
+        field: '总分',
         name: '总分',
-        sum_: safeScore(gradeData.sum_, 750),
-        sumb: gradeData.sumb || 0,
-        sumd: gradeData.sumd || 0,
-        maxB: safeScore(gradeData.sum_, 750),
-        passLine: getPassLineValue('sum_'),
+        score: safeScore(getTotalScore(gradeData), 750),
+        classRank: getSubjectClassRank(gradeData, '总分') || 0,
+        schoolRank: getSubjectSchoolRank(gradeData, '总分') || 0,
+        maxB: safeScore(getTotalScore(gradeData), 750),
+        passLine: getPassLineValue('总分'),
     },
     {
-        field: 'yuwen',
+        field: '语文',
         name: '语文',
-        sum_: safeScore(gradeData.yuwen, 150),
-        sumb: gradeData.yuwenb || 0,
-        sumd: gradeData.yuwend || 0,
-        maxB: safeScore(gradeData.yuwen, 150),
-        passLine: getPassLineValue('yuwen'),
+        score: safeScore(getSubjectScore(gradeData, '语文'), 150),
+        classRank: getSubjectClassRank(gradeData, '语文') || 0,
+        schoolRank: getSubjectSchoolRank(gradeData, '语文') || 0,
+        maxB: safeScore(getSubjectScore(gradeData, '语文'), 150),
+        passLine: getPassLineValue('语文'),
     },
     {
-        field: 'yingyu',
+        field: '英语',
         name: '英语',
-        sum_: safeScore(gradeData.yingyu, 150),
-        sumb: gradeData.yingyub || 0,
-        sumd: gradeData.yingyud || 0,
-        maxB: safeScore(gradeData.yingyu, 150),
-        passLine: getPassLineValue('yingyu'),
+        score: safeScore(getSubjectScore(gradeData, '英语'), 150),
+        classRank: getSubjectClassRank(gradeData, '英语') || 0,
+        schoolRank: getSubjectSchoolRank(gradeData, '英语') || 0,
+        maxB: safeScore(getSubjectScore(gradeData, '英语'), 150),
+        passLine: getPassLineValue('英语'),
     },
     {
-        field: 'shuxue',
+        field: '数学',
         name: '数学',
-        sum_: safeScore(gradeData.shuxue, 150),
-        sumb: gradeData.shuxueb || 0,
-        sumd: gradeData.shuxued || 0,
-        maxB: safeScore(gradeData.shuxue, 150),
-        passLine: getPassLineValue('shuxue'),
+        score: safeScore(getSubjectScore(gradeData, '数学'), 150),
+        classRank: getSubjectClassRank(gradeData, '数学') || 0,
+        schoolRank: getSubjectSchoolRank(gradeData, '数学') || 0,
+        maxB: safeScore(getSubjectScore(gradeData, '数学'), 150),
+        passLine: getPassLineValue('数学'),
     }
 ];
     const selection = studentInfo.value?.subject_selection;
     const hasSelection = typeof selection === 'string' && selection.length > 0;
     const extras = [
-        { short: '物', label: '物理', key: 'wuli' },
-        { short: '化', label: '化学', key: 'huaxue' },
-        { short: '生', label: '生物', key: 'shengwu' },
-        { short: '史', label: '历史', key: 'lishi' },
-        { short: '地', label: '地理', key: 'dili' },
-        { short: '政', label: '政治', key: 'zhengzhi' }
+        { short: '物', label: '物理' },
+        { short: '化', label: '化学' },
+        { short: '生', label: '生物' },
+        { short: '史', label: '历史' },
+        { short: '地', label: '地理' },
+        { short: '政', label: '政治' }
     ] as const;
     for (const e of extras) {
         if (!hasSelection || selection.includes(e.short)) {
-            const score = (gradeData as any)[e.key];
+            const score = getSubjectScore(gradeData, e.label);
             tableData.value.push({
-                field: e.key,
+                field: e.label,
                 name: e.label,
-                sum_: safeScore(score, 100),
-                sumb: (gradeData as any)[`${e.key}b`] || 0,
-                sumd: (gradeData as any)[`${e.key}d`] || 0,
+                score: safeScore(score, 100),
+                classRank: getSubjectClassRank(gradeData, e.label) || 0,
+                schoolRank: getSubjectSchoolRank(gradeData, e.label) || 0,
                 maxB: safeScore(score, 100),
-                passLine: getPassLineValue(e.key),
+                passLine: getPassLineValue(e.label),
             });
         }
     }
@@ -357,15 +371,15 @@ const  tableColumns = [{
         align: 'center',
     },{
         title: '成绩',
-        dataIndex:'sum_',
+        dataIndex:'score',
         align: 'center',
     },{
         title: '班级排名',
-        dataIndex:'sumb',
+        dataIndex:'classRank',
         align: 'center',
     },{
         title: '年级排名',
-        dataIndex: 'sumd',
+        dataIndex: 'schoolRank',
         align: 'center',
     },{
         title: '特控线',

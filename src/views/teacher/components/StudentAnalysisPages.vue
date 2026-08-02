@@ -90,26 +90,26 @@ const subject_selection = computed(() => {
   return subjects
 })
 const fieldMappingRank = {
-  '语文': 'yuwend',
-  '数学': 'shuxued',
-  '英语': 'yingyud',
-  '物理': 'wulid',
-  '化学': 'huaxued',
-  '生物': 'shengwud',
-  '历史': 'lishid',
-  '地理': 'dilid',
-  '政治': 'zhengzhid'
+  '语文': '语文段次',
+  '数学': '数学段次',
+  '英语': '英语段次',
+  '物理': '物理段次',
+  '化学': '化学段次',
+  '生物': '生物段次',
+  '历史': '历史段次',
+  '地理': '地理段次',
+  '政治': '政治段次'
 }
 const fieldMappingScore = {
-  '语文': 'yuwen',
-  '数学': 'shuxue',
-  '英语': 'yingyu',
-  '物理': 'wuli',
-  '化学': 'huaxue',
-  '生物': 'shengwu',
-  '历史': 'lishi',
-  '地理': 'dili',
-  '政治': 'zhengzhi'
+  '语文': '语文',
+  '数学': '数学',
+  '英语': '英语',
+  '物理': '物理',
+  '化学': '化学',
+  '生物': '生物',
+  '历史': '历史',
+  '地理': '地理',
+  '政治': '政治'
 }
 
 // 4. 监听学生ID变化
@@ -153,15 +153,27 @@ const generateTable = async (examData: any[], types: Record<string, string>) => 
     const examName = item.exam[0].name
     const examId = item.exam[0].id
     
-    // 获取特控线数据
+    // 获取特控线数据（行式：每行一个科目，按 line_group_id 分组聚合）
     let selectedPassLine = null
     try {
       if (examId) {
         const passLineRes = await getPassLine({ exam_id: examId })
         if (passLineRes?.data) {
-          selectedPassLine = Array.isArray(passLineRes.data) 
-            ? passLineRes.data[0] 
-            : passLineRes.data
+          if (Array.isArray(passLineRes.data) && passLineRes.data.length > 0) {
+            // 行式聚合：取第一个分数线组组装成 {科目: 分数}
+            const groups = new Map<number, Record<string, number>>()
+            passLineRes.data.forEach((row: any) => {
+              const gid = row?.line_group_id
+              if (gid == null) return
+              if (!groups.has(gid)) groups.set(gid, {})
+              if (row.subject != null && row.score != null) {
+                groups.get(gid)![row.subject] = row.score
+              }
+            })
+            selectedPassLine = groups.values().next().value || null
+          } else {
+            selectedPassLine = passLineRes.data
+          }
         }
       }
     } catch (error) {
@@ -171,8 +183,8 @@ const generateTable = async (examData: any[], types: Record<string, string>) => 
     // 处理总分
     tempData['总分'].x_name.push(examName)
     tempData['总分'].y_score.push({
-      score: item.sum_ ?? 0,
-      line: selectedPassLine?.sum_ ?? 0
+      score: item['总分'] ?? 0,
+      line: selectedPassLine?.['总分'] ?? 0
     })
 
     // 处理各科目

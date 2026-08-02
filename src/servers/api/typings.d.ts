@@ -290,7 +290,7 @@ declare namespace API {
     class_id: string;
     /** 选中考试id */
     selected_exam_id: number;
-    /** 科目筛选(如: sum_, yuwen, shuxue等) */
+    /** 科目筛选(如: 总分, 语文, 数学等) */
     subject?: string;
     /** 排序方向(asc:升序, desc:降序) */
     order_direction?: string;
@@ -850,68 +850,14 @@ declare namespace API {
     exam_id: number;
     /** 考试班级 */
     class_id: number;
-    /** 总分 */
-    sum_: number;
-    /** 总分班次 */
-    sumb: number;
-    /** 总分段次 */
-    sumd: number;
-    /** 语文 */
-    yuwen?: number;
-    /** 英语 */
-    yingyu?: number;
-    /** 物理 */
-    wuli?: number;
-    /** 数学 */
-    shuxue?: number;
-    /** 生物 */
-    shengwu?: number;
-    /** 历史 */
-    lishi?: number;
-    /** 地理 */
-    dili?: number;
-    /** 政治 */
-    zhengzhi?: number;
-    /** 化学 */
-    huaxue?: number;
-    /** 语文D */
-    yuwend?: number;
-    /** 英语D */
-    yingyud?: number;
-    /** 物理D */
-    wulid?: number;
-    /** 数学D */
-    shuxued?: number;
-    /** 生物D */
-    shengwud?: number;
-    /** 历史D */
-    lishid?: number;
-    /** 地理D */
-    dilid?: number;
-    /** 政治D */
-    zhengzhid?: number;
-    /** 化学D */
-    huaxued?: number;
-    /** 是否显示 */
-    show?: boolean;
-    /** 语文班次 */
-    yuwenb?: number;
-    /** 英语班次 */
-    yingyub?: number;
-    /** 物理班次 */
-    wulib?: number;
-    /** 数学班次 */
-    shuxueb?: number;
-    /** 生物班次 */
-    shengwub?: number;
-    /** 历史班次 */
-    lishib?: number;
-    /** 地理班次 */
-    dilib?: number;
-    /** 政治班次 */
-    zhengzhib?: number;
-    /** 化学班次 */
-    huaxueb?: number;
+    /** 科目名(中文: 总分/语文/数学/英语/物理/化学/生物/政治/历史/地理) */
+    subject: string;
+    /** 该科分数 */
+    score: number;
+    /** 班级名次 */
+    class_rank?: number;
+    /** 学校名次(段次) */
+    school_rank?: number;
   };
 
   type Login = {
@@ -928,52 +874,22 @@ declare namespace API {
   };
 
   type PassLine = {
-    /** 分数线id */
+    /** 科目行id */
     id?: number;
+    /** 分数线组id(同一条线的科目行共享) */
+    line_group_id?: number;
     /** 考试id */
     exam_id: number;
     /** 学校id */
     school_id: string;
-    /** 总分 */
-    sum_: number;
-    /** 总分排名 */
-    sumd: number;
-    /** 语文 */
-    yuwen: number;
-    /** 语文排名 */
-    yuwend: number;
-    /** 英语 */
-    yingyu: number;
-    /** 英语排名 */
-    yingyud: number;
-    /** 物理 */
-    wuli: number;
-    /** 物理排名 */
-    wulid: number;
-    /** 数学 */
-    shuxue: number;
-    /** 数学排名 */
-    shuxued: number;
-    /** 生物 */
-    shengwu: number;
-    /** 生物排名 */
-    shengwud: number;
-    /** 历史 */
-    lishi: number;
-    /** 历史排名 */
-    lishid: number;
-    /** 地理 */
-    dili: number;
-    /** 地理排名 */
-    dilid: number;
-    /** 政治 */
-    zhengzhi: number;
-    /** 政治排名 */
-    zhengzhid: number;
-    /** 化学 */
-    huaxue: number;
-    /** 化学排名 */
-    huaxued: number;
+    /** 分数线名称(如: 物理一本线) */
+    line_name: string;
+    /** 科目名(中文: 总分/语文/数学等) */
+    subject: string;
+    /** 该科分数线值 */
+    score: number;
+    /** 该科段次(达到分数线的学生人数) */
+    rank?: number;
   };
 
   type PassLineAnalysis = {
@@ -1222,26 +1138,26 @@ declare namespace API {
     class_id: string;
     /** 学校id */
     school_id: string;
-    /** 语文 */
-    yuwen: number;
-    /** 英语 */
-    yingyu: number;
-    /** 物理 */
-    wuli: number;
-    /** 数学 */
-    shuxue: number;
-    /** 生物 */
-    shengwu: number;
-    /** 历史 */
-    lishi: number;
-    /** 地理 */
-    dili: number;
-    /** 政治 */
-    zhengzhi: number;
-    /** 化学 */
-    huaxue: number;
     /** 总分 */
-    sum_: number;
+    总分?: number;
+    /** 语文 */
+    语文?: number;
+    /** 数学 */
+    数学?: number;
+    /** 英语 */
+    英语?: number;
+    /** 物理 */
+    物理?: number;
+    /** 化学 */
+    化学?: number;
+    /** 生物 */
+    生物?: number;
+    /** 政治 */
+    政治?: number;
+    /** 历史 */
+    历史?: number;
+    /** 地理 */
+    地理?: number;
   };
 
   type Student = {

@@ -85,62 +85,62 @@ const classStudents = ref<Record<string, string>>({});
 const loading = ref(false);
 const error = ref<string | null>(null);
 
-// 基础科目映射
+// 基础科目映射（中文科目名）
 const baseSubjectMap: Record<string, string> = {
-  yuwen: '语文',
-  shuxue: '数学',
-  yingyu: '英语',
-  wuli: '物理',
-  huaxue: '化学',
-  shengwu: '生物',
-  lishi: '历史',
-  zhengzhi: '政治',
-  dili: '地理',
-  sum_: '总分'
+  '语文': '语文',
+  '数学': '数学',
+  '英语': '英语',
+  '物理': '物理',
+  '化学': '化学',
+  '生物': '生物',
+  '历史': '历史',
+  '政治': '政治',
+  '地理': '地理',
+  '总分': '总分'
 };
 // 根据班级选科信息过滤科目
 const subjectMap = computed(() => {
   const map = { ...baseSubjectMap };
-  
+
   // 如果没有班级信息或者没有选科信息，则显示所有科目
   if (!props.classInfo?.subject_selection) {
     return map;
   }
-  
+
   const selection = props.classInfo.subject_selection;
-  
+
   // 物理类科目
   if (!selection.includes('物') && !selection.includes('理')) {
-    delete map.wuli;
+    delete map['物理'];
   }
-  
+
   // 化学类科目
   if (!selection.includes('化')) {
-    delete map.huaxue;
+    delete map['化学'];
   }
-  
+
   // 生物类科目
   if (!selection.includes('生')) {
-    delete map.shengwu;
+    delete map['生物'];
   }
-  
+
   // 历史类科目
   if (!selection.includes('史')) {
-    delete map.lishi;
+    delete map['历史'];
   }
-  
+
   // 政治类科目
   if (!selection.includes('政')) {
-    delete map.zhengzhi;
+    delete map['政治'];
   }
-  
+
   // 地理类科目
   if (!selection.includes('地')) {
-    delete map.dili;
+    delete map['地理'];
   }
 
   console.log('Filtered Subject Map:', map);
-  
+
   return map;
 });
 

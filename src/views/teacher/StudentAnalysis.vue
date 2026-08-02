@@ -164,7 +164,7 @@
                   <!-- 成绩行 -->
                   <tr>
                     <td class="row-label">成绩</td>
-                    <td :class="getScoreClass(totalScore, 'sum_')">{{ totalScore }}</td>
+                    <td :class="getScoreClass(totalScore, '总分')">{{ totalScore }}</td>
                     <!-- 动态渲染科目成绩 -->
                     <td v-for="subject in displaySubjects" :key="`score-${subject.code}`" 
                         :class="getScoreClass(getSubjectScore(subject.code), subject.code)">
@@ -174,7 +174,7 @@
                   <!-- 特控线行 -->
                   <tr>
                     <td class="row-label">特控线</td>
-                    <td class="pass-line">{{ getSubjectPassLine('sum_') }}</td>
+                    <td class="pass-line">{{ getSubjectPassLine('总分') }}</td>
                     <!-- 动态渲染科目特控线 -->
                     <td v-for="subject in displaySubjects" :key="`pass-${subject.code}`" class="pass-line">
                       {{ getSubjectPassLine(subject.code) }}
@@ -183,10 +183,10 @@
                   <!-- 线差行 -->
                   <tr>
                     <td class="row-label">线差</td>
-                    <td :class="getDifferenceClass(totalScore - getSubjectPassLine('sum_'))">
-                      {{ Math.abs(totalScore - getSubjectPassLine('sum_')).toFixed(1) }}
-                      <ArrowUpOutlined v-if="totalScore - getSubjectPassLine('sum_') > 0" />
-                      <ArrowDownOutlined v-else-if="totalScore - getSubjectPassLine('sum_') < 0" />
+                    <td :class="getDifferenceClass(totalScore - getSubjectPassLine('总分'))">
+                      {{ Math.abs(totalScore - getSubjectPassLine('总分')).toFixed(1) }}
+                      <ArrowUpOutlined v-if="totalScore - getSubjectPassLine('总分') > 0" />
+                      <ArrowDownOutlined v-else-if="totalScore - getSubjectPassLine('总分') < 0" />
                     </td>
                     <!-- 动态渲染科目线差 -->
                     <td v-for="subject in displaySubjects" :key="`diff-${subject.code}`"
@@ -359,6 +359,7 @@ import { getClassExam } from '@/servers/api/grade';
 import { getGradeApi } from '@/servers/api/grade';
 import { getPassLine, getStudentSelfCompareApi } from '@/servers/api/analysis';
 import { getExamDetailApi } from '@/servers/api/exam';
+import { getTotalScore, getTotalClassRank, getTotalSchoolRank, groupPassLine } from '@/utils/subjects';
 import type { ColumnType } from 'ant-design-vue/es/table';
 import StudentAnalysisPages from '@/views/teacher/components/StudentAnalysisPages.vue';
 // 类型定义
@@ -382,22 +383,22 @@ interface ScoreDetail {
 
 // 扩展科目类型定义
 interface SubjectItem {
-  code: string; // 科目编码（如yuwen、shuxue）
-  name: string; // 科目名称（如语文、数学）
+  code: string; // 科目名（中文，如 语文/数学）
+  name: string; // 科目名称（中文）
 }
 
-// 完整科目映射
+// 完整科目列表（中文科目名）
 const allSubjectMap: Record<string, string> = {
-  'yuwen': '语文',
-  'shuxue': '数学',
-  'yingyu': '英语',
-  'wuli': '物理',
-  'huaxue': '化学',
-  'shengwu': '生物',
-  'lishi': '历史',
-  'zhengzhi': '政治',
-  'dili': '地理',
-  'sum_': '总分'
+  '语文': '语文',
+  '数学': '数学',
+  '英语': '英语',
+  '物理': '物理',
+  '化学': '化学',
+  '生物': '生物',
+  '历史': '历史',
+  '政治': '政治',
+  '地理': '地理',
+  '总分': '总分'
 };
 
 // 状态管理
@@ -517,17 +518,17 @@ const displaySubjects = computed<SubjectItem[]>(() => {
 
     // 根据科目code判断
     switch (code) {
-      case 'wuli':
+      case '物理':
         return subjectSelection.includes('物');
-      case 'huaxue':
+      case '化学':
         return subjectSelection.includes('化');
-      case 'shengwu':
+      case '生物':
         return subjectSelection.includes('生');
-      case 'lishi':
+      case '历史':
         return subjectSelection.includes('史');
-      case 'zhengzhi':
+      case '政治':
         return subjectSelection.includes('政');
-      case 'dili':
+      case '地理':
         return subjectSelection.includes('地');
       default:
         // 语数英等主科始终显示
@@ -539,16 +540,16 @@ const displaySubjects = computed<SubjectItem[]>(() => {
   const validSubjects = Object.keys(allSubjectMap)
     .filter(code => {
       // 排除总分，只保留单科
-      if (code === 'sum_') return false;
+      if (code === '总分') return false;
 
       // 根据选科过滤
       const shouldShow = shouldShowSubject(code);
       if (!shouldShow) return false;
 
       // 获取成绩和排名数据
-      const score = scoreDetail[code];
-      const classRank = scoreDetail[`${code}b`];
-      const gradeRank = scoreDetail[`${code}d`];
+      const score = scoreDetail.subjects?.[code]?.score;
+      const classRank = scoreDetail.subjects?.[code]?.class_rank;
+      const gradeRank = scoreDetail.subjects?.[code]?.school_rank;
 
       // 只保留成绩、班级排名和年级排名都存在的科目（0也是有效值）
       return score !== null && score !== undefined &&
@@ -566,17 +567,17 @@ const displaySubjects = computed<SubjectItem[]>(() => {
 // 总分相关计算
 const totalScore = computed(() => {
   const detail = scoreDetails.value[selectedExamId.value];
-  return detail ? detail.sum_ || 0 : 0;
+  return detail ? getTotalScore(detail) : 0;
 });
 
 const totalClassRank = computed(() => {
   const detail = scoreDetails.value[selectedExamId.value];
-  return detail ? detail.sumb || 0 : 0;
+  return detail ? getTotalClassRank(detail) : 0;
 });
 
 const totalGradeRank = computed(() => {
   const detail = scoreDetails.value[selectedExamId.value];
-  return detail ? detail.sumd || 0 : 0;
+  return detail ? getTotalSchoolRank(detail) : 0;
 });
 
 // 及格率相关计算
@@ -596,7 +597,7 @@ const passRate = computed(() => {
 // 获取单科成绩
 const getSubjectScore = (subject: string) => {
   const detail = scoreDetails.value[selectedExamId.value];
-  return detail ? detail[subject] || 0 : 0;
+  return detail ? detail.subjects?.[subject]?.score || 0 : 0;
 };
 
 // 获取单科特控线
@@ -608,13 +609,13 @@ const getSubjectPassLine = (subject: string) => {
 // 获取单科班级排名
 const getSubjectClassRank = (subject: string) => {
   const detail = scoreDetails.value[selectedExamId.value];
-  return detail ? detail[`${subject}b`] || 0 : 0;
+  return detail ? detail.subjects?.[subject]?.class_rank || 0 : 0;
 };
 
 // 获取单科年级排名
 const getSubjectGradeRank = (subject: string) => {
   const detail = scoreDetails.value[selectedExamId.value];
-  return detail ? detail[`${subject}d`] || 0 : 0;
+  return detail ? detail.subjects?.[subject]?.school_rank || 0 : 0;
 };
 
 const compareColumns: ColumnType[] = [
@@ -712,17 +713,17 @@ const rawScoreData = computed<ScoreDetail[]>(() => {
 
     // 根据科目code判断
     switch (code) {
-      case 'wuli':
+      case '物理':
         return subjectSelection.includes('物');
-      case 'huaxue':
+      case '化学':
         return subjectSelection.includes('化');
-      case 'shengwu':
+      case '生物':
         return subjectSelection.includes('生');
-      case 'lishi':
+      case '历史':
         return subjectSelection.includes('史');
-      case 'zhengzhi':
+      case '政治':
         return subjectSelection.includes('政');
-      case 'dili':
+      case '地理':
         return subjectSelection.includes('地');
       default:
         // 语数英等主科始终显示
@@ -732,14 +733,14 @@ const rawScoreData = computed<ScoreDetail[]>(() => {
 
   // 遍历所有可能的科目
   Object.keys(allSubjectMap).forEach(subject => {
-    if (subject === 'sum_') return;
+    if (subject === '总分') return;
 
     // 根据选科过滤
     if (!shouldShowSubject(subject)) return;
 
-    const score = scoreDetail[subject];
-    const classRank = scoreDetail[`${subject}b`];
-    const gradeRank = scoreDetail[`${subject}d`];
+    const score = scoreDetail.subjects?.[subject]?.score;
+    const classRank = scoreDetail.subjects?.[subject]?.class_rank;
+    const gradeRank = scoreDetail.subjects?.[subject]?.school_rank;
 
     // 只添加成绩、班级排名和年级排名都存在的科目（0也是有效值）
     if (score !== null && score !== undefined &&
@@ -790,56 +791,56 @@ const compareTableData = computed(() => {
       return true;
     }
     switch (code) {
-      case 'wuli':
+      case '物理':
         return subjectSelection.includes('物');
-      case 'huaxue':
+      case '化学':
         return subjectSelection.includes('化');
-      case 'shengwu':
+      case '生物':
         return subjectSelection.includes('生');
-      case 'lishi':
+      case '历史':
         return subjectSelection.includes('史');
-      case 'zhengzhi':
+      case '政治':
         return subjectSelection.includes('政');
-      case 'dili':
+      case '地理':
         return subjectSelection.includes('地');
       default:
         return true;
     }
   };
-  
-  // 添加总分
-  if (compareDataValue.sum_) {
+
+  // 添加总分（扁平中文键）
+  if (compareDataValue['总分']) {
     data.push({
-      subject: 'sum_',
+      subject: '总分',
       subjectName: '总分',
-      currentScore: compareDataValue.sum_.current || 0,
-      compareScore: compareDataValue.sum_.compare || 0,
-      scoreDiff: Number(compareDataValue.sum_.difference || 0),
-      currentClassRank: compareDataValue.sumb?.current || 0,
-      compareClassRank: compareDataValue.sumb?.compare || 0,
-      classRankDiff: compareDataValue.sumb?.difference || 0,
-      currentGradeRank: compareDataValue.sumd?.current || 0,
-      compareGradeRank: compareDataValue.sumd?.compare || 0,
-      gradeRankDiff: compareDataValue.sumd?.difference || 0
+      currentScore: compareDataValue['总分'].current || 0,
+      compareScore: compareDataValue['总分'].compare || 0,
+      scoreDiff: Number(compareDataValue['总分'].difference || 0),
+      currentClassRank: compareDataValue['总分班次']?.current || 0,
+      compareClassRank: compareDataValue['总分班次']?.compare || 0,
+      classRankDiff: compareDataValue['总分班次']?.difference || 0,
+      currentGradeRank: compareDataValue['总分段次']?.current || 0,
+      compareGradeRank: compareDataValue['总分段次']?.compare || 0,
+      gradeRankDiff: compareDataValue['总分段次']?.difference || 0
     });
   }
-  
+
   // 添加有完整数据的科目成绩（根据班级选科过滤）
   Object.keys(allSubjectMap).forEach(subject => {
-    if (subject === 'sum_') return;
-    
+    if (subject === '总分') return;
+
     // 根据选科过滤
     if (!shouldShowSubject(subject)) {
       console.log(`compareTableData - 跳过科目: ${subject} (${allSubjectMap[subject]})`);
       return;
     }
-    
+
     const subjectData = compareDataValue[subject];
     if (!subjectData) return;
-    
-    const classRankKey = `${subject}b`;
-    const gradeRankKey = `${subject}d`;
-    
+
+    const classRankKey = `${subject}班次`;
+    const gradeRankKey = `${subject}段次`;
+
     if (compareDataValue[classRankKey] && compareDataValue[gradeRankKey]) {
       data.push({
         subject,
@@ -856,7 +857,7 @@ const compareTableData = computed(() => {
       });
     }
   });
-  
+
   console.log('compareTableData - 过滤后的科目:', data.map(s => s.subjectName));
   return data;
 });
@@ -1047,7 +1048,7 @@ const handleStudentSearch = (value: string) => {
 
 // 获取成绩等级类名
 const getScoreClass = (score: number, subject: string) => {
-  if (subject === 'sum_') {
+  if (subject === '总分') {
     return score >= 600 ? 'excellent-score' : score >= 500 ? 'good-score' : 'normal-score';
   }
   return score >= 90 ? 'excellent-score' : score >= 80 ? 'good-score' : 'normal-score';
@@ -1236,29 +1237,34 @@ const fetchPassLine = async (examId: number) => {
   try {
     const res = await getPassLine({ exam_id: examId });
     if (res.code === 200 && res.data.length > 0) {
-      let targetLine = null;
+      const rows: any[] = res.data;
       const subjectSel = classInfo.value?.subject_selection || '';
-      
-      // 精准匹配选科对应的特控线
+
+      // 行式按 line_group_id 分组
+      const grouped = new Map<number, any[]>();
+      rows.forEach((row: any) => {
+        const gid = row.line_group_id;
+        if (gid == null) return;
+        if (!grouped.has(gid)) grouped.set(gid, []);
+        grouped.get(gid)!.push(row);
+      });
+      const groups = Array.from(grouped.values());
+
+      // 找到匹配选科的特控线组，组装成 {科目: 分数}
+      let targetGroup: any[] | null = null;
+      const matchGroup = (pred: (n: string) => boolean): any[] | null =>
+        groups.find((g: any[]) => pred(g[0]?.line_name || '')) || null;
+
       if (subjectSel.includes('物')) {
-        // 物理类 → 匹配含"物/理"且含"特控"的分数线
-        targetLine = res.data.find((line: any) => 
-          line.line_name && (line.line_name.includes('物') || line.line_name.includes('理')) && line.line_name.includes('特控')
-        );
+        targetGroup = matchGroup((n) => (n.includes('物') || n.includes('理')) && n.includes('特控'));
       } else if (subjectSel.includes('史')) {
-        // 历史类 → 匹配含"史"且含"特控"的分数线
-        targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('史') && line.line_name.includes('特控')
-        );
+        targetGroup = matchGroup((n) => n.includes('史') && n.includes('特控'));
       } else {
-        // 无明确选科时查找包含"特控"的分数线
-        targetLine = res.data.find((line: any) => 
-          line.line_name && line.line_name.includes('特控')
-        ) || res.data[0];
+        targetGroup = matchGroup((n) => n.includes('特控')) || groups[0] || null;
       }
-      
-      if (targetLine) {
-        passLineDetails.value[examId] = targetLine;
+
+      if (targetGroup && targetGroup.length > 0) {
+        passLineDetails.value[examId] = groupPassLine(targetGroup);
       } else {
         message.warning('未找到匹配的特控线数据');
         passLineDetails.value[examId] = {};

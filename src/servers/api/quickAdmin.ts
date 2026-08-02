@@ -39,10 +39,7 @@ export async function postQuickAdminClassImport(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(
-            ele,
-            new Blob([JSON.stringify(item)], { type: "application/json" })
-          );
+          formData.append(ele, JSON.stringify(item));
         }
       } else {
         formData.append(ele, item);
@@ -143,10 +140,7 @@ export async function postQuickAdminPassLineImport(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(
-            ele,
-            new Blob([JSON.stringify(item)], { type: "application/json" })
-          );
+          formData.append(ele, JSON.stringify(item));
         }
       } else {
         formData.append(ele, item);
@@ -202,10 +196,7 @@ export async function postQuickAdminScoreImport(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(
-            ele,
-            new Blob([JSON.stringify(item)], { type: "application/json" })
-          );
+          formData.append(ele, JSON.stringify(item));
         }
       } else {
         formData.append(ele, item);
@@ -261,10 +252,7 @@ export async function postQuickAdminStudentImport(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(
-            ele,
-            new Blob([JSON.stringify(item)], { type: "application/json" })
-          );
+          formData.append(ele, JSON.stringify(item));
         }
       } else {
         formData.append(ele, item);

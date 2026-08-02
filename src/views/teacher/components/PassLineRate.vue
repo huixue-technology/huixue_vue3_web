@@ -54,19 +54,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 
-// 定义科目数据的接口
+// 定义科目数据的接口（中文科目名）
 interface SubjectRates {
   [key: string]: number;
-  yuwen: number;
-  shuxue: number;
-  yingyu: number;
-  huaxue: number;
-  wuli: number;
-  zhengzhi: number;
-  dili: number;
-  shengwu: number;
-  lishi: number;
-  sum_: number;
+  '语文': number;
+  '数学': number;
+  '英语': number;
+  '化学': number;
+  '物理': number;
+  '政治': number;
+  '地理': number;
+  '生物': number;
+  '历史': number;
+  '总分': number;
 }
 
 // 定义显示项的接口
@@ -93,18 +93,18 @@ const props = defineProps<{
 // 激活的tab
 const activeTab = ref('pass_rate');
 
-// 科目名称映射
+// 科目名称映射（中文科目名）
 const subjectMap: Record<string, string> = {
-  yuwen: '语文',
-  shuxue: '数学',
-  yingyu: '英语',
-  huaxue: '化学',
-  wuli: '物理',
-  zhengzhi: '政治',
-  dili: '地理',
-  shengwu: '生物',
-  lishi: '历史',
-  sum_: '总分'
+  '语文': '语文',
+  '数学': '数学',
+  '英语': '英语',
+  '化学': '化学',
+  '物理': '物理',
+  '政治': '政治',
+  '地理': '地理',
+  '生物': '生物',
+  '历史': '历史',
+  '总分': '总分'
 };
 
 // 获取科目名称
@@ -121,17 +121,17 @@ const shouldShowSubject = (subjectKey: string): boolean => {
 
   // 根据科目key判断是否应该显示
   switch (subjectKey) {
-    case 'wuli':
+    case '物理':
       return props.classInfo.subject_selection.includes('物') || props.classInfo.subject_selection.includes('理');
-    case 'huaxue':
+    case '化学':
       return props.classInfo.subject_selection.includes('化');
-    case 'shengwu':
+    case '生物':
       return props.classInfo.subject_selection.includes('生');
-    case 'lishi':
+    case '历史':
       return props.classInfo.subject_selection.includes('史');
-    case 'zhengzhi':
+    case '政治':
       return props.classInfo.subject_selection.includes('政');
-    case 'dili':
+    case '地理':
       return props.classInfo.subject_selection.includes('地');
     default:
       // 语数英等主科 always 显示
@@ -209,7 +209,7 @@ const top2RateItems = computed(() => {
 
 // 折线图配置
 const passLineChartOption = computed(() => {
-  // 获取所有科目（过滤掉sum_）
+  // 获取所有科目
   const subjects = passRateItems.value.map(item => item.subjectName);
   
   // 获取各线的数据

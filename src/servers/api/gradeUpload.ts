@@ -24,10 +24,7 @@ export async function postGradeUploadApi(
         if (item instanceof Array) {
           item.forEach((f) => formData.append(ele, f || ""));
         } else {
-          formData.append(
-            ele,
-            new Blob([JSON.stringify(item)], { type: "application/json" })
-          );
+          formData.append(ele, JSON.stringify(item));
         }
       } else {
         formData.append(ele, item);

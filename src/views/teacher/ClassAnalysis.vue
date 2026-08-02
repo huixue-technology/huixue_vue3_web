@@ -105,18 +105,18 @@ const props = defineProps<{
 
 const loading = ref(false);
 
-// 科目名称映射表
+// 科目名称映射表（中文科目名）
 const subjectMap = {
-  'yuwen': '语文',
-  'shuxue': '数学',
-  'yingyu': '英语',
-  'wuli': '物理',
-  'huaxue': '化学',
-  'shengwu': '生物',
-  'lishi': '历史',
-  'zhengzhi': '政治',
-  'dili': '地理',
-  'sum_': '总分'
+  '语文': '语文',
+  '数学': '数学',
+  '英语': '英语',
+  '物理': '物理',
+  '化学': '化学',
+  '生物': '生物',
+  '历史': '历史',
+  '政治': '政治',
+  '地理': '地理',
+  '总分': '总分'
 };
 
 // 学生过线率列表数据
@@ -206,8 +206,8 @@ const sortedStudentRateList = computed(() => {
   
   // 未选择科目时，按总分过线率排序
   return list.sort((a, b) => {
-    const rateA = a['sum_'] || 0;
-    const rateB = b['sum_'] || 0;
+    const rateA = a['总分'] || 0;
+    const rateB = b['总分'] || 0;
     return sortOrder.value === 'desc' ? rateB - rateA : rateA - rateB;
   });
 });

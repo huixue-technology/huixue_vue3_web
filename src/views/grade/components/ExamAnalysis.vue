@@ -34,8 +34,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import type { ColumnType } from 'ant-design-vue/es/table';
 import { postCompareRankMultiExam } from '@/servers/api/analysis';
 import { getGradeApi } from '@/servers/api/grade';
-import type { CompareScore } from '@/utils/types'
-import subjects_inflection from '@/utils/inflection'
+import { getSubjectScore } from '@/utils/subjects'
 import { message } from 'ant-design-vue';
 
 
@@ -135,25 +134,25 @@ const handleUpandDown = (res:any) => {
     const selection = props.studentInfo?.subject_selection;
     const hasSelection = typeof selection === 'string' && selection.length > 0;
     const extras = [
-        { short: '物', name: '物理', b: 'wulib', d: 'wulid' },
-        { short: '化', name: '化学', b: 'huaxueb', d: 'huaxued' },
-        { short: '生', name: '生物', b: 'shengwub', d: 'shengwud' },
-        { short: '史', name: '历史', b: 'lishib', d: 'lishid' },
-        { short: '地', name: '地理', b: 'dilib', d: 'dilid' },
-        { short: '政', name: '政治', b: 'zhengzhib', d: 'zhengzhid' }
+        { short: '物', name: '物理' },
+        { short: '化', name: '化学' },
+        { short: '生', name: '生物' },
+        { short: '史', name: '历史' },
+        { short: '地', name: '地理' },
+        { short: '政', name: '政治' }
     ] as const;
 
-    addSubjectData('总分', res.data[0].compareB.sumb, res.data[0].compareD.sumd);
-    addSubjectData('语文', res.data[0].compareB.yuwenb, res.data[0].compareD.yuwend);
-    addSubjectData('英语', res.data[0].compareB.yingyub, res.data[0].compareD.yingyud);
-    addSubjectData('数学', res.data[0].compareB.shuxueb, res.data[0].compareD.shuxued);
+    addSubjectData('总分', res.data[0].compareB['总分班次'], res.data[0].compareD['总分段次']);
+    addSubjectData('语文', res.data[0].compareB['语文班次'], res.data[0].compareD['语文段次']);
+    addSubjectData('英语', res.data[0].compareB['英语班次'], res.data[0].compareD['英语段次']);
+    addSubjectData('数学', res.data[0].compareB['数学班次'], res.data[0].compareD['数学段次']);
 
     for (const e of extras) {
         if (!hasSelection || selection.includes(e.short)) {
             addSubjectData(
                 e.name,
-                (res.data[0].compareB as any)[e.b],
-                (res.data[0].compareD as any)[e.d]
+                (res.data[0].compareB as any)[`${e.name}班次`],
+                (res.data[0].compareD as any)[`${e.name}段次`]
             );
         }
     }
@@ -181,14 +180,13 @@ const loadTableAndRadar = (value:string) => {
     getGradeApi({
       student_id: props.student_id,
       exam_id: parseInt(value),
-    }).then((res:{code:number,data:CompareScore[],msg:string})=> { 
+    }).then((res:{code:number,data:any[],msg:string})=> {
       if(res.code === 200 && res.data?.[0]) {
         const compareScoreData = []
         // 过滤异常成绩
         const safeScore = (score: any, max: number) => isFinite(score) && score <= max ? score : 0;
         for(let i of subjectsList.value){
-          // @ts-ignore
-          const score = res.data[0][subjects_inflection[i.name]];
+          const score = getSubjectScore(res.data[0], i.name);
           compareScoreData.push(safeScore(score, i.max));
         }
         emit('update:compareScoreData', compareScoreData);
