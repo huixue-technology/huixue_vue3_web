@@ -73,18 +73,18 @@
 import { ref, watch, computed } from 'vue';
 import { getStudentApi } from '@/servers/api/student';
 
-// 定义科目映射
+// 定义科目映射（中文科目名）
 const subjectMap = {
-  'yuwen': '语文',
-  'shuxue': '数学',
-  'yingyu': '英语',
-  'wuli': '物理',
-  'huaxue': '化学',
-  'shengwu': '生物',
-  'lishi': '历史',
-  'zhengzhi': '政治',
-  'dili': '地理',
-  'sum_': '总分'
+  '语文': '语文',
+  '数学': '数学',
+  '英语': '英语',
+  '物理': '物理',
+  '化学': '化学',
+  '生物': '生物',
+  '历史': '历史',
+  '政治': '政治',
+  '地理': '地理',
+  '总分': '总分'
 } as const;
 
 type SubjectKey = keyof typeof subjectMap;
@@ -95,16 +95,16 @@ const props = defineProps<{
 }>();
 
 // 当前激活的学科tab
-const activeSubject = ref<SubjectKey>('sum_');
+const activeSubject = ref<SubjectKey>('总分');
 
 // 获取学科键列表，优先显示总分
 const subjectKeys = computed(() => {
   const keys = Object.keys(subjectMap) as SubjectKey[];
   // 将总分移到第一个
-  const sumIndex = keys.indexOf('sum_');
+  const sumIndex = keys.indexOf('总分');
   if (sumIndex > -1) {
     keys.splice(sumIndex, 1);
-    keys.unshift('sum_');
+    keys.unshift('总分');
   }
   return keys;
 });

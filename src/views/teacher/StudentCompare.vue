@@ -295,15 +295,15 @@ interface StudentInfo {
 }
 
 interface SubjectScores {
-  yuwen: number;
-  shuxue: number;
-  yingyu: number;
-  wuli: number;
-  huaxue: number;
-  lishi: number;
-  zhengzhi: number;
-  shengwu: number;
-  dili: number;
+  '语文': number;
+  '数学': number;
+  '英语': number;
+  '物理': number;
+  '化学': number;
+  '生物': number;
+  '历史': number;
+  '政治': number;
+  '地理': number;
 }
 
 interface StudentResult {
@@ -312,36 +312,36 @@ interface StudentResult {
   school_id: string;
   exam_id: number;
   class_id: string;
-  sum_: number;
-  sumb: number; // 班级总分排名
-  sumd: number; // 年级总分排名
-  yuwen?: number;
-  yuwenb?: number; // 语文班级排名
-  yuwend?: number; // 语文年级排名
-  shuxue?: number;
-  shuxueb?: number;
-  shuxued?: number;
-  yingyu?: number;
-  yingyub?: number;
-  yingyud?: number;
-  wuli?: number;
-  wulib?: number;
-  wulid?: number;
-  huaxue?: number;
-  huaxueb?: number;
-  huaxued?: number;
-  lishi?: number;
-  lishib?: number;
-  lishid?: number;
-  zhengzhi?: number;
-  zhengzhib?: number;
-  zhengzhid?: number;
-  shengwu?: number;
-  shengwub?: number;
-  shengwud?: number;
-  dili?: number;
-  dilib?: number;
-  dilid?: number;
+  '总分': number;
+  '总分班次': number; // 班级总分排名
+  '总分段次': number; // 年级总分排名
+  '语文'?: number;
+  '语文班次'?: number; // 语文班级排名
+  '语文段次'?: number; // 语文年级排名
+  '数学'?: number;
+  '数学班次'?: number;
+  '数学段次'?: number;
+  '英语'?: number;
+  '英语班次'?: number;
+  '英语段次'?: number;
+  '物理'?: number;
+  '物理班次'?: number;
+  '物理段次'?: number;
+  '化学'?: number;
+  '化学班次'?: number;
+  '化学段次'?: number;
+  '历史'?: number;
+  '历史班次'?: number;
+  '历史段次'?: number;
+  '政治'?: number;
+  '政治班次'?: number;
+  '政治段次'?: number;
+  '生物'?: number;
+  '生物班次'?: number;
+  '生物段次'?: number;
+  '地理'?: number;
+  '地理班次'?: number;
+  '地理段次'?: number;
 }
 
 interface ComparisonResult {
@@ -387,29 +387,29 @@ const loading = ref(false);
 const hasSearched = ref(false);
 const classList = ref<ClassInfo[]>([]);
 const examList = ref<ExamInfo[]>([]);
-const studentList = ref<StudentInfo[]>([]); 
-const filteredStudentList1 = ref<StudentInfo[]>([]); 
-const filteredStudentList2 = ref<StudentInfo[]>([]); 
+const studentList = ref<StudentInfo[]>([]);
+const filteredStudentList1 = ref<StudentInfo[]>([]);
+const filteredStudentList2 = ref<StudentInfo[]>([]);
 const selectedClassId = ref<number>();
-const selectedStudent1 = ref<string>(); 
-const selectedStudent2 = ref<string>(); 
+const selectedStudent1 = ref<string>();
+const selectedStudent2 = ref<string>();
 const selectedExamId = ref<number>(0);
 const displayMode = ref<'table' | 'chart'>('table');
 const comparisonData = ref<ComparisonResult>({ valid: false });
-const searchKeyword1 = ref(''); 
-const searchKeyword2 = ref(''); 
+const searchKeyword1 = ref('');
+const searchKeyword2 = ref('');
 
-// 科目名称映射
+// 科目名称映射（中文科目名）
 const subjectMap = {
-  'yuwen': '语文',
-  'shuxue': '数学',
-  'yingyu': '英语',
-  'wuli': '物理',
-  'huaxue': '化学',
-  'shengwu': '生物',
-  'lishi': '历史',
-  'zhengzhi': '政治',
-  'dili': '地理'
+  '语文': '语文',
+  '数学': '数学',
+  '英语': '英语',
+  '物理': '物理',
+  '化学': '化学',
+  '生物': '生物',
+  '历史': '历史',
+  '政治': '政治',
+  '地理': '地理'
 };
 
 // 计算总分/总排名差值
@@ -441,22 +441,22 @@ const subjectList = computed<SubjectInfo[]>(() => {
     const s2Score = subjectScore.compare[enKey as keyof SubjectScores] || 0;
     const scoreDiff = s1Score - s2Score;
 
-    // 班级排名数据
-    const s1ClassRankKey = `${enKey}b` as keyof StudentResult;
-    const s2ClassRankKey = `${enKey}b` as keyof StudentResult;
+    // 班级排名数据（扁平中文键：`${科目}班次`）
+    const s1ClassRankKey = `${enKey}班次` as keyof StudentResult;
+    const s2ClassRankKey = `${enKey}班次` as keyof StudentResult;
     const s1ClassRank = current[s1ClassRankKey] || '-';
     const s2ClassRank = compare[s2ClassRankKey] || '-';
-    const classRankDiff = (typeof s1ClassRank === 'number' && typeof s2ClassRank === 'number') 
-      ? s1ClassRank - s2ClassRank 
+    const classRankDiff = (typeof s1ClassRank === 'number' && typeof s2ClassRank === 'number')
+      ? s1ClassRank - s2ClassRank
       : '-';
 
-    // 年级排名数据
-    const s1GradeRankKey = `${enKey}d` as keyof StudentResult;
-    const s2GradeRankKey = `${enKey}d` as keyof StudentResult;
+    // 年级排名数据（扁平中文键：`${科目}段次`）
+    const s1GradeRankKey = `${enKey}段次` as keyof StudentResult;
+    const s2GradeRankKey = `${enKey}段次` as keyof StudentResult;
     const s1GradeRank = current[s1GradeRankKey] || '-';
     const s2GradeRank = compare[s2GradeRankKey] || '-';
-    const gradeRankDiff = (typeof s1GradeRank === 'number' && typeof s2GradeRank === 'number') 
-      ? s1GradeRank - s2GradeRank 
+    const gradeRankDiff = (typeof s1GradeRank === 'number' && typeof s2GradeRank === 'number')
+      ? s1GradeRank - s2GradeRank
       : '-';
 
     return {
@@ -599,39 +599,39 @@ const fetchComparisonData = async () => {
         current_student,
         compare_student,
         total_score: {
-          current: current_student.sum_ || 0,
-          compare: compare_student.sum_ || 0
+          current: current_student['总分'] || 0,
+          compare: compare_student['总分'] || 0
         },
         class_rank: {
-          current: current_student.sumb || 0,
-          compare: compare_student.sumb || 0
+          current: current_student['总分班次'] || 0,
+          compare: compare_student['总分班次'] || 0
         },
         grade_rank: {
-          current: current_student.sumd || 0,
-          compare: compare_student.sumd || 0
+          current: current_student['总分段次'] || 0,
+          compare: compare_student['总分段次'] || 0
         },
         subject_score: {
           current: {
-            yuwen: current_student.yuwen || 0,
-            shuxue: current_student.shuxue || 0,
-            yingyu: current_student.yingyu || 0,
-            wuli: current_student.wuli || 0,
-            huaxue: current_student.huaxue || 0,
-            shengwu: current_student.shengwu || 0,
-            lishi: current_student.lishi || 0,
-            zhengzhi: current_student.zhengzhi || 0,
-            dili: current_student.dili || 0,
+            '语文': current_student['语文'] || 0,
+            '数学': current_student['数学'] || 0,
+            '英语': current_student['英语'] || 0,
+            '物理': current_student['物理'] || 0,
+            '化学': current_student['化学'] || 0,
+            '生物': current_student['生物'] || 0,
+            '历史': current_student['历史'] || 0,
+            '政治': current_student['政治'] || 0,
+            '地理': current_student['地理'] || 0,
           },
           compare: {
-            yuwen: compare_student.yuwen || 0,
-            shuxue: compare_student.shuxue || 0,
-            yingyu: compare_student.yingyu || 0,
-            wuli: compare_student.wuli || 0,
-            huaxue: compare_student.huaxue || 0,
-            shengwu: compare_student.shengwu || 0,
-            lishi: compare_student.lishi || 0,
-            zhengzhi: compare_student.zhengzhi || 0,
-            dili: compare_student.dili || 0,
+            '语文': compare_student['语文'] || 0,
+            '数学': compare_student['数学'] || 0,
+            '英语': compare_student['英语'] || 0,
+            '物理': compare_student['物理'] || 0,
+            '化学': compare_student['化学'] || 0,
+            '生物': compare_student['生物'] || 0,
+            '历史': compare_student['历史'] || 0,
+            '政治': compare_student['政治'] || 0,
+            '地理': compare_student['地理'] || 0,
           }
         }
       };

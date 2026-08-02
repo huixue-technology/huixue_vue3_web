@@ -81,10 +81,10 @@ const tableKey = ref(Date.now());
 const examAnalysisRaw = ref<any[]>([]);
 const comprehensiveAnalysisRaw = ref<any[]>([]);
 
-// 科目映射
+// 科目映射（中文科目名）
 const subjects_map = ref<{[key: string]: string}>({
-  'dili':'地理','huaxue':'化学','lishi':'历史','shengwu':'生物','shuxue':'数学',
-  'wuli':'物理','yingyu':'英语','yuwen':'语文','zhengzhi':'政治','sum_':'总分'
+  '地理':'地理','化学':'化学','历史':'历史','生物':'生物','数学':'数学',
+  '物理':'物理','英语':'英语','语文':'语文','政治':'政治','总分':'总分'
 });
 
 // 学期选择
@@ -246,12 +246,12 @@ const bindStudentSubject = () => {
     message.warn('学生还未选科，默认显示所有科目');
     return;
   }
-  if (selected_subjects.indexOf('物') === -1) delete subjects_map.value.wuli;
-  if (selected_subjects.indexOf('化') === -1) delete subjects_map.value.huaxue;
-  if (selected_subjects.indexOf('政') === -1) delete subjects_map.value.zhengzhi;
-  if (selected_subjects.indexOf('生') === -1) delete subjects_map.value.shengwu;
-  if (selected_subjects.indexOf('史') === -1) delete subjects_map.value.lishi;
-  if (selected_subjects.indexOf('地') === -1) delete subjects_map.value.dili;
+  if (selected_subjects.indexOf('物') === -1) delete subjects_map.value['物理'];
+  if (selected_subjects.indexOf('化') === -1) delete subjects_map.value['化学'];
+  if (selected_subjects.indexOf('政') === -1) delete subjects_map.value['政治'];
+  if (selected_subjects.indexOf('生') === -1) delete subjects_map.value['生物'];
+  if (selected_subjects.indexOf('史') === -1) delete subjects_map.value['历史'];
+  if (selected_subjects.indexOf('地') === -1) delete subjects_map.value['地理'];
 };
 
 // 获取学生信息
@@ -320,7 +320,7 @@ const fetchExamStats = async () => {
         // 4. 给遍历的 data 加类型断言（关键修复）
         .map(([key, data]: [string, PassLineItem]) => ({
           key,
-          subject: subjects_map.value[key],
+          subject: subjects_map.value[key] || key,
           passCount: data.pass_count || 0, // 现在 data 类型明确，可安全访问
           passRate: data.pass_rate || '0', // 同上
         }));

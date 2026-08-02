@@ -119,11 +119,11 @@
               <h3>总分平均分</h3>
               <div class="summary-item">
                 <span class="class-name">{{ getClassName(selectedClass1) }}</span>
-                <span class="score">{{ formatScore(comparisonData.subject_average_score.current.sum_) }}</span>
+                <span class="score">{{ formatScore(comparisonData.subject_average_score.current['总分']) }}</span>
               </div>
               <div class="summary-item">
                 <span class="class-name">{{ getClassName(selectedClass2) }}</span>
-                <span class="score">{{ formatScore(comparisonData.subject_average_score.compare.sum_) }}</span>
+                <span class="score">{{ formatScore(comparisonData.subject_average_score.compare['总分']) }}</span>
               </div>
               <div class="difference" :class="getDifferenceClass(totalScoreDiff)">
                 差值: {{ formatScore(Math.abs(totalScoreDiff)) }}
@@ -225,7 +225,7 @@
                     bordered
                     :columns="topStudentColumns"
                     :pagination="false"
-                    rowKey="id"
+                    rowKey="student_id"
                   />
                 </div>
               </a-col>
@@ -237,7 +237,7 @@
                     bordered
                     :columns="topStudentColumns"
                     :pagination="false"
-                    rowKey="id"
+                    rowKey="student_id"
                   />
                 </div>
               </a-col>
@@ -282,22 +282,21 @@ interface StudentInfo {
   id: number;
   student_id: number;
   student_name: string;
-  sum_: number; // 总分
-  sumb: number; // 班级排名
+  total_score: number; // 总分
   [key: string]: any;
 }
 
 interface SubjectScores {
-  sum_: number;
-  yuwen: number;
-  shuxue: number;
-  yingyu: number;
-  wuli: number;
-  huaxue: number;
-  lishi: number;
-  zhengzhi: number;
-  shengwu: number;
-  dili: number;
+  '总分': number;
+  '语文': number;
+  '数学': number;
+  '英语': number;
+  '物理': number;
+  '化学': number;
+  '历史': number;
+  '政治': number;
+  '生物': number;
+  '地理': number;
 }
 
 interface ComparisonResult {
@@ -327,33 +326,33 @@ interface ComparisonResult {
 const userStore = useUserStore();
 const loading = ref(false);
 const hasSearched = ref(false);
-const allClassList = ref<ClassInfo[]>([]); 
-const classList = ref<ClassInfo[]>([]);    
+const allClassList = ref<ClassInfo[]>([]);
+const classList = ref<ClassInfo[]>([]);
 const examList = ref<ExamInfo[]>([]);
-const selectedClass1 = ref<number>();      
-const selectedClass2 = ref<number>();      
+const selectedClass1 = ref<number>();
+const selectedClass2 = ref<number>();
 const selectedExamId = ref<number>(0);
 const displayMode = ref<'table' | 'chart'>('table');
 const comparisonData = ref<ComparisonResult | null>(null);
 const currentClass = ref<ClassInfo>({ id: 0, name: '', header: null, school_id: null, subject_selection: '' });
-// 科目名称映射
+// 科目名称映射（中文科目名）
 const subjectMap = {
-  'yuwen': '语文',
-  'shuxue': '数学',
-  'yingyu': '英语',
-  'wuli': '物理',
-  'huaxue': '化学',
-  'shengwu': '生物',
-  'lishi': '历史',
-  'zhengzhi': '政治',
-  'dili': '地理'
+  '语文': '语文',
+  '数学': '数学',
+  '英语': '英语',
+  '物理': '物理',
+  '化学': '化学',
+  '生物': '生物',
+  '历史': '历史',
+  '政治': '政治',
+  '地理': '地理'
 };
 
 // 计算差值
 const totalScoreDiff = computed(() => {
   if (!comparisonData.value) return 0;
-  return comparisonData.value.subject_average_score.current.sum_ - 
-         comparisonData.value.subject_average_score.compare.sum_;
+  return comparisonData.value.subject_average_score.current['总分'] -
+         comparisonData.value.subject_average_score.compare['总分'];
 });
 
 const passRateDiff = computed(() => {
@@ -468,9 +467,9 @@ const mergedSubjectTableColumns = computed(() => [
 ]);
 
 const topStudentColumns = [
-  { title: '班级排名', dataIndex: 'sumb', key: 'sumb' },
+  { title: '班级排名', dataIndex: 'class_rank', key: 'class_rank', customRender: ({ record }: any) => record?.subjects?.['总分']?.class_rank ?? '-' },
   { title: '姓名', dataIndex: 'student_name', key: 'student_name' },
-  { title: '总分', dataIndex: 'sum_', key: 'sum_', render: (val: number) => formatScore(val) }
+  { title: '总分', dataIndex: 'total_score', key: 'total_score', render: (val: number) => formatScore(val) }
 ];
 
 // 图表配置

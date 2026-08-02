@@ -16,12 +16,12 @@
       <template #overlay>
         <a-menu @click="handleScoreLineSelect">
           <a-menu-item key="">不选择分数线</a-menu-item>
-          <a-menu-item 
-            v-for="line in passLineList" 
+          <a-menu-item
+            v-for="line in passLineList"
             :key="line.id"
             :value="line.id"
           >
-            {{ line.line_name.slice(4) }}({{ line.sum_ }}分)
+            {{ line.line_name.slice(4) }}({{ line['总分'] }}分)
           </a-menu-item>
         </a-menu>
       </template>
@@ -30,15 +30,15 @@
       :visible="offsetVisible" 
       @visibleChange="handleOffsetVisibleChange"
       placement="bottomLeft"
-      :disabled="!props.selectedPassLineId"  
+      :disabled="!props.selectedLineGroupId"
     >
-      <a-button 
-        class="filter-btn" 
-        :class="{ 
-          'active': offsetVisible, 
-          'disabled': !props.selectedPassLineId  
+      <a-button
+        class="filter-btn"
+        :class="{
+          'active': offsetVisible,
+          'disabled': !props.selectedLineGroupId
         }"
-        :disabled="!props.selectedPassLineId"  
+        :disabled="!props.selectedLineGroupId"
       >
         {{ currentOffsetText }}
         <a-icon type="caret-down" :rotate="offsetVisible ? 180 : 0" />
@@ -87,17 +87,17 @@ import { ref, watch, computed } from 'vue';
 // 定义组件props
 const props = defineProps<{
   passLineOffset: number;
-  selectedPassLineId: string | number | null;
-  passLineList: Array<{ id: string | number; line_name: string; sum_: number }>;
+  selectedLineGroupId: string | number | null;
+  passLineList: Array<{ id: string | number; line_name: string; '总分': number }>;
 }>();
 
 // 定义组件事件
 const emit = defineEmits<{
   (e: 'update:passLineOffset', value: number): void;
-  (e: 'update:selectedPassLineId', value: string | number | null): void;
-  (e: 'filterChange', data: { 
+  (e: 'update:selectedLineGroupId', value: string | number | null): void;
+  (e: 'filterChange', data: {
     id?: string | number | null;
-    offset?: number 
+    offset?: number
   }): void;
 }>();
 
@@ -117,15 +117,15 @@ const currentOffsetText = computed(() => {
 
 // 动态计算当前选中的分数线文本
 const currentPassLineText = computed(() => {
-  if (props.selectedPassLineId === null || props.selectedPassLineId === '') {
-    return '选择分数线';  
+  if (props.selectedLineGroupId === null || props.selectedLineGroupId === '') {
+    return '选择分数线';
   }
-  const selectedLine = props.passLineList.find(line => line.id === props.selectedPassLineId);
-  return selectedLine ? selectedLine.line_name : '选择分数线'; 
+  const selectedLine = props.passLineList.find(line => line.id === props.selectedLineGroupId);
+  return selectedLine ? selectedLine.line_name : '选择分数线';
 });
 
-// 监听props变化 
-watch(() => props.selectedPassLineId, (val) => {
+// 监听props变化
+watch(() => props.selectedLineGroupId, (val) => {
   if (val === null || val === '') {
     resetOffsetValues();
   } else {
@@ -170,7 +170,7 @@ const handleOffsetVisibleChange = (visible: boolean) => {
 // 分数线选择处理
 const handleScoreLineSelect = ({ key }: { key: string }) => {
   const selectedId = key === '' ? null : key;
-  emit('update:selectedPassLineId', selectedId);
+  emit('update:selectedLineGroupId', selectedId);
   
   // 选择具体分数线时设置默认偏移量
   if (selectedId) {

@@ -260,27 +260,27 @@ const compareStudentData = ref<any>({});
 const scoreComparisonData = ref<any[]>([]); // 分数对比数据
 const rankComparisonData = ref<any[]>([]); // 段次对比数据
 
-// 学科名称映射（所有科目）
+// 学科名称映射（所有科目，中文）
 const allSubjectMap: Record<string, string> = {
-  'yuwen': '语文',
-  'shuxue': '数学',
-  'yingyu': '英语',
-  'wuli': '物理',
-  'huaxue': '化学',
-  'shengwu': '生物',
-  'lishi': '历史',
-  'zhengzhi': '政治',
-  'dili': '地理',
-  'sum': '总分'
+  '语文': '语文',
+  '数学': '数学',
+  '英语': '英语',
+  '物理': '物理',
+  '化学': '化学',
+  '生物': '生物',
+  '历史': '历史',
+  '政治': '政治',
+  '地理': '地理',
+  '总分': '总分'
 };
 
 // 根据学生选科过滤的科目映射
 const subjectMap = computed(() => {
   const filteredMap: Record<string, string> = {
-    'yuwen': '语文',
-    'shuxue': '数学',
-    'yingyu': '英语',
-    'sum': '总分'
+    '语文': '语文',
+    '数学': '数学',
+    '英语': '英语',
+    '总分': '总分'
   };
 
   const selectedSubjects = userInfo?.student?.subject_selection;
@@ -290,12 +290,12 @@ const subjectMap = computed(() => {
   }
 
   // 根据选科信息过滤科目
-  if (selectedSubjects.indexOf('物') !== -1) filteredMap.wuli = '物理';
-  if (selectedSubjects.indexOf('化') !== -1) filteredMap.huaxue = '化学';
-  if (selectedSubjects.indexOf('生') !== -1) filteredMap.shengwu = '生物';
-  if (selectedSubjects.indexOf('史') !== -1) filteredMap.lishi = '历史';
-  if (selectedSubjects.indexOf('政') !== -1) filteredMap.zhengzhi = '政治';
-  if (selectedSubjects.indexOf('地') !== -1) filteredMap.dili = '地理';
+  if (selectedSubjects.indexOf('物') !== -1) filteredMap['物理'] = '物理';
+  if (selectedSubjects.indexOf('化') !== -1) filteredMap['化学'] = '化学';
+  if (selectedSubjects.indexOf('生') !== -1) filteredMap['生物'] = '生物';
+  if (selectedSubjects.indexOf('史') !== -1) filteredMap['历史'] = '历史';
+  if (selectedSubjects.indexOf('政') !== -1) filteredMap['政治'] = '政治';
+  if (selectedSubjects.indexOf('地') !== -1) filteredMap['地理'] = '地理';
 
   return filteredMap;
 });
@@ -460,8 +460,8 @@ const handleOpponentNameChange = () => {
 
 // 计算总分差值
 const totalScoreDiff = computed(() => {
-  const currentTotal = getScoreValue(currentStudentData.value, 'sum');
-  const opponentTotal = getScoreValue(compareStudentData.value, 'sum');
+  const currentTotal = getScoreValue(currentStudentData.value, '总分');
+  const opponentTotal = getScoreValue(compareStudentData.value, '总分');
   return currentTotal - opponentTotal;
 });
 
@@ -551,17 +551,17 @@ const runComparison = async () => {
 
 // 获取分数值
 const getScoreValue = (data: any, subject: string) => {
-  return subject === 'sum' ? (data.sum_ || 0) : (data[subject] || 0);
+  return data[subject] || 0;
 };
 
 // 获取班级段次值
 const getClassRankValue = (data: any, subject: string) => {
-  return subject === 'sum' ? (data.sumb || 0) : (data[`${subject}b`] || 0);
+  return data[`${subject}班次`] || 0;
 };
 
 // 获取年级段次值
 const getGradeRankValue = (data: any, subject: string) => {
-  return subject === 'sum' ? (data.sumd || 0) : (data[`${subject}d`] || 0);
+  return data[`${subject}段次`] || 0;
 };
 
 // 分数差值样式（正数优于对手，绿色；负数红色）

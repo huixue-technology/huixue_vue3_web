@@ -105,6 +105,7 @@ import { getPassLine, postSimulateGrade } from '@/servers/api/analysis';
 import { Button as AButton, message, Spin } from 'ant-design-vue';
 import { getExamApi } from '@/servers/api/exam';
 import { getGradeApi } from '@/servers/api/grade';
+import { getTotalScore, getTotalClassRank, getTotalSchoolRank, getSubjectScore, getSubjectClassRank, getSubjectSchoolRank } from '@/utils/subjects';
 import { useUserStore } from '@/store/modules/user';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -259,69 +260,103 @@ const fetchExamOption = async () => {
 //定义查询功能score: 429.0, classRank: 72, gradeRank: 428, classHighest: 593, firstLine: 500 },
 const inquiry = async() => {
     originalScores.value = []
-    await getGradeApi({student_id:studentId,exam_id:Number(selectedExam.value),class_id:studentClassId}).then((res:{code:number,data:any}) => { 
-
-      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'总分',label:'sum_',score:res.data[0]?.sum_,classRank:res.data[0].sumb,gradeRank:res.data[0].sumd })
-      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'语文',label:'yuwen',score:res.data[0]?.yuwen,classRank:res.data[0].yuwenb,gradeRank:res.data[0].yuwend })
-      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'数学',label:'shuxue',score:res.data[0]?.shuxue,classRank:res.data[0].shuxueb,gradeRank:res.data[0].shuxued })
-      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'英语',label:'yingyu',score:res.data[0]?.yingyu,classRank:res.data[0].yingyub,gradeRank:res.data[0].yingyud })
+    await getGradeApi({student_id:studentId,exam_id:Number(selectedExam.value),class_id:studentClassId}).then((res:{code:number,data:any}) => {
+      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'总分',label:'总分',score:getTotalScore(res.data[0]),classRank:getTotalClassRank(res.data[0]),gradeRank:getTotalSchoolRank(res.data[0]) })
+      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'语文',label:'语文',score:getSubjectScore(res.data[0],'语文'),classRank:getSubjectClassRank(res.data[0],'语文'),gradeRank:getSubjectSchoolRank(res.data[0],'语文') })
+      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'数学',label:'数学',score:getSubjectScore(res.data[0],'数学'),classRank:getSubjectClassRank(res.data[0],'数学'),gradeRank:getSubjectSchoolRank(res.data[0],'数学') })
+      originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'英语',label:'英语',score:getSubjectScore(res.data[0],'英语'),classRank:getSubjectClassRank(res.data[0],'英语'),gradeRank:getSubjectSchoolRank(res.data[0],'英语') })
       const selected_subject = userInfo.value.student.subject_selection
       if(selected_subject.indexOf('物') === -1) {
-        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'物理',label:'wuli',score:res.data[0]?.wuli,classRank:res.data[0].wulib,gradeRank:res.data[0].wulid })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'物理',label:'物理',score:getSubjectScore(res.data[0],'物理'),classRank:getSubjectClassRank(res.data[0],'物理'),gradeRank:getSubjectSchoolRank(res.data[0],'物理') })
       }else {
-        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'物理',label:'wuli',score:res.data[0]?.wuli,classRank:res.data[0].wulib,gradeRank:res.data[0].wulid })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'物理',label:'物理',score:getSubjectScore(res.data[0],'物理'),classRank:getSubjectClassRank(res.data[0],'物理'),gradeRank:getSubjectSchoolRank(res.data[0],'物理') })
       }
 
       if(selected_subject.indexOf('化') === -1) {
-        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'化学',label:'huaxue',score:res.data[0]?.huaxue,classRank:res.data[0].huaxueb,gradeRank:res.data[0].huaxued })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'化学',label:'化学',score:getSubjectScore(res.data[0],'化学'),classRank:getSubjectClassRank(res.data[0],'化学'),gradeRank:getSubjectSchoolRank(res.data[0],'化学') })
       }else{
-        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'化学',label:'huaxue',score:res.data[0]?.huaxue,classRank:res.data[0].huaxueb,gradeRank:res.data[0].huaxued })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'化学',label:'化学',score:getSubjectScore(res.data[0],'化学'),classRank:getSubjectClassRank(res.data[0],'化学'),gradeRank:getSubjectSchoolRank(res.data[0],'化学') })
       }
 
       if(selected_subject.indexOf('生') === -1) {
-        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'生物',label:'shengwu',score:res.data[0]?.shengwu,classRank:res.data[0].shengwub,gradeRank:res.data[0].shengwud })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'生物',label:'生物',score:getSubjectScore(res.data[0],'生物'),classRank:getSubjectClassRank(res.data[0],'生物'),gradeRank:getSubjectSchoolRank(res.data[0],'生物') })
       }else{
-        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'生物',label:'shengwu',score:res.data[0]?.shengwu,classRank:res.data[0].shengwub,gradeRank:res.data[0].shengwud })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'生物',label:'生物',score:getSubjectScore(res.data[0],'生物'),classRank:getSubjectClassRank(res.data[0],'生物'),gradeRank:getSubjectSchoolRank(res.data[0],'生物') })
       }
-      
+
 
       if(selected_subject.indexOf('政') === -1) {
-        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'政治',label:'zhengzhi',score:res.data[0]?.zhengzhi,classRank:res.data[0].zhengzhib,gradeRank:res.data[0].zhengzhid })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'政治',label:'政治',score:getSubjectScore(res.data[0],'政治'),classRank:getSubjectClassRank(res.data[0],'政治'),gradeRank:getSubjectSchoolRank(res.data[0],'政治') })
       }else{
-        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'政治',label:'zhengzhi',score:res.data[0]?.zhengzhi,classRank:res.data[0].zhengzhib,gradeRank:res.data[0].zhengzhid })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'政治',label:'政治',score:getSubjectScore(res.data[0],'政治'),classRank:getSubjectClassRank(res.data[0],'政治'),gradeRank:getSubjectSchoolRank(res.data[0],'政治') })
       }
 
       if(selected_subject.indexOf('史') === -1) {
-        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'历史',label:'lishi',score:res.data[0]?.lishi,classRank:res.data[0].lishib,gradeRank:res.data[0].lishid })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'历史',label:'历史',score:getSubjectScore(res.data[0],'历史'),classRank:getSubjectClassRank(res.data[0],'历史'),gradeRank:getSubjectSchoolRank(res.data[0],'历史') })
       }else{
-        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'历史',label:'lishi',score:res.data[0]?.lishi,classRank:res.data[0].lishib,gradeRank:res.data[0].lishid })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'历史',label:'历史',score:getSubjectScore(res.data[0],'历史'),classRank:getSubjectClassRank(res.data[0],'历史'),gradeRank:getSubjectSchoolRank(res.data[0],'历史') })
       }
 
       if(selected_subject.indexOf('地') === -1) {
-        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'地理',label:'dili',score:res.data[0]?.dili,classRank:res.data[0].dilib,gradeRank:res.data[0].dilid })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:false,subject:'地理',label:'地理',score:getSubjectScore(res.data[0],'地理'),classRank:getSubjectClassRank(res.data[0],'地理'),gradeRank:getSubjectSchoolRank(res.data[0],'地理') })
       }else{
-        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'地理',label:'dili',score:res.data[0]?.dili,classRank:res.data[0].dilib,gradeRank:res.data[0].dilid })
+        originalScores.value.push({classHighest:res.data[0].topScore,show:true,subject:'地理',label:'地理',score:getSubjectScore(res.data[0],'地理'),classRank:getSubjectClassRank(res.data[0],'地理'),gradeRank:getSubjectSchoolRank(res.data[0],'地理') })
       }
       showTable.value = true;
     })
     
     getPassLine({exam_id:Number(selectedExam.value)}).then(async (res) => {
-      if(res.data.length > 1) {
+      // 行式数据按 line_group_id 分组聚合
+      const grouped = new Map<number, Record<string, number>>();
+      (res.data || []).forEach((row: any) => {
+        const gid = row?.line_group_id;
+        if (gid == null) return;
+        if (!grouped.has(gid)) grouped.set(gid, {});
+        if (row.subject != null && row.score != null) {
+          grouped.get(gid)![row.subject] = row.score;
+        }
+      });
+      const groups = Array.from(grouped.values());
+
+      if(groups.length > 1) {
         if(userInfo.value.student.subject_selection.indexOf('物') !== -1) {
-          for(let item of res.data) {
-            if(item.line_name.indexOf('物') !== -1) {
-              pass_line.value = item
-              break
+          // 按 line_name 分组匹配含"物"的组，需保留每组对应的 line_name
+          const named = new Map<number, { name: string; dict: Record<string, number> }>();
+          (res.data || []).forEach((row: any) => {
+            const gid = row?.line_group_id;
+            if (gid == null) return;
+            if (!named.has(gid)) named.set(gid, { name: row.line_name || '', dict: {} });
+            if (row.subject != null && row.score != null) {
+              named.get(gid)!.dict[row.subject] = row.score;
+            }
+          });
+          for (const [gid, val] of named) {
+            if (val.name.indexOf('物') !== -1) {
+              pass_line.value = val.dict;
+              break;
             }
           }
-        }else if(userInfo.value.student.subject_selection.indexOf('史') !== -1){
-          for(let item of res.data) {
-            if(item.line_name.indexOf('史') !== -1) {
-              pass_line.value = item
-              break
+        } else if(userInfo.value.student.subject_selection.indexOf('史') !== -1){
+          const named = new Map<number, { name: string; dict: Record<string, number> }>();
+          (res.data || []).forEach((row: any) => {
+            const gid = row?.line_group_id;
+            if (gid == null) return;
+            if (!named.has(gid)) named.set(gid, { name: row.line_name || '', dict: {} });
+            if (row.subject != null && row.score != null) {
+              named.get(gid)!.dict[row.subject] = row.score;
+            }
+          });
+          for (const [gid, val] of named) {
+            if (val.name.indexOf('史') !== -1) {
+              pass_line.value = val.dict;
+              break;
             }
           }
         }
+      }
+      // 未匹配到时取第一个组
+      if (!pass_line.value || Object.keys(pass_line.value).length === 0) {
+        pass_line.value = groups[0] || {};
       }
       for(let item in originalScores.value) {
         originalScores.value[item].firstLine = pass_line.value[originalScores.value[item].label]
@@ -332,7 +367,7 @@ const inquiry = async() => {
       for(let item in simulatedScores.value) {
         originalScores.value[item].classHighest = simulatedScores.value[item].classHighest
       }
-    }) 
+    })
 };
 // 提交
 const submit = async () => {
@@ -342,25 +377,25 @@ const submit = async () => {
       exam_id: Number(selectedExam.value),
       class_id: studentClassId,
       school_id: userInfo.value.student.school,
-      yuwen: simulatedScores.value[1].score,
+      语文: simulatedScores.value[1].score,
       /** 英语 */
-      yingyu: simulatedScores.value[3].score,
+      英语: simulatedScores.value[3].score,
       /** 物理 */
-      wuli: simulatedScores.value[4].score,
+      物理: simulatedScores.value[4].score,
       /** 数学 */
-      shuxue: simulatedScores.value[2].score,
+      数学: simulatedScores.value[2].score,
       /** 生物 */
-      shengwu: simulatedScores.value[6].score,
+      生物: simulatedScores.value[6].score,
       /** 历史 */
-      lishi: simulatedScores.value[8].score,
+      历史: simulatedScores.value[8].score,
       /** 地理 */
-      dili: simulatedScores.value[9].score,
+      地理: simulatedScores.value[9].score,
       /** 政治 */
-      zhengzhi: simulatedScores.value[7].score,
+      政治: simulatedScores.value[7].score,
       /** 化学 */
-      huaxue: simulatedScores.value[5].score,
+      化学: simulatedScores.value[5].score,
       /** 总分 */
-      sum_: simulatedScores.value[0].score,
+      总分: simulatedScores.value[0].score,
     });
     // 更新数据
     for(let item in simulatedScores.value) {
