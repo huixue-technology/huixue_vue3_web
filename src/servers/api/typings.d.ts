@@ -932,6 +932,11 @@ declare namespace API {
     exam_id: number;
   };
 
+  type postPaperParseUploadApiParams = {
+    /** 试卷ID */
+    test_paper_id: number;
+  };
+
   type postPaperQuestionScoreParams = {
     /** 学校ID */
     school_id: string;
@@ -1057,11 +1062,6 @@ declare namespace API {
     name?: string;
     /** 试卷备注 */
     description?: string;
-  };
-
-  type postTestPaperPdfAnswerParams = {
-    /** 试卷ID */
-    test_paper_id: number;
   };
 
   type postTestPaperPdfParams = {
@@ -1294,5 +1294,24 @@ declare namespace API {
     is_need_answer?: boolean;
     /** 是否包含解析 */
     is_need_analysis?: boolean;
+  };
+
+  type GaokaoPaper = {
+    id: number | string;
+    name: string;
+    subject: string;
+    year?: string;
+    download_url?: string;
+  };
+
+  type getGaokaoPapersParams = {
+    subject: string;
+    year?: string;
+    page?: number;
+    size?: number;
+  };
+
+  type getGaokaoPaperDownloadUrlParams = {
+    paper_id: number | string;
   };
 }
