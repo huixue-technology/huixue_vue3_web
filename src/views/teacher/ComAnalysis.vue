@@ -21,19 +21,54 @@
         ref="classAnalysisRef"
         :class-id="selectedClass"
       />
-  <!-- 分数线过线率 -->
-          <PassLineRate 
-            :pass-line-rate-data="passLineRateData" 
-            :class-info="currentClassInfo"
-          />
       
+      <!-- 分数线过线率 -->
+      <PassLineRate 
+        :pass-line-rate-data="passLineRateData" 
+        :class-info="currentClassInfo"
+      />
       
-      
-      <!-- 优秀与待关注学生 + 学生分类概览
-      <StudentCategory 
-        :student-grades-data="studentGradesData" 
-        :classInfo="currentClassInfo"
-      /> -->
+      <!-- 分数线对比表格 -->
+      <a-card class="compare-card" title="分数线对比表">
+        <a-table
+          :columns="compareColumns"
+          :data-source="compareTableData"
+          :pagination="false"
+          bordered
+          size="middle"
+          row-key="key"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.dataIndex === 'score'">
+              <span v-if="record.score !== null && record.score !== undefined">{{ record.score }}</span>
+              <span v-else class="empty-value">-</span>
+            </template>
+            <template v-else-if="column.dataIndex === 'count'">
+              <span>{{ record.count ?? 0 }}</span>
+            </template>
+            <template v-else-if="column.dataIndex === 'rate'">
+              <span>{{ record.rate ?? 0 }}%</span>
+            </template>
+            <template v-else-if="column.dataIndex === 'average'">
+              <span v-if="record.average !== null && record.average !== undefined">{{ record.average }}</span>
+              <span v-else class="empty-value">-</span>
+            </template>
+            <template v-else-if="column.dataIndex === 'max'">
+              <span v-if="record.max !== null && record.max !== undefined">{{ record.max }}</span>
+              <span v-else class="empty-value">-</span>
+            </template>
+          </template>
+        </a-table>
+        <a-alert
+          v-if="showEmptyTip"
+          message="提示"
+          description="部分分数线数据（如211、985、清北）需要后台先配置分数线。当前考试可能只配置了特控线。"
+          type="info"
+          show-icon
+          closable
+          style="margin-top: 12px;"
+        />
+      </a-card>
     </a-spin>
   </div>
 </template>
@@ -45,6 +80,7 @@ import {
   postClassPassLineRate,
   postClassComprehensiveStudentGrades 
 } from '@/servers/api/average';
+import { getPassLine } from '@/servers/api/analysis';
 import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
 import { getClassesApi } from '@/servers/api/classes';
@@ -77,6 +113,8 @@ const classAnalysisData = ref<any>({});
 const passLineRateData = ref<any>({});
 const studentGradesData = ref<any[]>([]);
 const classAnalysisRef = ref<any>(null); // 子组件引用
+const passLineConfigData = ref<any[]>([]); // 分数线配置数据
+const showEmptyTip = ref(false); // 显示空数据提示
 
 // 计算当前班级信息
 const currentClassInfo = computed((): ClassInfo | undefined => {
@@ -116,7 +154,8 @@ const batchComputeData = async () => {
     await Promise.all([
       getClassAnalysisfunc(),
       getClassPassLineRatefunc(),
-      getClassComprehensiveStudentGradesfunc()
+      getClassComprehensiveStudentGradesfunc(),
+      fetchPassLineConfig()
     ]);
     
     // 刷新子组件（学生过线率统计）
@@ -202,6 +241,100 @@ const getClassComprehensiveStudentGradesfunc = async () => {
   }
 };
 
+// 获取分数线配置
+const fetchPassLineConfig = async () => {
+  if (selectedClass.value <= 0) {
+    return;
+  }
+  
+  // 获取班级的考试信息来拿到 exam_id
+  const currentClass = classList.value.find(c => c.id === selectedClass.value);
+  if (!currentClass) return;
+  
+  // 尝试获取分数线配置（需要 exam_id，这里先获取班级关联的考试）
+  // 由于 getPassLine 需要 exam_id，我们从 classAnalysisData 中获取
+  if (classAnalysisData.value && classAnalysisData.value.exam_id) {
+    try {
+      const res = await getPassLine({ exam_id: classAnalysisData.value.exam_id });
+      if (res.code === 200 && res.data) {
+        // 处理返回的分页数据
+        passLineConfigData.value = res.data.records || res.data.list || res.data || [];
+      }
+    } catch (err) {
+      console.error('获取分数线配置失败:', err);
+      passLineConfigData.value = [];
+    }
+  }
+};
+
+// 定义表格列
+const compareColumns = [
+  { title: '层次', dataIndex: 'level', width: 100, align: 'center' },
+  { title: '分数线', dataIndex: 'score', width: 100, align: 'center' },
+  { title: '进线人数', dataIndex: 'count', width: 100, align: 'center' },
+  { title: '进线率', dataIndex: 'rate', width: 100, align: 'center' },
+  { title: '平均分', dataIndex: 'average', width: 100, align: 'center' },
+  { title: '最高分', dataIndex: 'max', width: 100, align: 'center' },
+];
+
+// 分数线配置映射关系
+const lineConfig = [
+  { key: 'pass_rate', level: '特控线', lineName: '特控线' },
+  { key: 'top2_rate', level: '211', lineName: '211线' },
+  { key: 'top9_rate', level: '985', lineName: '985线' },
+  { key: 'top_rate', level: '清北', lineName: '清北线' },
+];
+
+// 从 passLineConfigData 中查找对应层次的分数线
+const findPassLineScore = (lineName: string): number | null => {
+  if (!passLineConfigData.value || passLineConfigData.value.length === 0) {
+    return null;
+  }
+  
+  // 匹配分数线名称（模糊匹配）
+  const matched = passLineConfigData.value.find((item: any) => {
+    const name = item.line_name || item.lineName || '';
+    return name.includes(lineName) || name.includes(lineName.replace('线', ''));
+  });
+  
+  return matched ? (matched.score ?? null) : null;
+};
+
+// 构建表格数据
+const compareTableData = computed(() => {
+  const result: any[] = [];
+  let hasEmptyData = false;
+  
+  lineConfig.forEach(config => {
+    const rateData = passLineRateData.value?.[config.key] || {};
+    const sumData = rateData['总分'] || {};
+    
+    const count = sumData.sum_ ?? 0;
+    const rate = sumData.rate_ ?? 0;
+    const average = sumData.average ?? null;
+    const maxScore = sumData.max ?? null;
+    const score = findPassLineScore(config.lineName);
+    
+    // 检查是否有数据
+    if (score === null && count === 0 && rate === 0 && average === null) {
+      hasEmptyData = true;
+    }
+    
+    result.push({
+      key: config.key,
+      level: config.level,
+      score: score,
+      count: count,
+      rate: rate,
+      average: average,
+      max: maxScore,
+    });
+  });
+  
+  showEmptyTip.value = hasEmptyData;
+  
+  return result;
+});
 
 </script>
 
@@ -234,6 +367,32 @@ const getClassComprehensiveStudentGradesfunc = async () => {
       font-size: 16px;
       opacity: 0.9;
     }
+  }
+
+  .compare-card {
+    margin-top: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    
+    :deep(.ant-card-body) {
+      padding: 16px;
+    }
+    
+    :deep(.ant-table-thead > tr > th) {
+      background: linear-gradient(180deg, #f0f5ff 0%, #e6f0ff 100%);
+      font-weight: 600;
+      color: #2c3e50;
+      text-align: center;
+    }
+    
+    :deep(.ant-table-tbody > tr > td) {
+      text-align: center;
+      font-size: 15px;
+    }
+  }
+
+  .empty-value {
+    color: #bfbfbf;
   }
 }
 </style>
