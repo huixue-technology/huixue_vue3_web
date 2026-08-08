@@ -24,6 +24,7 @@ import * as teacherUpload from "./teacherUpload";
 import * as tp from "./tp";
 import * as user from "./user";
 import * as wrongQuestion from "./wrongQuestion";
+import * as gaokao from "./gaokao";
 export default {
   analysis,
   average,
@@ -47,4 +48,5 @@ export default {
   user,
   cart,
   wrongQuestion,
+  gaokao,
 };

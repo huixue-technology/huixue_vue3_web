@@ -1295,4 +1295,23 @@ declare namespace API {
     /** 是否包含解析 */
     is_need_analysis?: boolean;
   };
+
+  type GaokaoPaper = {
+    id: number | string;
+    name: string;
+    subject: string;
+    year?: string;
+    download_url?: string;
+  };
+
+  type getGaokaoPapersParams = {
+    subject: string;
+    year?: string;
+    page?: number;
+    size?: number;
+  };
+
+  type getGaokaoPaperDownloadUrlParams = {
+    paper_id: number | string;
+  };
 }

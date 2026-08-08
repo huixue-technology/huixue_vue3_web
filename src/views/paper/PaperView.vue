@@ -6,11 +6,16 @@
           <h2>试卷查看</h2>
           <p>集中浏览试卷资料，支持按考试、科目和试卷名称快速筛选。</p>
         </div>
-        <div class="header-stat">
-          <span class="stat-value">{{ pagination.total }}</span>
-          <span class="stat-label">份试卷</span>
+        <div class="header-right">
+          <a-button class="gaokao-entry-btn" @click="gaokaoDrawerOpen = true">高考试卷</a-button>
+          <div class="header-stat">
+            <span class="stat-value">{{ pagination.total }}</span>
+            <span class="stat-label">份试卷</span>
+          </div>
         </div>
       </div>
+
+      <GaokaoDrawer v-model:open="gaokaoDrawerOpen" />
 
       <a-card class="filter-card" :bordered="false">
         <a-space wrap class="filter-actions">
@@ -108,6 +113,7 @@ import {
   getTeacherWrongQuestionSearch as searchTeacherWrongQuestionApi,
 } from "@/servers/api/wrongQuestion";
 import { useUserStore } from "@/store";
+import GaokaoDrawer from "@/views/gaokao/GaokaoDrawer.vue";
 import {
   buildPaperSemesterOptions,
   getPaperGrade,
@@ -190,6 +196,7 @@ type WrongQuestionSearchRecord = {
 type ScoreMap = Record<string, number | string>;
 
 const userStore = useUserStore();
+const gaokaoDrawerOpen = ref(false);
 const userInfo = ref<any>(null);
 const loadingPapers = ref(false);
 const loadingQuestions = ref(false);
@@ -1384,5 +1391,18 @@ onMounted(async () => {
   .filter-input {
     width: 100%;
   }
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gaokao-entry-btn {
+  font-size: 12px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
 }
 </style>
