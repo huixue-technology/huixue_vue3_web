@@ -24,7 +24,14 @@
               </template>
             </a-list-item-meta>
             <template #actions>
-              <a-button type="link" size="small" @click="handleDownload(item)">下载</a-button>
+              <a
+                v-if="item.download_url"
+                :href="item.download_url"
+                target="_blank"
+                rel="noopener"
+                class="gaokao-download-link"
+              >下载</a>
+              <span v-else class="gaokao-download-disabled">暂无下载地址</span>
             </template>
           </a-list-item>
         </template>
@@ -47,14 +54,14 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { message } from "ant-design-vue";
-import { getGaokaoPapers, getGaokaoPaperDownloadUrl } from "@/servers/api/gaokao";
+import { getGaokaoPaperDownloadApi } from "@/servers/api/papers";
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ (e: "update:open", val: boolean): void }>();
 
 const subjects = ["语文", "数学", "英语", "物理", "化学", "生物", "历史", "地理", "政治"];
 const activeSubject = ref("语文");
-const papers = ref<API.GaokaoPaper[]>([]);
+const papers = ref<API.GaokaoPaperDownload[]>([]);
 const total = ref(0);
 const loading = ref(false);
 const pagination = ref({ page: 1, size: 10 });
@@ -62,7 +69,7 @@ const pagination = ref({ page: 1, size: 10 });
 const loadPapers = async (page = 1) => {
   loading.value = true;
   try {
-    const res = await getGaokaoPapers({
+    const res = await getGaokaoPaperDownloadApi({
       subject: activeSubject.value,
       page,
       size: pagination.value.size,
@@ -87,24 +94,6 @@ const handlePageChange = (page: number) => {
   loadPapers(page);
 };
 
-const handleDownload = async (item: API.GaokaoPaper) => {
-  if (item.download_url) {
-    window.open(item.download_url, "_blank");
-    return;
-  }
-  try {
-    const res = await getGaokaoPaperDownloadUrl({ paper_id: item.id });
-    const url = res?.download_url || res?.data?.download_url;
-    if (url) {
-      window.open(url, "_blank");
-    } else {
-      message.warning("暂无下载地址");
-    }
-  } catch {
-    message.error("获取下载地址失败");
-  }
-};
-
 watch(
   () => props.open,
   (val) => {
@@ -120,5 +109,16 @@ watch(
 .gaokao-pagination {
   margin-top: 16px;
   text-align: right;
+}
+.gaokao-download-link {
+  color: #1890ff;
+  text-decoration: none;
+}
+.gaokao-download-link:hover {
+  color: #40a9ff;
+}
+.gaokao-download-disabled {
+  color: rgba(0, 0, 0, 0.25);
+  font-size: 12px;
 }
 </style>

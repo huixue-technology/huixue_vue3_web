@@ -1400,9 +1400,18 @@ onMounted(async () => {
 }
 
 .gaokao-entry-btn {
-  font-size: 12px;
-  height: 26px;
-  padding: 0 10px;
+  font-size: 14px;
+  height: 34px;
+  padding: 0 18px;
   border-radius: 6px;
+  background: #1890ff;
+  border-color: #1890ff;
+  color: #fff;
+}
+.gaokao-entry-btn:hover,
+.gaokao-entry-btn:focus {
+  background: #40a9ff;
+  border-color: #40a9ff;
+  color: #fff;
 }
 </style>

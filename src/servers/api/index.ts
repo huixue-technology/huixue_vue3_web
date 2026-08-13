@@ -12,6 +12,7 @@ import * as feedback from "./feedback";
 import * as grade from "./grade";
 import * as gradeUpload from "./gradeUpload";
 import * as paperQuestionScore from "./paperQuestionScore";
+import * as papers from "./papers";
 import * as paperUpload from "./paperUpload";
 import * as questionScoreUpload from "./questionScoreUpload";
 import * as quickAdmin from "./quickAdmin";
@@ -24,7 +25,6 @@ import * as teacherUpload from "./teacherUpload";
 import * as tp from "./tp";
 import * as user from "./user";
 import * as wrongQuestion from "./wrongQuestion";
-import * as gaokao from "./gaokao";
 export default {
   analysis,
   average,
@@ -32,6 +32,7 @@ export default {
   classes,
   exam,
   feedback,
+  papers,
   grade,
   gradeUpload,
   paperQuestionScore,
@@ -48,5 +49,4 @@ export default {
   user,
   cart,
   wrongQuestion,
-  gaokao,
 };
