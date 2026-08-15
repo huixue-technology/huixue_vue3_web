@@ -71,6 +71,39 @@ declare namespace API {
     class_ids: number[];
   };
 
+  type ClassAnalysisData = {
+    class_summary: ClassAnalysisSummary;
+    /** 总分在线附近的学生 */
+    danger_student: Record<string, any>[];
+    /** 按总分降序排列的前十名学生 */
+    excellent_student: Record<string, any>[];
+    /** 总分分数段统计 */
+    sum_score_section: Record<string, any>[];
+    /** 主科分数段统计 */
+    main_score_section: Record<string, any>[];
+    /** 选考科目分数段统计 */
+    select_score_section: Record<string, any>[];
+  };
+
+  type ClassAnalysisReply = {
+    /** HTTP 业务状态码 */
+    code: number;
+    /** 响应消息 */
+    msg: string;
+    data: ClassAnalysisData;
+    /** 该接口固定为 null */
+    total?: Record<string, any>;
+  };
+
+  type ClassAnalysisSummary = {
+    /** 当前有效花名册人数；不作为历史考试过线率分母 */
+    active_student_count: number;
+    /** 本场存在成绩记录的去重参考人数 */
+    exam_participant_count: number;
+    /** 本场参考学生的总分最高值 */
+    highest_total_score?: number;
+  };
+
   type Classes = {
     /** 班级ID */
     id?: number;
@@ -84,6 +117,31 @@ declare namespace API {
     grade?: string;
     /** 选科 */
     subject_selection: string;
+  };
+
+  type ClassPassLineRateItem = {
+    /** 班级 ID */
+    class_id: number;
+    /** 清北线各科累计过线率 */
+    top_rate: Record<string, any>;
+    /** 985 线各科累计过线率 */
+    top9_rate: Record<string, any>;
+    /** 211 线各科累计过线率 */
+    top2_rate: Record<string, any>;
+    /** 一本/特控线各科累计过线率 */
+    pass_rate: Record<string, any>;
+    /** 按清北、985、211、一本分组的科目统计。每个科目值为 {pass_count, actual_count, pass_rate}；计数单位均为跨考试累计人次。 */
+    pass_line_stats: Record<string, any>;
+  };
+
+  type ClassPassLineRateReply = {
+    /** HTTP 业务状态码 */
+    code: number;
+    /** 响应消息 */
+    msg: string;
+    data: ClassPassLineRateItem[];
+    /** 该接口固定为 null */
+    total?: Record<string, any>;
   };
 
   type Compute = {
@@ -114,6 +172,18 @@ declare namespace API {
     paper_id: string;
     /** 班级ID */
     class_id?: string;
+  };
+
+  type deleteQuestionBankPaperAnswerFileApiParams = {
+    /** 仅内置管理员必传的学校 ID */
+    school_id?: string;
+    paper_id: number;
+  };
+
+  type deleteQuestionBankPaperDetailApiParams = {
+    /** 仅内置管理员必传的学校 ID */
+    school_id?: string;
+    paper_id: number;
   };
 
   type deleteQuickAdminClassDeleteParams = {
@@ -187,6 +257,8 @@ declare namespace API {
     exam_category?: string;
     /** 考试年级 */
     student_grade?: string;
+    /** 考试开始日期，格式 YYYY-MM-DD，可为空 */
+    exam_date?: string;
   };
 
   type FeedbackSubmit = {
@@ -244,6 +316,13 @@ declare namespace API {
     total?: number;
   };
 
+  type GaokaoPaperUploadResponse = {
+    code?: number;
+    msg?: string;
+    data?: GaokaoPaperDownload;
+    total?: number;
+  };
+
   type getAllFeedbacksParams = {
     /** 状态筛选 */
     status?: string;
@@ -271,9 +350,9 @@ declare namespace API {
   };
 
   type getClassAnalysisParams = {
-    /** 班级id */
+    /** 必填；班级 ID */
     class_id: number;
-    /** 考试id */
+    /** 必填；考试 ID */
     exam_id: number;
   };
 
@@ -317,7 +396,7 @@ declare namespace API {
     class_id: string;
     /** 选中考试id */
     selected_exam_id: number;
-    /** 科目筛选(如: sum_, yuwen, shuxue等) */
+    /** 科目筛选(如: 总分, 语文, 数学等) */
     subject?: string;
     /** 排序方向(asc:升序, desc:降序) */
     order_direction?: string;
@@ -438,6 +517,10 @@ declare namespace API {
     size?: number;
   };
 
+  type getGaokaoPaperFileApiParams = {
+    paper_id: number;
+  };
+
   type getGaokaoPaperListApiParams = {
     /** 科目 */
     subject?: string;
@@ -473,6 +556,17 @@ declare namespace API {
     grade_id: number;
   };
 
+  type getKnowledgePointMasteryApiParams = {
+    /** 必填；学生学号，去首尾空白后不可为空 */
+    student_id?: string;
+    /** 必填；精确匹配的科目 */
+    subject?: string;
+    /** 必填；精确匹配的知识点名称 */
+    knowledge_point?: string;
+    /** 可选；整数，范围 1 至 100，默认 10 */
+    n?: string;
+  };
+
   type getMyFeedbacksParams = {
     /** 每页数量 */
     page_size?: number;
@@ -506,6 +600,38 @@ declare namespace API {
     page?: number;
     /** 每页记录数 */
     size?: number;
+  };
+
+  type getQuestionBankPaperCollectionApiParams = {
+    /** 页码，默认 1 */
+    page?: number;
+    /** 每页数量，默认 20，最大 100 */
+    size?: number;
+    /** 卷种 */
+    category?: string;
+    /** 细项或地区 */
+    region?: string;
+    /** 科目 */
+    subject?: string;
+    /** 年份 */
+    year?: string;
+    /** 试卷名称关键词 */
+    keyword?: string;
+    /** 仅内置管理员必传的学校 ID */
+    school_id?: string;
+  };
+
+  type getQuestionBankPaperDetailApiParams = {
+    /** 仅内置管理员必传的学校 ID */
+    school_id?: string;
+    paper_id: number;
+  };
+
+  type getQuestionBankPaperProtectedFileApiParams = {
+    /** 仅内置管理员必传的学校 ID */
+    school_id?: string;
+    paper_id: number;
+    file_kind: string;
   };
 
   type getQuickAdminExamListParams = {
@@ -899,68 +1025,62 @@ declare namespace API {
     exam_id: number;
     /** 考试班级 */
     class_id: number;
-    /** 总分 */
-    sum_: number;
-    /** 总分班次 */
-    sumb: number;
-    /** 总分段次 */
-    sumd: number;
-    /** 语文 */
-    yuwen?: number;
-    /** 英语 */
-    yingyu?: number;
-    /** 物理 */
-    wuli?: number;
-    /** 数学 */
-    shuxue?: number;
-    /** 生物 */
-    shengwu?: number;
-    /** 历史 */
-    lishi?: number;
-    /** 地理 */
-    dili?: number;
-    /** 政治 */
-    zhengzhi?: number;
-    /** 化学 */
-    huaxue?: number;
-    /** 语文D */
-    yuwend?: number;
-    /** 英语D */
-    yingyud?: number;
-    /** 物理D */
-    wulid?: number;
-    /** 数学D */
-    shuxued?: number;
-    /** 生物D */
-    shengwud?: number;
-    /** 历史D */
-    lishid?: number;
-    /** 地理D */
-    dilid?: number;
-    /** 政治D */
-    zhengzhid?: number;
-    /** 化学D */
-    huaxued?: number;
-    /** 是否显示 */
-    show?: boolean;
-    /** 语文班次 */
-    yuwenb?: number;
-    /** 英语班次 */
-    yingyub?: number;
-    /** 物理班次 */
-    wulib?: number;
-    /** 数学班次 */
-    shuxueb?: number;
-    /** 生物班次 */
-    shengwub?: number;
-    /** 历史班次 */
-    lishib?: number;
-    /** 地理班次 */
-    dilib?: number;
-    /** 政治班次 */
-    zhengzhib?: number;
-    /** 化学班次 */
-    huaxueb?: number;
+    /** 科目名(中文: 总分/语文/数学/英语/物理/化学/生物/政治/历史/地理) */
+    subject: string;
+    /** 该科分数 */
+    score: number;
+    /** 班级名次 */
+    class_rank?: number;
+    /** 学校名次(段次) */
+    school_rank?: number;
+  };
+
+  type KnowledgePointMasteryData = {
+    /** 学生学号 */
+    student_id: string;
+    /** 请求科目 */
+    subject: string;
+    /** 请求知识点 */
+    knowledge_point: string;
+    /** 请求的最近考试场数 */
+    requested_exam_count: number;
+    /** 实际参与统计的考试场数 */
+    actual_exam_count: number;
+    /** 窗口内正确题数 */
+    correct_question_count: number;
+    /** 窗口内有效相关题数 */
+    total_question_count: number;
+    /** 窗口掌握率，范围 0 至 1，保留四位小数；无有效题时为空 */
+    mastery_rate?: number;
+    /** 按 exam_id 倒序的逐场趋势 */
+    exams: KnowledgePointMasteryExamTrend[];
+  };
+
+  type KnowledgePointMasteryExamTrend = {
+    /** 考试 ID */
+    exam_id: number;
+    /** 考试名称 */
+    exam_name?: string;
+    /** 考试学年 */
+    exam_year?: string;
+    /** 考试开始日期，格式 YYYY-MM-DD；历史考试可为空 */
+    exam_date?: string;
+    /** 该场正确题数 */
+    correct_question_count: number;
+    /** 该场有效相关题数 */
+    total_question_count: number;
+    /** 该场掌握率，范围 0 至 1，保留四位小数 */
+    mastery_rate?: number;
+  };
+
+  type KnowledgePointMasteryReply = {
+    /** HTTP 业务状态码 */
+    code: number;
+    /** 响应消息 */
+    msg: string;
+    data: KnowledgePointMasteryData;
+    /** 该接口固定为 null */
+    total?: Record<string, any>;
   };
 
   type Login = {
@@ -977,52 +1097,22 @@ declare namespace API {
   };
 
   type PassLine = {
-    /** 分数线id */
+    /** 科目行id */
     id?: number;
+    /** 分数线组id(同一条线的科目行共享) */
+    line_group_id?: number;
     /** 考试id */
     exam_id: number;
     /** 学校id */
     school_id: string;
-    /** 总分 */
-    sum_: number;
-    /** 总分排名 */
-    sumd: number;
-    /** 语文 */
-    yuwen: number;
-    /** 语文排名 */
-    yuwend: number;
-    /** 英语 */
-    yingyu: number;
-    /** 英语排名 */
-    yingyud: number;
-    /** 物理 */
-    wuli: number;
-    /** 物理排名 */
-    wulid: number;
-    /** 数学 */
-    shuxue: number;
-    /** 数学排名 */
-    shuxued: number;
-    /** 生物 */
-    shengwu: number;
-    /** 生物排名 */
-    shengwud: number;
-    /** 历史 */
-    lishi: number;
-    /** 历史排名 */
-    lishid: number;
-    /** 地理 */
-    dili: number;
-    /** 地理排名 */
-    dilid: number;
-    /** 政治 */
-    zhengzhi: number;
-    /** 政治排名 */
-    zhengzhid: number;
-    /** 化学 */
-    huaxue: number;
-    /** 化学排名 */
-    huaxued: number;
+    /** 分数线名称(如: 物理一本线) */
+    line_name: string;
+    /** 科目名(中文: 总分/语文/数学等) */
+    subject: string;
+    /** 该科分数线值 */
+    score: number;
+    /** 该科段次(达到分数线的学生人数) */
+    rank?: number;
   };
 
   type PassLineAnalysis = {
@@ -1065,6 +1155,11 @@ declare namespace API {
     exam_id: number;
   };
 
+  type postPaperParseUploadApiParams = {
+    /** 试卷ID */
+    test_paper_id: number;
+  };
+
   type postPaperQuestionScoreParams = {
     /** 学校ID */
     school_id: string;
@@ -1087,6 +1182,23 @@ declare namespace API {
     name: string;
     /** 备注 */
     comment?: string;
+  };
+
+  type postQuestionBankPaperAnswerFileApiParams = {
+    /** 仅内置管理员必传的学校 ID */
+    school_id?: string;
+    paper_id: number;
+  };
+
+  type postQuestionBankPaperCollectionApiParams = {
+    /** 仅内置管理员必传的学校 ID */
+    school_id?: string;
+  };
+
+  type postQuestionBankPaperFileApiParams = {
+    /** 仅内置管理员必传的学校 ID */
+    school_id?: string;
+    paper_id: number;
   };
 
   type postQuestionScoreUploadApiParams = {
@@ -1192,11 +1304,6 @@ declare namespace API {
     description?: string;
   };
 
-  type postTestPaperPdfAnswerParams = {
-    /** 试卷ID */
-    test_paper_id: number;
-  };
-
   type postTestPaperPdfParams = {
     /** 试卷ID */
     test_paper_id: number;
@@ -1237,6 +1344,12 @@ declare namespace API {
     grade_id: number;
   };
 
+  type putQuestionBankPaperDetailApiParams = {
+    /** 仅内置管理员必传的学校 ID */
+    school_id?: string;
+    paper_id: number;
+  };
+
   type putSchoolDetailApiParams = {
     school_id: string;
   };
@@ -1257,6 +1370,21 @@ declare namespace API {
     user_id: string;
   };
 
+  type QuestionBankPaperUpdate = {
+    /** 试卷名称 */
+    name?: string;
+    /** 卷种 */
+    category?: string;
+    /** 细项或地区 */
+    region?: string;
+    /** 科目；思想政治会规范为政治 */
+    subject?: string;
+    /** 四位年份 */
+    year?: string;
+    /** 备注；传 null 可清空 */
+    description?: string;
+  };
+
   type School = {
     /** 学校ID */
     school_id: string;
@@ -1271,26 +1399,26 @@ declare namespace API {
     class_id: string;
     /** 学校id */
     school_id: string;
-    /** 语文 */
-    yuwen: number;
-    /** 英语 */
-    yingyu: number;
-    /** 物理 */
-    wuli: number;
-    /** 数学 */
-    shuxue: number;
-    /** 生物 */
-    shengwu: number;
-    /** 历史 */
-    lishi: number;
-    /** 地理 */
-    dili: number;
-    /** 政治 */
-    zhengzhi: number;
-    /** 化学 */
-    huaxue: number;
     /** 总分 */
-    sum_: number;
+    总分?: number;
+    /** 语文 */
+    语文?: number;
+    /** 数学 */
+    数学?: number;
+    /** 英语 */
+    英语?: number;
+    /** 物理 */
+    物理?: number;
+    /** 化学 */
+    化学?: number;
+    /** 生物 */
+    生物?: number;
+    /** 政治 */
+    政治?: number;
+    /** 历史 */
+    历史?: number;
+    /** 地理 */
+    地理?: number;
   };
 
   type Student = {

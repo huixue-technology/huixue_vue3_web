@@ -62,19 +62,22 @@ export async function postClassComputeTest(
   });
 }
 
-/** 获取班级四条分数线过线率 POST /api/average/class_pass_line_rate */
+/** 获取班级四条线累计进线人次、有效参考人次和过线率。 返回班级全部有效考试累计的清北、985、211、一本/特控线统计。pass_count 与 actual_count 的单位为人次，不是去重学生人数。 POST /api/average/class_pass_line_rate */
 export async function postClassPassLineRate(
   body: API.ClassAnalysis,
   options?: { [key: string]: any }
 ) {
-  return request<any>("/api/average/class_pass_line_rate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    data: body,
-    ...(options || {}),
-  });
+  return request<API.ClassPassLineRateReply>(
+    "/api/average/class_pass_line_rate",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      data: body,
+      ...(options || {}),
+    }
+  );
 }
 
 /** 获取班级特控线过线率排名 POST /api/average/class_students_one_line_rate */
