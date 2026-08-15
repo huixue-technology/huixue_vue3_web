@@ -14,6 +14,7 @@ import * as gradeUpload from "./gradeUpload";
 import * as paperQuestionScore from "./paperQuestionScore";
 import * as papers from "./papers";
 import * as paperUpload from "./paperUpload";
+import * as questionBankPapers from "./questionBankPapers";
 import * as questionScoreUpload from "./questionScoreUpload";
 import * as quickAdmin from "./quickAdmin";
 import * as school from "./school";
@@ -37,6 +38,7 @@ export default {
   gradeUpload,
   paperQuestionScore,
   paperUpload,
+  questionBankPapers,
   questionScoreUpload,
   quickAdmin,
   school,

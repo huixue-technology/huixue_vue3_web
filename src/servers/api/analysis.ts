@@ -2,13 +2,13 @@
 /* eslint-disable */
 import request from "@/utils/request";
 
-/** 获取班级分析 GET /api/analysis/class_analysis */
+/** 获取班级单场考试分析及当前花名册、参考人数摘要。 返回指定班级、指定考试的分数段、前十名和班级摘要。在班人数取当前有效花名册，本场参考人数与最高分只基于该场成绩记录。 GET /api/analysis/class_analysis */
 export async function getClassAnalysis(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getClassAnalysisParams,
   options?: { [key: string]: any }
 ) {
-  return request<any>("/api/analysis/class_analysis", {
+  return request<API.ClassAnalysisReply>("/api/analysis/class_analysis", {
     method: "GET",
     params: {
       ...params,
@@ -60,6 +60,24 @@ export async function getExamSmallPoint(
     },
     ...(options || {}),
   });
+}
+
+/** 查询单名学生指定科目和知识点的最近考试掌握度。 GET /api/analysis/knowledge_point_mastery */
+export async function getKnowledgePointMasteryApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getKnowledgePointMasteryApiParams,
+  options?: { [key: string]: any }
+) {
+  return request<API.KnowledgePointMasteryReply>(
+    "/api/analysis/knowledge_point_mastery",
+    {
+      method: "GET",
+      params: {
+        ...params,
+      },
+      ...(options || {}),
+    }
+  );
 }
 
 /** 获取对应考试的特控线 GET /api/analysis/pass_line */
