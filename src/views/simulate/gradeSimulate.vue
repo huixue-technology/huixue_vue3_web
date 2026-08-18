@@ -308,6 +308,7 @@ interface ScoreRecord {
   gradeRank: number;
   classRankDiff?: number;
   gradeRankDiff?: number;
+  scoreDiff?: number;
 }
 
 interface ExamOption {
@@ -360,6 +361,7 @@ const subjectMap: Record<string, { name: string; max: number }> = {
   '语文': { name: '语文', max: 150 },
   '数学': { name: '数学', max: 150 },
   '英语': { name: '英语', max: 150 },
+  '日语': { name: '日语', max: 150 },
   '物理': { name: '物理', max: 100 },
   '化学': { name: '化学', max: 100 },
   '生物': { name: '生物', max: 100 },
@@ -657,6 +659,7 @@ const handleClassChange = async (classId: number) => {
   examOptions.value = [];
   studentOptions.value = [];
   showResults.value = false;
+
   hasSimulated.value = false;
   
   if (classId) {
@@ -709,7 +712,7 @@ const handleSearch = async () => {
   loading.value = true;
   try {
     const res = await getGradeApi({
-      student_id: parseInt(studentId.value),
+      student_id: studentId.value,
       exam_id: selectedExamId.value,
     });
 
@@ -762,24 +765,28 @@ const shouldShowSubject = (subjectKey: string): boolean => {
 // 解析成绩数据
 const parseGradeData = (gradeData: any) => {
   const scores: ScoreRecord[] = [];
+  const totalScore = getTotalScore(gradeData);
 
   // 添加总分
   scores.push({
     key: '总分',
     subject: '总分',
     subjectKey: '总分',
-    score: getTotalScore(gradeData),
+    score: totalScore,
     classRank: getTotalClassRank(gradeData),
     gradeRank: getTotalSchoolRank(gradeData)
   });
 
   // 添加各科成绩
   const subjects = ['语文', '数学', '英语', '物理', '化学', '生物', '历史', '政治', '地理'];
+  let singleSum = 0; // 单科成绩之和（不含总分，用于判断是否缺日语）
 
   subjects.forEach(subjectKey => {
     const score = getSubjectScore(gradeData, subjectKey);
     const classRank = getSubjectClassRank(gradeData, subjectKey);
     const gradeRank = getSubjectSchoolRank(gradeData, subjectKey);
+
+    singleSum += score;
 
     // 只显示有成绩且符合选科要求的科目
     if ((score > 0 || classRank > 0 || gradeRank > 0) && shouldShowSubject(subjectKey)) {
@@ -793,6 +800,19 @@ const parseGradeData = (gradeData: any) => {
       });
     }
   });
+
+  // 单科成绩之和与总分不等时，补上日语（日语成绩 = 总分 - 单科成绩之和）
+  const japaneseScore = totalScore - singleSum;
+  if (japaneseScore > 0.01) {
+    scores.push({
+      key: '日语',
+      subject: subjectMap['日语'].name,
+      subjectKey: '日语',
+      score: japaneseScore,
+      classRank: getSubjectClassRank(gradeData, '日语'),
+      gradeRank: getSubjectSchoolRank(gradeData, '日语')
+    });
+  }
 
   originalScores.value = scores;
   simulatedScores.value = JSON.parse(JSON.stringify(scores));
@@ -828,6 +848,7 @@ const handleSimulate = async () => {
       exam_id: selectedExamId.value,
       school_id: schoolId.value,
       class_id: currentClassId.value,
+      student_id:studentId.value,
       '语文': 0,
       '数学': 0,
       '英语': 0,
@@ -837,6 +858,7 @@ const handleSimulate = async () => {
       '历史': 0,
       '政治': 0,
       '地理': 0,
+      '日语': 0,
       '总分': 0
     };
 
