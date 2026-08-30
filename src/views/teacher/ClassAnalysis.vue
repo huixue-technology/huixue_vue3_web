@@ -23,7 +23,7 @@
                 <div>{{ label }} ({{ maskStudentId(value) }})</div>
               </template>
             </a-auto-complete>
-            
+
             <!-- 科目筛选 -->
             <a-select
               v-model:value="selectedSubject"
@@ -37,7 +37,7 @@
                 {{ subject.label }}
               </a-select-option>
             </a-select>
-            
+
             <!-- 过线率范围 -->
             <a-select
               v-model:value="rateRange"
@@ -51,7 +51,7 @@
               <a-select-option value="60-80">60% - 80%</a-select-option>
               <a-select-option value="80-100">80% - 100%</a-select-option>
             </a-select>
-            
+
             <!-- 排序方式 -->
             <a-select
               v-model:value="sortOrder"
@@ -61,10 +61,10 @@
               <a-select-option value="desc">降序</a-select-option>
               <a-select-option value="asc">升序</a-select-option>
             </a-select>
-            
+
             <!-- 确定筛选按钮 -->
             <a-button type="primary" @click="applyFilters">确定筛选</a-button>
-            
+
             <!-- 清除筛选按钮 -->
             <a-button @click="clearSearch">清除筛选</a-button>
           </a-space>
@@ -90,14 +90,114 @@
         </a-table>
       </a-card>
     </div>
+
+        <!-- ========== 知识点掌握情况模块 ========== -->
+    <div class="section">
+      <a-row>
+        <div class="section-title">知识点掌握情况（考试趋势）</div>
+      </a-row>
+      <a-card class="rate-card">
+        <div class="search-container">
+          <a-space wrap :size="12">
+            <a-select
+              v-model:value="knowledgeSubject"
+              placeholder="请选择科目"
+              style="width: 180px"
+              allowClear
+            >
+              <a-select-option v-for="item in subjectOptions" :key="item" :value="item">
+                {{ item }}
+              </a-select-option>
+            </a-select>
+
+            <a-input
+              v-model:value="knowledgePoint"
+              placeholder="请输入知识点名称"
+              style="width: 320px"
+              allowClear
+            />
+
+            <a-input-number
+              v-model:value="queryExamN"
+              placeholder="查询考试场数"
+              :min="1"
+              :max="100"
+              style="width:140px"
+            />
+
+            <a-button type="primary" @click="fetchKnowledgeData" :loading="knowledgeLoading">查询</a-button>
+            <a-button @click="clearKnowledgeFilter">重置</a-button>
+          </a-space>
+        </div>
+
+                <!-- 查询出来的汇总信息 -->
+        <div v-if="knowledgeSummary" class="summary-info">
+          <div class="summary-wrap">
+            <div class="summary-item">
+              <div class="summary-label">知识点</div>
+              <div class="summary-value">{{ knowledgePoint }}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">班级人数</div>
+              <div class="summary-value">{{ knowledgeSummary.class_student_count ?? 0 }}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">有效考试场数</div>
+              <div class="summary-value">{{ knowledgeSummary.actual_exam_count }} / {{ knowledgeSummary.requested_exam_count }}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">总答对小题</div>
+              <div class="summary-value">{{ knowledgeSummary.correct_question_count }}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">总有效小题</div>
+              <div class="summary-value">{{ knowledgeSummary.total_question_count }}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">整体掌握率</div>
+              <div class="summary-value">
+                <b :class="getMasteryClass(knowledgeSummary?.mastery_rate)">
+                  {{ knowledgeSummary?.mastery_rate != null
+                    ? `${(knowledgeSummary.mastery_rate * 100).toFixed(0)}%`
+                    : '暂无统计'
+                  }}
+                </b>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <a-table
+          :data-source="knowledgeExamList"
+          bordered
+          :columns="knowledgeColumns"
+          :pagination="{ pageSize: 20 }"
+          :scroll="{ x: 'max-content', y: 460 }"
+          :loading="knowledgeLoading"
+          rowKey="exam_id"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.dataIndex === 'mastery_rate'">
+              <span :class="getMasteryClass(record.mastery_rate)">
+                {{ record.mastery_rate === null ? '-' : `${Math.round(record.mastery_rate * 100)}%` }}
+              </span>
+            </template>
+          </template>
+        </a-table>
+        <div v-if="!knowledgeLoading && knowledgeExamList.length === 0 && knowledgeSummary" class="empty-tip">
+          暂无可统计的有效考试数据
+        </div>
+      </a-card>
+    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed, onUnmounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { postClassAlwaysTopBottomStudents } from '@/servers/api/average';
 import { message } from 'ant-design-vue';
-import { LoadingOutlined } from '@ant-design/icons-vue';
+import {getClassKnowledgePointMasteryApi} from '@/servers/api/analysis'
 
 const props = defineProps<{
   classId: number;
@@ -106,7 +206,7 @@ const props = defineProps<{
 const loading = ref(false);
 
 // 科目名称映射表（中文科目名）
-const subjectMap = {
+const subjectMap: Record<string, string> = {
   '语文': '语文',
   '数学': '数学',
   '英语': '英语',
@@ -148,7 +248,7 @@ const availableSubjects = ref<{ value: string; label: string }[]>([]);
 // 过滤后的学生列表
 const filteredStudentRateList = computed(() => {
   let result = studentRateList.value;
-  
+
   // 按姓名或学号筛选
   if (searchName.value) {
     result = result.filter(student => {
@@ -157,7 +257,7 @@ const filteredStudentRateList = computed(() => {
       return nameMatch || uidMatch;
     });
   }
-  
+
   // 按科目筛选
   if (selectedSubject.value) {
     result = result.filter(student => {
@@ -165,7 +265,7 @@ const filteredStudentRateList = computed(() => {
       return rate !== null && rate !== undefined;
     });
   }
-  
+
   // 按过线率范围筛选
   if (rateRange.value) {
     const [min, max] = rateRange.value.split('-').map(Number);
@@ -187,14 +287,14 @@ const filteredStudentRateList = computed(() => {
       }
     });
   }
-  
+
   return result;
 });
 
 // 排序后的学生列表
 const sortedStudentRateList = computed(() => {
   const list = [...filteredStudentRateList.value];
-  
+
   // 如果选择了科目，按该科目过线率排序
   if (selectedSubject.value) {
     return list.sort((a, b) => {
@@ -203,7 +303,7 @@ const sortedStudentRateList = computed(() => {
       return sortOrder.value === 'desc' ? rateB - rateA : rateA - rateB;
     });
   }
-  
+
   // 未选择科目时，按总分过线率排序
   return list.sort((a, b) => {
     const rateA = a['总分'] || 0;
@@ -271,6 +371,98 @@ const maskStudentId = (studentId: string) => {
   return '**' + idStr.slice(-4);
 };
 
+const knowledgeLoading = ref(false);
+// 查询条件
+const knowledgeSubject = ref('');
+const knowledgePoint = ref('');
+const queryExamN = ref<number>(10);
+
+// 汇总返回data
+const knowledgeSummary = ref<any>(null);
+// 逐场考试列表，给table渲染
+const knowledgeExamList = ref<any[]>([]);
+
+// 科目下拉选项
+const subjectOptions = ref<string[]>(['语文','数学','英语','物理','化学','生物','历史','政治','地理']);
+
+// 表格列
+const knowledgeColumns = ref<any[]>([
+  { title: '考试ID', dataIndex: 'exam_id', width: 100, align: 'center' },
+  { title: '考试名称', dataIndex: 'exam_name', width: 220, align: 'center' },
+  { title: '考试日期', dataIndex: 'exam_date', width: 130, align: 'center' },
+  { title: '参与人数', dataIndex: 'participant_count', width: 110, align: 'center' },
+  { title: '答对小题数', dataIndex: 'correct_question_count', width: 120, align: 'center' },
+  { title: '总小题数', dataIndex: 'total_question_count', width: 110, align: 'center' },
+  { title: '本场掌握率', dataIndex: 'mastery_rate', width: 130, align: 'center' },
+]);
+
+// 掌握度颜色
+const getMasteryClass = (rate: number|null|undefined) => {
+  if(rate == null) return 'normal-rate';
+  const p = rate * 100;
+  if(p < 60) return 'low-rate';
+  if(p < 80) return 'mid-rate';
+  return 'normal-rate';
+};
+
+// 重置知识点筛选
+const clearKnowledgeFilter = () => {
+  knowledgeSubject.value = '';
+  knowledgePoint.value = '';
+  queryExamN.value = 10;
+  knowledgeSummary.value = null;
+  knowledgeExamList.value = [];
+};
+
+const fetchKnowledgeData = async () => {
+  if (!props.classId) {
+    message.warning('请先选择班级');
+    return;
+  }
+  const trimPoint = knowledgePoint.value?.trim() ?? '';
+  if (!knowledgeSubject.value || !trimPoint) {
+    message.warning('请选择科目并输入知识点名称');
+    return;
+  }
+  try {
+    knowledgeLoading.value = true;
+    const res = (await getClassKnowledgePointMasteryApi({
+      class_id: props.classId,
+      subject: knowledgeSubject.value,
+      knowledge_point: trimPoint,
+      n: String(queryExamN.value)
+    })) as any;
+
+    if (res?.code === 200 && res.data) {
+      const bizData = res.data;
+      knowledgeSummary.value = bizData;
+      knowledgeExamList.value = bizData.exams ?? [];
+
+      if (knowledgeExamList.value.length === 0) {
+        message.info('该知识点暂无有效考试统计数据');
+      } else {
+        message.success('查询成功');
+      }
+    } else {
+      message.warning(res?.msg || '未获取到知识点数据');
+      knowledgeSummary.value = null;
+      knowledgeExamList.value = [];
+    }
+  } catch (err: any) {
+    console.error('知识点接口异常', err);
+    message.error('请求知识点数据异常');
+    knowledgeSummary.value = null;
+    knowledgeExamList.value = [];
+  } finally {
+    knowledgeLoading.value = false;
+  }
+};
+
+// classId变更清空知识点模块
+watch(()=>props.classId, ()=>{
+  clearKnowledgeFilter();
+})
+
 // 初始化
 onMounted(() => {
   fetchSubjectRateData();
@@ -286,13 +478,13 @@ watch(() => props.classId, () => {
 // 处理数据并更新表格
 const processStudentRateData = (classData: any) => {
   const studentOneLineRate = classData.student_one_line_rate || {};
-  
+
   // 构建学生数据映射表
   const studentMap = new Map<string, any>();
-  
+
   // 收集所有科目并构建动态列
   const subjectColumns: any[] = [];
-  
+
   Object.entries(studentOneLineRate).forEach(([subject, students]: [string, any]) => {
     if (Array.isArray(students)) {
       // 添加科目列（支持排序）
@@ -302,9 +494,8 @@ const processStudentRateData = (classData: any) => {
         dataIndex: subject,
         width: 100,
         align: 'center',
-        // 移除自定义渲染，改用模板方式处理颜色
       });
-      
+
       // 将每个学生的该科目过线率添加到学生数据中
       students.forEach((student: any) => {
         if (!studentMap.has(student.uid)) {
@@ -321,20 +512,20 @@ const processStudentRateData = (classData: any) => {
       });
     }
   });
-  
+
   // 更新表格列（基础列 + 科目列）
   studentRateColumns.value = [
     { title: '学生姓名', dataIndex: 'name', width: 120, fixed: 'left', align: 'center' },
     { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left', align: 'center', customRender: ({ text }: any) => maskStudentId(text) },
     ...subjectColumns
   ];
-  
+
   // 更新可用科目列表
   availableSubjects.value = subjectColumns.map(col => ({
     value: col.dataIndex,
     label: col.title
   }));
-  
+
   // 转换为数组
   studentRateList.value = Array.from(studentMap.values());
 };
@@ -345,7 +536,7 @@ const fetchSubjectRateData = async (silent = false) => {
 
   try {
     loading.value = true;
-    
+
     const res = await postClassAlwaysTopBottomStudents({
       class_ids: [props.classId],
     }, {
@@ -354,10 +545,10 @@ const fetchSubjectRateData = async (silent = false) => {
       },
       getResponse: true,
     });
-    
+
     const responseData = res.data || res;
     const httpStatus = res.response?.status || res.status;
-    
+
     if (httpStatus === 200 && responseData.code === 200 && responseData.data) {
       // 判断 data 是数组还是对象
       if (Array.isArray(responseData.data) && responseData.data.length > 0) {
@@ -385,12 +576,14 @@ const fetchSubjectRateData = async (silent = false) => {
   }
 };
 
-// 暴露方法给父组件（必须在函数定义之后）
+// 暴露方法给父组件
 defineExpose({
-  refresh: () => fetchSubjectRateData(true),
+  refresh: () => {
+    fetchSubjectRateData(true);
+    clearKnowledgeFilter();
+  },
 });
 </script>
-
 <style scoped lang="less">
 .class-analysis-container {
   margin-bottom: 20px;
@@ -429,15 +622,54 @@ defineExpose({
   padding: 12px;
   background: #f5f7fa;
   border-radius: 6px;
-  
+
   :deep(.ant-select-selector),
   :deep(.ant-input) {
     border-radius: 4px;
   }
-  
+
   :deep(.ant-btn) {
     border-radius: 4px;
   }
+}
+
+.summary-info {
+  margin-bottom: 16px;
+  padding: 20px 24px;
+  background: #fafafa;
+  border-radius: 8px;
+
+  .summary-wrap {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 100px;
+    flex-wrap: wrap;
+  }
+
+  .summary-item {
+    text-align: left;
+    min-width: 130px;
+  }
+
+  .summary-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+    line-height: 1;
+  }
+
+  .summary-value {
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1;
+  }
+}
+
+.empty-tip{
+  text-align:center;
+  padding:24px;
+  color:#888;
 }
 
 /* 表格样式优化 */
@@ -447,13 +679,13 @@ defineExpose({
   color: #2c3e50;
   border-bottom: 2px solid #d6e4ff;
   text-align: center;
-  font-size: 16px; /* 设置表头字体大小 */
+  font-size: 16px;
 }
 
 :deep(.ant-table-tbody > tr > td) {
   text-align: center;
-  font-size: 16px; /* 设置表格内容字体大小 */
-  padding: 12px 8px; /* 增加单元格内边距 */
+  font-size: 16px;
+  padding: 12px 8px;
 }
 
 :deep(.ant-table-tbody > tr:hover) {
@@ -493,20 +725,20 @@ defineExpose({
   .class-analysis-container {
     padding: 10px;
   }
-  
+
   .search-container {
     :deep(.ant-space) {
       display: flex;
       flex-wrap: wrap;
     }
-    
+
     :deep(.ant-space-item) {
       margin-bottom: 8px;
       width: 100%;
     }
-    
+
     :deep(.ant-select),
-    :deep(.ant-auto-complete) {
+    :deep(.ant-input) {
       width: 100% !important;
     }
   }
