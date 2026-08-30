@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="wrong-question-page">
     <header class="page-header">
       <div>
@@ -108,11 +108,40 @@
           allow-clear
           @pressEnter="handleSearch"
         />
+        <template v-if="mode === 'class'">
+          <a-select v-model:value="statScope" class="filter-control" :options="statScopeOptions" placeholder="统计口径" />
+          <a-input-number
+            v-if="statScope === 'custom'"
+            v-model:value="customTopN"
+            class="filter-control"
+            :min="1"
+            :max="1000"
+            :precision="0"
+            placeholder="前 N 名"
+          />
+          <a-input-number
+            v-model:value="wrongRateFilters.min"
+            class="filter-control"
+            :min="0"
+            :max="1"
+            :step="0.01"
+            placeholder="最低错误率（0-1）"
+          />
+          <a-input-number
+            v-model:value="wrongRateFilters.max"
+            class="filter-control"
+            :min="0"
+            :max="1"
+            :step="0.01"
+            placeholder="最高错误率（0-1）"
+          />
+        </template>
       </div>
 
       <div class="filter-actions">
         <span class="rule-text">{{ ruleText }}</span>
         <div class="button-row">
+          <a-button v-if="mode === 'class'" :disabled="!filters.school_id" @click="openStatConfig">统计配置</a-button>
           <a-badge :count="displayedCartCount" :overflow-count="99" :show-zero="false">
             <a-button type="primary" ghost @click="handleOpenCart">购物车</a-button>
           </a-badge>
@@ -122,6 +151,18 @@
         </div>
       </div>
     </section>
+
+    <a-modal v-model:open="statConfigOpen" title="学校错误率统计配置" :confirm-loading="statConfigSaving" @ok="saveStatConfig">
+      <a-form layout="vertical">
+        <a-form-item label="统计范围">
+          <a-select v-model:value="statConfigTopN" :options="statConfigOptions" />
+        </a-form-item>
+        <a-form-item v-if="statConfigTopN === 'custom'" label="前 N 名">
+          <a-input-number v-model:value="statConfigCustomTopN" :min="1" :max="1000" :precision="0" />
+        </a-form-item>
+      </a-form>
+      <div class="config-status">当前配置：{{ schoolConfigText }}</div>
+    </a-modal>
 
     <section v-if="recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
       <a-tag
@@ -294,7 +335,7 @@
 import { computed, nextTick, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import { getClassesApi } from "@/servers/api/classes";
-import { getSchoolApi } from "@/servers/api/school";
+import { getSchoolApi, getWrongQuestionStatConfigApi, putWrongQuestionStatConfigApi } from "@/servers/api/school";
 import { getStudentApi } from "@/servers/api/student";
 import { getTestPaper as getTestPaperApi } from "@/servers/api/tp";
 import {
@@ -382,6 +423,28 @@ const filters = reactive({
 });
 
 const pagination = reactive({ page: 1, size: 5, total: 0 });
+const statScope = ref<"school_default" | "all_students" | "top_10" | "top_20" | "custom">("school_default");
+const customTopN = ref<number | null>(null);
+const wrongRateFilters = reactive<{ min: number | null; max: number | null }>({ min: null, max: null });
+const statConfigOpen = ref(false);
+const statConfigSaving = ref(false);
+const statConfigLoading = ref(false);
+const schoolConfigTopN = ref<number | null>(null);
+const schoolConfigConfigured = ref(false);
+const statConfigTopN = ref<"all_students" | "custom">("all_students");
+const statConfigCustomTopN = ref<number | null>(null);
+
+const statScopeOptions: Option[] = [
+  { label: "学校默认", value: "school_default" },
+  { label: "全班统计", value: "all_students" },
+  { label: "前 10 名", value: "top_10" },
+  { label: "前 20 名", value: "top_20" },
+  { label: "按排名前 N，允许同分并列扩展", value: "custom" },
+];
+const statConfigOptions: Option[] = [
+  { label: "全班统计", value: "all_students" },
+  { label: "前 N 名", value: "custom" },
+];
 
 const subjectOptions: Option[] = ["语文", "数学", "英语", "物理", "化学", "生物", "政治", "历史", "地理"].map((item) => ({
   label: item,
@@ -408,6 +471,11 @@ const ruleText = computed(() =>
     : "先用学校、年级、班级定位学生，再选择科目和试卷查看个人错题。"
 );
 const displayedCartCount = computed(() => (mode.value === "class" ? classCartItems.value.length : cartCount.value));
+const schoolConfigText = computed(() => {
+  if (statConfigLoading.value) return "加载中";
+  if (!schoolConfigConfigured.value || schoolConfigTopN.value === null) return "全班统计";
+  return `前 ${schoolConfigTopN.value} 名`;
+});
 
 const text = (value: unknown) => String(value ?? "").trim();
 const normalizeGradeForApi = (value: unknown) => {
@@ -450,7 +518,62 @@ const loadSchools = async () => {
   }
 };
 
-const buildParams = () => ({
+const loadSchoolStatConfig = async (schoolId?: string) => {
+  const id = text(schoolId);
+  if (!id) {
+    schoolConfigTopN.value = null;
+    schoolConfigConfigured.value = false;
+    return;
+  }
+  if (statConfigLoading.value) return;
+  statConfigLoading.value = true;
+  try {
+    const res = await getWrongQuestionStatConfigApi({ school_id: id });
+    if (Number(res?.code) !== 200) throw new Error(res?.msg || "配置加载失败");
+    const data = res?.data || {};
+    schoolConfigTopN.value = data.top_n === null || data.top_n === undefined ? null : Number(data.top_n);
+    schoolConfigConfigured.value = Boolean(data.configured);
+  } catch (error: any) {
+    schoolConfigTopN.value = null;
+    schoolConfigConfigured.value = false;
+    message.error(error?.message || "学校统计配置加载失败");
+  } finally {
+    statConfigLoading.value = false;
+  }
+};
+
+const openStatConfig = () => {
+  if (!text(filters.school_id)) return;
+  statConfigTopN.value = schoolConfigConfigured.value && schoolConfigTopN.value !== null ? "custom" : "all_students";
+  statConfigCustomTopN.value = schoolConfigTopN.value;
+  statConfigOpen.value = true;
+};
+
+const saveStatConfig = async () => {
+  const schoolId = text(filters.school_id);
+  if (!schoolId) return;
+  const topN = statConfigTopN.value === "all_students" ? null : statConfigCustomTopN.value;
+  if (topN !== null && (!Number.isInteger(topN) || topN < 1 || topN > 1000)) {
+    message.error("自定义统计范围必须是 1 到 1000 的整数。");
+    return;
+  }
+  statConfigSaving.value = true;
+  try {
+    const res = await putWrongQuestionStatConfigApi({ school_id: schoolId }, { top_n: topN });
+    if (Number(res?.code) !== 200) throw new Error(res?.msg || "配置保存失败");
+    const data = res?.data || { top_n: topN, configured: topN !== null };
+    schoolConfigTopN.value = data.top_n === null || data.top_n === undefined ? null : Number(data.top_n);
+    schoolConfigConfigured.value = Boolean(data.configured);
+    statConfigOpen.value = false;
+    message.success("学校统计配置已保存");
+  } catch (error: any) {
+    message.error(error?.message || "学校统计配置保存失败");
+  } finally {
+    statConfigSaving.value = false;
+  }
+};
+
+const buildBaseParams = (): API.getTeacherWrongQuestionSearchParams => ({
   page: pagination.page,
   size: pagination.size,
   subject: filters.subject,
@@ -462,6 +585,30 @@ const buildParams = () => ({
   question_type: text(filters.question_type) || undefined,
   knowledge_keyword: text(filters.knowledge_keyword) || undefined,
 });
+
+const buildParams = (): API.getTeacherWrongQuestionSearchParams => {
+  const params: API.getTeacherWrongQuestionSearchParams = {
+    page: pagination.page,
+    size: pagination.size,
+    subject: filters.subject,
+    school_id: text(filters.school_id) || undefined,
+    grade: normalizeGradeForApi(filters.grade),
+    class_id: filters.class_id,
+    test_paper_id: filters.test_paper_id,
+    student_id: mode.value === "student" ? filters.student_id : undefined,
+    question_type: text(filters.question_type) || undefined,
+    knowledge_keyword: text(filters.knowledge_keyword) || undefined,
+  };
+  if (mode.value === "class") {
+    if (wrongRateFilters.min !== null) params.min_wrong_rate = wrongRateFilters.min;
+    if (wrongRateFilters.max !== null) params.max_wrong_rate = wrongRateFilters.max;
+    if (statScope.value === "all_students") params.top_n = 0;
+    else if (statScope.value === "top_10") params.top_n = 10;
+    else if (statScope.value === "top_20") params.top_n = 20;
+    else if (statScope.value === "custom") params.top_n = customTopN.value ?? undefined;
+  }
+  return params;
+};
 
 const refreshClassOptions = () => {
   const grade = text(filters.grade);
@@ -547,6 +694,26 @@ const loadStudents = async () => {
 };
 
 const validateSearch = () => {
+  const min = wrongRateFilters.min;
+  const max = wrongRateFilters.max;
+  if (mode.value === "class") {
+    if (min !== null && (!Number.isFinite(min) || min < 0 || min > 1)) {
+      errorText.value = "最低错误率必须位于 0 到 1 之间。";
+      return false;
+    }
+    if (max !== null && (!Number.isFinite(max) || max < 0 || max > 1)) {
+      errorText.value = "最高错误率必须位于 0 到 1 之间。";
+      return false;
+    }
+    if (min !== null && max !== null && min > max) {
+      errorText.value = "最低错误率不能高于最高错误率。";
+      return false;
+    }
+    if (statScope.value === "custom" && (!Number.isInteger(customTopN.value) || customTopN.value! < 1 || customTopN.value! > 1000)) {
+      errorText.value = "自定义统计范围必须是 1 到 1000 的整数。";
+      return false;
+    }
+  }
   if (!filters.subject || !text(filters.school_id) || !filters.grade) {
     errorText.value = "请先选择科目、学校和年级。";
     return false;
@@ -596,7 +763,7 @@ const loadRecommend = async () => {
   if (!validateSearch()) return;
   recommendLoading.value = true;
   try {
-    const res = await getTeacherWrongQuestionRecommendApi({ ...buildParams(), limit: 12 });
+    const res = await getTeacherWrongQuestionRecommendApi({ ...buildBaseParams(), limit: 12 });
     if (Number(res?.code) !== 200) throw new Error(res?.msg || "推荐失败");
     recommendKnowledge.value = Array.isArray(res?.data?.knowledge_points) ? res.data.knowledge_points : [];
     recommendTypes.value = Array.isArray(res?.data?.question_types) ? res.data.question_types : [];
@@ -615,8 +782,16 @@ const clearQueryResult = () => {
   recommendKnowledge.value = [];
   recommendTypes.value = [];
 };
+const resetStatFilters = () => {
+  statScope.value = "school_default";
+  customTopN.value = null;
+  wrongRateFilters.min = null;
+  wrongRateFilters.max = null;
+};
+
 const handleModeChange = () => {
   filters.student_id = undefined;
+  resetStatFilters();
   selectedQuestionKeys.value = new Set();
   if (mode.value === "student") fetchCartCount();
   clearQueryResult();
@@ -636,6 +811,8 @@ const handleBaseChange = async () => {
   refreshClassOptions();
 };
 const handleSchoolChange = async () => {
+  resetStatFilters();
+  await loadSchoolStatConfig(filters.school_id);
   filters.grade = undefined;
   filters.class_id = undefined;
   filters.test_paper_id = undefined;
@@ -692,6 +869,7 @@ const handleSizeChange = async (_page: number, size: number) => {
   await search(true);
 };
 const resetFilters = async () => {
+  resetStatFilters();
   filters.subject = undefined;
   filters.school_id = getLocalSchoolId();
   filters.grade = undefined;
@@ -707,6 +885,7 @@ const resetFilters = async () => {
   recommendTypes.value = [];
   paperOptions.value = [];
   await loadClasses();
+  await loadSchoolStatConfig(filters.school_id);
 };
 const useKnowledge = async (name: string) => {
   filters.knowledge_keyword = name;
@@ -928,7 +1107,10 @@ const handleAddToCart = async () => {
 onMounted(async () => {
   await loadSchools();
   filters.school_id = getLocalSchoolId();
-  if (filters.school_id) await loadClasses();
+  if (filters.school_id) {
+    await loadClasses();
+    await loadSchoolStatConfig(filters.school_id);
+  }
   fetchCartCount();
 });
 </script>
