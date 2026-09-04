@@ -17,6 +17,24 @@ export async function getClassAnalysis(
   });
 }
 
+/** 查询班级指定科目和知识点的最近考试掌握度趋势。 按班级、科目和知识点查询最近若干场有效考试的掌握度趋势。班级掌握率按全班有效小题作答次数计算，参与人数按学生去重；仅内置管理员、普通管理员和目标班级同校教师可访问。 GET /api/analysis/class_knowledge_point_mastery */
+export async function getClassKnowledgePointMasteryApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getClassKnowledgePointMasteryApiParams,
+  options?: { [key: string]: any }
+) {
+  return request<API.ClassKnowledgePointMasteryReply>(
+    "/api/analysis/class_knowledge_point_mastery",
+    {
+      method: "GET",
+      params: {
+        ...params,
+      },
+      ...(options || {}),
+    }
+  );
+}
+
 /** 与多次考试成绩排名对比分析例： POST /api/analysis/compare_rank_multi_exam */
 export async function postCompareRankMultiExam(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

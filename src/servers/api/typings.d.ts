@@ -119,6 +119,58 @@ declare namespace API {
     subject_selection: string;
   };
 
+  type ClassKnowledgePointMasteryData = {
+    /** 班级表主键 */
+    class_id: number;
+    /** 请求科目 */
+    subject: string;
+    /** 请求知识点 */
+    knowledge_point: string;
+    /** 请求的最近考试场数 */
+    requested_exam_count: number;
+    /** 实际参与统计的考试场数 */
+    actual_exam_count: number;
+    /** 当前班级 Student.state=True 的人数，不作为历史考试掌握率分母 */
+    active_student_count: number;
+    /** 窗口内正确题数 */
+    correct_question_count: number;
+    /** 窗口内有效相关题数 */
+    total_question_count: number;
+    /** 窗口掌握率，范围 0 至 1，保留四位小数；无有效题时为空 */
+    mastery_rate?: number;
+    /** 按 exam_id 倒序的逐场趋势 */
+    exams: ClassKnowledgePointMasteryExamTrend[];
+  };
+
+  type ClassKnowledgePointMasteryExamTrend = {
+    /** 考试 ID */
+    exam_id: number;
+    /** 考试名称 */
+    exam_name?: string;
+    /** 考试学年 */
+    exam_year?: string;
+    /** 考试日期，格式 YYYY-MM-DD；历史考试可为空 */
+    exam_date?: string;
+    /** 该场至少有一条有效知识点题作答的去重学生数 */
+    participant_count: number;
+    /** 该场正确题数 */
+    correct_question_count: number;
+    /** 该场有效相关题数 */
+    total_question_count: number;
+    /** 该场掌握率，范围 0 至 1，保留四位小数 */
+    mastery_rate?: number;
+  };
+
+  type ClassKnowledgePointMasteryReply = {
+    /** HTTP 业务状态码 */
+    code: number;
+    /** 响应消息 */
+    msg: string;
+    data: ClassKnowledgePointMasteryData;
+    /** 该接口固定为 null */
+    total?: Record<string, any>;
+  };
+
   type ClassPassLineRateItem = {
     /** 班级 ID */
     class_id: number;
@@ -420,6 +472,17 @@ declare namespace API {
     max_class_rank?: number;
   };
 
+  type getClassKnowledgePointMasteryApiParams = {
+    /** 必填；班级表主键，必须为正整数 */
+    class_id: number;
+    /** 必填；去首尾空白后不可为空，与题目科目精确匹配 */
+    subject: string;
+    /** 必填；去首尾空白后不可为空，与题目关键词精确匹配 */
+    knowledge_point: string;
+    /** 可选；整数，范围 1 至 100，默认 10 */
+    n?: string;
+  };
+
   type getClassQuestionStatParams = {
     /** 页码 */
     page?: number;
@@ -435,6 +498,12 @@ declare namespace API {
     question_key?: string;
     /** 兼容旧前端参数 */
     refresh?: string;
+    /** 错误率下限，范围 0 到 1（含边界） */
+    min_wrong_rate?: number;
+    /** 错误率上限，范围 0 到 1（含边界） */
+    max_wrong_rate?: number;
+    /** 错误率统计前 N 名；0 表示全班，最大 1000 */
+    top_n?: number;
   };
 
   type getClassQuestionWrongStudentsParams = {
@@ -449,9 +518,7 @@ declare namespace API {
     /** 班级ID */
     class_id: string;
     /** 题号 */
-    question_key?: string;
-    /** 兼容旧前端参数 */
-    refresh?: string;
+    question_key: string;
   };
 
   type getClassScoreParams = {
@@ -836,6 +903,12 @@ declare namespace API {
     year?: string;
     /** 是否已复习 */
     is_reviewed?: string;
+    /** 错误率下限，范围 0 到 1（含边界） */
+    min_wrong_rate?: number;
+    /** 错误率上限，范围 0 到 1（含边界） */
+    max_wrong_rate?: number;
+    /** 错误率统计前 N 名；0 表示全班，最大 1000 */
+    top_n?: number;
     student_uid: string;
   };
 
@@ -928,6 +1001,12 @@ declare namespace API {
     year?: string;
     /** 是否已复习 */
     is_reviewed?: string;
+    /** 错误率下限，范围 0 到 1（含边界） */
+    min_wrong_rate?: number;
+    /** 错误率上限，范围 0 到 1（含边界） */
+    max_wrong_rate?: number;
+    /** 错误率统计前 N 名；0 表示全班，最大 1000 */
+    top_n?: number;
   };
 
   type getTestPaperFileParams = {
@@ -1012,6 +1091,10 @@ declare namespace API {
 
   type getUserDetailApiParams = {
     user_id: string;
+  };
+
+  type getWrongQuestionStatConfigApiParams = {
+    school_id: string;
   };
 
   type Grade = {
@@ -1134,6 +1217,12 @@ declare namespace API {
     test_paper_id: number;
     /** 班级ID */
     class_id?: string;
+    /** 错误率下限，范围 0 到 1（含边界） */
+    min_wrong_rate?: number;
+    /** 错误率上限，范围 0 到 1（含边界） */
+    max_wrong_rate?: number;
+    /** 错误率统计前 N 名；0 表示全班，最大 1000 */
+    top_n?: number;
   };
 
   type postClassUploadApiParams = {
@@ -1370,6 +1459,10 @@ declare namespace API {
     user_id: string;
   };
 
+  type putWrongQuestionStatConfigApiParams = {
+    school_id: string;
+  };
+
   type QuestionBankPaperUpdate = {
     /** 试卷名称 */
     name?: string;
@@ -1399,6 +1492,8 @@ declare namespace API {
     class_id: string;
     /** 学校id */
     school_id: string;
+    /** 学生id */
+    student_id: string;
     /** 总分 */
     总分?: number;
     /** 语文 */
@@ -1407,6 +1502,8 @@ declare namespace API {
     数学?: number;
     /** 英语 */
     英语?: number;
+    /** 日语 */
+    日语?: number;
     /** 物理 */
     物理?: number;
     /** 化学 */
@@ -1555,5 +1652,10 @@ declare namespace API {
     is_need_answer?: boolean;
     /** 是否包含解析 */
     is_need_analysis?: boolean;
+  };
+
+  type WrongQuestionStatConfig = {
+    /** 错误率统计前 N 名；null 恢复全班统计，取值范围 1 到 1000 */
+    top_n: number;
   };
 }

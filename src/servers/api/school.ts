@@ -78,3 +78,36 @@ export async function deleteSchoolDetailApi(
     ...(options || {}),
   });
 }
+
+/** 学校未配置或配置为 null 时使用全班统计。 GET /api/school/${param0}/wrong-question-config */
+export async function getWrongQuestionStatConfigApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getWrongQuestionStatConfigApiParams,
+  options?: { [key: string]: any }
+) {
+  const { school_id: param0, ...queryParams } = params;
+  return request<any>(`/api/school/${param0}/wrong-question-config`, {
+    method: "GET",
+    params: { ...queryParams },
+    ...(options || {}),
+  });
+}
+
+/** 保存前 N 名统计口径；传入 null 清除配置并恢复全班统计。 PUT /api/school/${param0}/wrong-question-config */
+export async function putWrongQuestionStatConfigApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.putWrongQuestionStatConfigApiParams,
+  body: API.WrongQuestionStatConfig,
+  options?: { [key: string]: any }
+) {
+  const { school_id: param0, ...queryParams } = params;
+  return request<any>(`/api/school/${param0}/wrong-question-config`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    params: { ...queryParams },
+    data: body,
+    ...(options || {}),
+  });
+}
