@@ -21,28 +21,31 @@
               </div>
             </a-tab-pane>
             <a-tab-pane key="top_rate" tab="清北率">
-              <div class="rate-grid">
+              <div v-if="topRateItems.length > 0" class="rate-grid">
                 <div v-for="item in topRateItems" :key="item.subject" class="rate-item">
                   <span class="subject-name">{{ item.subjectName }}</span>
                   <span class="rate-value">{{ item.rate }}%</span>
                 </div>
               </div>
+              <div v-else class="no-data-tip">未配置清北线</div>
             </a-tab-pane>
             <a-tab-pane key="top9_rate" tab="985率">
-              <div class="rate-grid">
+              <div v-if="top9RateItems.length > 0" class="rate-grid">
                 <div v-for="item in top9RateItems" :key="item.subject" class="rate-item">
                   <span class="subject-name">{{ item.subjectName }}</span>
                   <span class="rate-value">{{ item.rate }}%</span>
                 </div>
               </div>
+              <div v-else class="no-data-tip">未配置985线</div>
             </a-tab-pane>
             <a-tab-pane key="top2_rate" tab="211率">
-              <div class="rate-grid">
+              <div v-if="top2RateItems.length > 0" class="rate-grid">
                 <div v-for="item in top2RateItems" :key="item.subject" class="rate-item">
                   <span class="subject-name">{{ item.subjectName }}</span>
                   <span class="rate-value">{{ item.rate }}%</span>
                 </div>
               </div>
+              <div v-else class="no-data-tip">未配置211线</div>
             </a-tab-pane>
           </a-tabs>
         </a-card>
@@ -53,21 +56,6 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-
-// 定义科目数据的接口（中文科目名）
-interface SubjectRates {
-  [key: string]: number;
-  '语文': number;
-  '数学': number;
-  '英语': number;
-  '化学': number;
-  '物理': number;
-  '政治': number;
-  '地理': number;
-  '生物': number;
-  '历史': number;
-  '总分': number;
-}
 
 // 定义显示项的接口
 interface RateItem {
@@ -82,12 +70,12 @@ interface ClassInfo {
   name: string;
   header: number;
   school_id: number;
-  subject_selection: string; // 选科信息
+  subject_selection: string;
 }
 
 const props = defineProps<{
   passLineRateData: any;
-  classInfo?: ClassInfo; // 可选的班级信息
+  classInfo?: ClassInfo;
 }>();
 
 // 激活的tab
@@ -290,7 +278,6 @@ const passLineChartOption = computed(() => {
   font-size: 20px;
   font-weight: 600;
   color: #2c3e50;
-//   height: 36px;
   text-align: left;
   margin-bottom: 12px;
   padding-left: 8px;
@@ -343,5 +330,15 @@ const passLineChartOption = computed(() => {
 .rate-value {
   font-weight: 600;
   color: #1890ff;
+}
+
+.no-data-tip {
+  text-align: center;
+  padding: 24px 16px;
+  color: #999;
+  font-size: 14px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  margin-top: 8px;
 }
 </style>
