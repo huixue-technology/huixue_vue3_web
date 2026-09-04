@@ -386,6 +386,7 @@ const subjectPassLines = ref<Record<string, number>>({});
 
 // 筛选状态
 const selectedSubject = ref<string>(''); // 科目筛选
+const appliedSubject = ref<string>(''); // 已应用到表格展示的科目
 const sortOrder = ref<string>('desc'); // 排序方向（仅需此参数）
 const minScore = ref<number | null>(null); // 最低分数
 const maxScore = ref<number | null>(null); // 最高分数
@@ -417,13 +418,20 @@ const maxClassRank = ref<number | null>(null);
 const minRank = ref<number | null>(null);
 const maxRank = ref<number | null>(null);
 
+const displayedSubjects = computed(() => {
+  if (appliedSubject.value) {
+    return subjects.value.includes(appliedSubject.value) ? [appliedSubject.value] : [];
+  }
+  return subjects.value;
+});
+
 const columns = computed(() => {
   const baseColumns = [
     { title: '学号', dataIndex: 'studentId', key: 'studentId', width: 100 },
     { title: '姓名', dataIndex: 'studentName', key: 'studentName', width: 150 },
   ];
-  // 每个科目生成 分数/班名/校名 三列
-  const subjectColumns = subjects.value.flatMap(subject => [
+  // 只渲染当前选中的科目；未选中时保留当前数据中存在的科目列
+  const subjectColumns = displayedSubjects.value.flatMap(subject => [
     { title: subject, dataIndex: subject, key: subject, width: 120, sorter: false },
     { title: '班名', dataIndex: `${subject}b`, key: `${subject}b`, width: 100, sorter: false },
     { title: '校名', dataIndex: `${subject}d`, key: `${subject}d`, width: 100, sorter: false },
@@ -747,6 +755,7 @@ const resetAllFiltersExceptClass = () => {
   
   // 重置其他筛选条件
   selectedSubject.value = '';
+  appliedSubject.value = '';
   sortOrder.value = 'desc'; // 重置为默认降序
   minScore.value = null;
   maxScore.value = null;
@@ -864,7 +873,7 @@ const handlePassLineIdChange = (value: number | null) => {
 };
 
 const add_filter = (params: any) => {
-  if (selectedSubject.value) params.subject = selectedSubject.value;
+  if (appliedSubject.value) params.subject = appliedSubject.value;
   // 严格按照接口要求传递排序方向参数
   params.order_direction = sortOrder.value;
 
@@ -889,6 +898,7 @@ const applyFilters = async () => {
     return;
   }
   
+  appliedSubject.value = selectedSubject.value;
   isFiltering.value = true;
   try {
     console.log('[applyFilters] 准备调用 handleExamChange, examId:', selectedExamId.value);
@@ -995,6 +1005,7 @@ const resetFilters = () => {
   console.log('重置筛选条件');
   selectedExamId.value = classExamList.value.length > 0 ? classExamList.value[0].id : 0;
   selectedSubject.value = '';
+  appliedSubject.value = '';
   sortOrder.value = 'desc'; 
   minScore.value = null;
   maxScore.value = null;

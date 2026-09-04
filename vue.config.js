@@ -6,7 +6,7 @@ const REMOTE_API_TARGET = "http://103.236.97.252:56004";  // uat环境
 const isLocalMachine = process.platform === "win32" || process.platform === "darwin";
 console.log(`[vue.config] isLocalMachine: ${isLocalMachine}`);
 const apiProxyTarget =
-  process.env.VUE_APP_API_PROXY_TARGET || LOCAL_API_TARGET;
+  process.env.VUE_APP_API_PROXY_TARGET || REMOTE_API_TARGET;
 
 console.log(`[vue.config] /api proxy target: ${apiProxyTarget}`);
 
