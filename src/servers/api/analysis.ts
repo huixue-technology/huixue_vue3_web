@@ -35,6 +35,32 @@ export async function getClassKnowledgePointMasteryApi(
   );
 }
 
+/** 查询班级知识点候选列表。 按班级和科目返回历史班级题目覆盖中的去重知识点候选。候选范围是当前学校中至少有班级成绩覆盖的题目，并按试卷题号只使用最新题目定义；关键词第 0 项按题型处理，后续成员才是知识点，名称去首尾空白后精确去重。keyword 缺失或为空时不筛选，其他值按字符串包含关系筛选；limit 默认 100，范围为 1 至 200。question_count 和 exam_count 描述历史覆盖范围，has_historical_data 只表示历史上存在有效作答，不承诺默认最近考试窗口一定有掌握度结果。仅内置管理员、普通管理员和目标班级同校教师可访问。
+Returns:
+    Flask ``Response``：成功时使用统一 Reply 包装候选项和过滤后总数。
+
+Raises:
+    BadRequest: Flask-RESTX 无法把缺失或格式错误的查询参数解析为声明类型；
+        该异常会被转换为 400 Reply，而不会泄露解析细节。 GET /api/analysis/class_knowledge_points */
+export async function getClassKnowledgePointsApi(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getClassKnowledgePointsApiParams,
+  options?: { [key: string]: any }
+) {
+  return request<API.ClassKnowledgePointsReply>(
+    "/api/analysis/class_knowledge_points",
+    {
+      method: "GET",
+      params: {
+        // limit has a default value: 100
+        limit: "100",
+        ...params,
+      },
+      ...(options || {}),
+    }
+  );
+}
+
 /** 与多次考试成绩排名对比分析例： POST /api/analysis/compare_rank_multi_exam */
 export async function postCompareRankMultiExam(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

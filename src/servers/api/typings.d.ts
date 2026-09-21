@@ -119,6 +119,17 @@ declare namespace API {
     subject_selection: string;
   };
 
+  type ClassKnowledgePointCandidate = {
+    /** 去除首尾空白后的唯一知识点名称；题型不属于知识点 */
+    knowledge_point: string;
+    /** 当前班级题目覆盖中，最新题目定义包含该知识点的去重题目数；不要求每题有有效作答 */
+    question_count: number;
+    /** 上述题目所属的去重考试数；不是最近考试窗口的实际统计场数 */
+    exam_count: number;
+    /** 历史范围内是否至少存在一条符合掌握度统计规则的有效作答；不代表最近考试一定有结果 */
+    has_historical_data: boolean;
+  };
+
   type ClassKnowledgePointMasteryData = {
     /** 班级表主键 */
     class_id: number;
@@ -171,6 +182,17 @@ declare namespace API {
     total?: Record<string, any>;
   };
 
+  type ClassKnowledgePointsReply = {
+    /** HTTP 业务状态码 */
+    code: number;
+    /** 响应消息 */
+    msg: string;
+    /** 按接口排序并应用 limit 截取后的候选列表 */
+    data: ClassKnowledgePointCandidate[];
+    /** keyword 过滤后的候选总数，不受 limit 截取影响 */
+    total: number;
+  };
+
   type ClassPassLineRateItem = {
     /** 班级 ID */
     class_id: number;
@@ -211,6 +233,18 @@ declare namespace API {
 
   type deleteExamDetailApiParams = {
     exam_id: number;
+  };
+
+  type deleteGaokaoQuestionImageDeleteApiParams = {
+    /** 题目 ID */
+    question_id: number;
+    /** 图片序号，从 0 开始 */
+    image_index: number;
+  };
+
+  type deleteGaokaoQuestionItemApiParams = {
+    /** 题目 ID */
+    question_id: number;
   };
 
   type deleteGradeDetailApiParams = {
@@ -348,6 +382,21 @@ declare namespace API {
     year: string;
   };
 
+  type GaokaoPaperDetail =
+    // #/components/schemas/GaokaoPaperDownload
+    GaokaoPaperDownload & {
+      /** 题目总数 */
+      question_count?: number;
+      /** 待补录题目数 */
+      missing_count?: number;
+    };
+
+  type GaokaoPaperDetailResponse = {
+    code?: number;
+    msg?: string;
+    data?: GaokaoPaperDetail;
+  };
+
   type GaokaoPaperDownload =
     // #/components/schemas/GaokaoPaper
     GaokaoPaper & {
@@ -372,6 +421,41 @@ declare namespace API {
     code?: number;
     msg?: string;
     data?: GaokaoPaperDownload;
+    total?: number;
+  };
+
+  type GaokaoQuestion = {
+    id: number;
+    paper_id: number;
+    string_number: string;
+    question_type?: string;
+    content?: string;
+    /** 选项数组 */
+    options?: Record<string, any>;
+    answer?: string;
+    score?: number;
+    /** 裁图相对路径 */
+    images?: string[];
+    /** 可直接渲染的裁图地址 */
+    image_urls?: string[];
+    /** 来源页码 */
+    pages?: number[];
+    /** auto=解析 manual=人工 */
+    source?: string;
+    /** parsed/missing/edited */
+    status?: string;
+  };
+
+  type GaokaoQuestionItemResponse = {
+    code?: number;
+    msg?: string;
+    data?: GaokaoQuestion;
+  };
+
+  type GaokaoQuestionListResponse = {
+    code?: number;
+    msg?: string;
+    data?: GaokaoQuestion[];
     total?: number;
   };
 
@@ -483,6 +567,17 @@ declare namespace API {
     n?: string;
   };
 
+  type getClassKnowledgePointsApiParams = {
+    /** 必填；班级表主键，必须为正整数 */
+    class_id: number;
+    /** 必填；去首尾空白后不可为空，与题目科目精确匹配 */
+    subject: string;
+    /** 可选；去首尾空白后按知识点名称包含关系筛选，缺失或空白表示不筛选 */
+    keyword?: string;
+    /** 可选；返回数量上限，整数范围 1 至 200，默认 100 */
+    limit?: number;
+  };
+
   type getClassQuestionStatParams = {
     /** 页码 */
     page?: number;
@@ -573,6 +668,11 @@ declare namespace API {
     feedback_id: number;
   };
 
+  type getGaokaoPaperDetailApiParams = {
+    /** 高考试卷 ID */
+    paper_id: number;
+  };
+
   type getGaokaoPaperDownloadApiParams = {
     /** 科目 */
     subject?: string;
@@ -597,6 +697,29 @@ declare namespace API {
     page?: number;
     /** 每页数量，最大 100 */
     size?: number;
+  };
+
+  type getGaokaoPaperQuestionsApiParams = {
+    /** 高考试卷 ID */
+    paper_id: number;
+    /** 按状态过滤 parsed/missing/edited */
+    status?: string;
+    /** 页码，从 1 开始 */
+    page?: number;
+    /** 每页数量，最大 200 */
+    size?: number;
+  };
+
+  type getGaokaoQuestionImageApiParams = {
+    /** 题目 ID */
+    question_id: number;
+    /** 图片序号，从 0 开始 */
+    image_index: number;
+  };
+
+  type getGaokaoQuestionItemApiParams = {
+    /** 题目 ID */
+    question_id: number;
   };
 
   type getGetGradeStudentCountApiParams = {
@@ -1239,6 +1362,21 @@ declare namespace API {
     compare_exam_ids: string;
   };
 
+  type postGaokaoPaperParseApiParams = {
+    /** 高考试卷 ID */
+    paper_id: number;
+  };
+
+  type postGaokaoPaperQuestionsApiParams = {
+    /** 高考试卷 ID */
+    paper_id: number;
+  };
+
+  type postGaokaoQuestionImageUploadApiParams = {
+    /** 题目 ID */
+    question_id: number;
+  };
+
   type postGradeUploadApiParams = {
     /** 考试id */
     exam_id: number;
@@ -1427,6 +1565,11 @@ declare namespace API {
 
   type putExamDetailApiParams = {
     exam_id: number;
+  };
+
+  type putGaokaoQuestionItemApiParams = {
+    /** 题目 ID */
+    question_id: number;
   };
 
   type putGradeDetailApiParams = {

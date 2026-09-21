@@ -21,6 +21,7 @@ import {
   LogoutOutlined,
   MailOutlined,
   MergeCellsOutlined,
+  ReadOutlined,
   MessageOutlined,
   SecurityScanOutlined,
   ThunderboltOutlined,
@@ -63,7 +64,8 @@ const items = computed<MenuProps["items"]>(() => {
       { key: "student_compare", icon: () => h(ThunderboltOutlined), label: "学生对比", title: "学生对比" },
       { key: "simulate", icon: () => h(FrownOutlined), label: "成绩模拟", title: "成绩模拟" },
       { key: "wrong_question", icon: () => h(AppstoreOutlined), label: "错题模块", title: "错题模块" },
-      { key: "paper_view", icon: () => h(ForkOutlined), label: "试卷查看", title: "试卷查看" }
+      { key: "paper_view", icon: () => h(ForkOutlined), label: "试卷查看", title: "试卷查看" },
+      { key: "gaokao_question_bank", icon: () => h(ReadOutlined), label: "高考试题", title: "高考试题" }
     );
   } else {
     menuItems.push(
@@ -77,7 +79,8 @@ const items = computed<MenuProps["items"]>(() => {
         label: "错题模块",
         title: "错题模块",
       },
-      { key: "student_paper_view", icon: () => h(ForkOutlined), label: "试卷查看", title: "试卷查看" }
+      { key: "student_paper_view", icon: () => h(ForkOutlined), label: "试卷查看", title: "试卷查看" },
+      { key: "gaokao_question_bank", icon: () => h(ReadOutlined), label: "高考试题", title: "高考试题" }
     );
   }
 

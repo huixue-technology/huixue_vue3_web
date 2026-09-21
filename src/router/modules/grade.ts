@@ -63,5 +63,15 @@ export default [
         path: '/simulate',
         name: 'gradeSimulate',
         component: () => import('@/views/simulate/gradeSimulate.vue')
+    },
+    {
+        path: '/gaokao_question_bank',
+        name: 'gaokaoQuestionBank',
+        component: () => import('@/views/gaokao/GaokaoQuestionBank.vue')
+    },
+    {
+        path: '/gaokao_paper/:paperId',
+        name: 'gaokaoPaperDetail',
+        component: () => import('@/views/gaokao/GaokaoPaperDetail.vue')
     }
 ]

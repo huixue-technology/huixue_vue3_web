@@ -79,7 +79,13 @@ export async function deleteSchoolDetailApi(
   });
 }
 
-/** 学校未配置或配置为 null 时使用全班统计。 GET /api/school/${param0}/wrong-question-config */
+/** 读取学校错题错误率统计口径。 学校未配置或配置为 null 时使用全班统计。
+Args:
+    school_id: 路径中的学校 ID。
+
+Returns:
+    Response: 统一响应体，data 含 school_id、top_n、configured；
+    学校不存在返回 404，入参非法返回 400。 GET /api/school/${param0}/wrong-question-config */
 export async function getWrongQuestionStatConfigApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getWrongQuestionStatConfigApiParams,
@@ -93,7 +99,14 @@ export async function getWrongQuestionStatConfigApi(
   });
 }
 
-/** 保存前 N 名统计口径；传入 null 清除配置并恢复全班统计。 PUT /api/school/${param0}/wrong-question-config */
+/** 更新学校错题错误率统计口径。 保存前 N 名统计口径；传入 null 清除配置并恢复全班统计。
+Args:
+    school_id: 路径中的学校 ID。
+
+Returns:
+    Response: 统一响应体，data 含 school_id、top_n、configured；
+    top_n 传 null 表示清除配置并恢复全班统计，configured 为 false。
+    请求体不满足模型校验或学校不存在时分别返回 400、404。 PUT /api/school/${param0}/wrong-question-config */
 export async function putWrongQuestionStatConfigApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.putWrongQuestionStatConfigApiParams,
