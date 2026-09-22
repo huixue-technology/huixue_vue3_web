@@ -195,6 +195,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue';
 import { postClassAlwaysTopBottomStudents } from '@/servers/api/average';
+import { getStudentApi } from '@/servers/api/student';
 import { message } from 'ant-design-vue';
 import { getClassKnowledgePointMasteryApi, getClassKnowledgePointsApi } from '@/servers/api/analysis'
 import { debounce } from 'lodash';
@@ -203,8 +204,20 @@ const props = defineProps<{
   classId: number;
 }>();
 const loading = ref(false);
-// 科目名称映射表（中文科目名）
+// 科目名称映射表（支持拼音键和中文键，统一转为中文显示）
 const subjectMap: Record<string, string> = {
+  // 拼音键 → 中文
+  'yuwen': '语文',
+  'shuxue': '数学',
+  'yingyu': '英语',
+  'wuli': '物理',
+  'huaxue': '化学',
+  'shengwu': '生物',
+  'lishi': '历史',
+  'zhengzhi': '政治',
+  'dili': '地理',
+  'sum_': '总分',
+  // 中文键 → 中文（兼容已有数据）
   '语文': '语文',
   '数学': '数学',
   '英语': '英语',
@@ -218,11 +231,37 @@ const subjectMap: Record<string, string> = {
 };
 // 学生过线率列表数据
 const studentRateList = ref<any[]>([]);
+// 学生 uid → 姓名 映射表（从学生列表接口获取，补充过线率数据中缺失的姓名字段）
+const studentNameMap = ref<Map<string, string>>(new Map());
 // 表格列定义（增加排序功能）
 const studentRateColumns = ref<any[]>([
   { title: '学生姓名', dataIndex: 'name', width: 120, fixed: 'left', align: 'center' },
   { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left', align: 'center', customRender: ({ text }: any) => maskStudentId(text) },
 ]);
+
+// 获取班级学生列表，建立 uid → 姓名 映射
+const fetchStudentNames = async (classId: number) => {
+  if (!classId) return;
+  try {
+    const res = await getStudentApi({
+      class_id: classId,
+      page: 1,
+      size: 999,
+    });
+    if (res.code === 200 && res.data) {
+      const list = Array.isArray(res.data) ? res.data : (res.data.records || res.data.list || []);
+      const map = new Map<string, string>();
+      list.forEach((s: any) => {
+        if (s.uid != null) {
+          map.set(String(s.uid), s.name || '');
+        }
+      });
+      studentNameMap.value = map;
+    }
+  } catch (err) {
+    console.error('获取班级学生列表失败:', err);
+  }
+};
 // 搜索相关
 const searchName = ref<string>('');
 const selectedSubject = ref<string>('');
@@ -491,7 +530,7 @@ const processStudentRateData = (classData: any) => {
   const subjectColumns: any[] = [];
   Object.entries(studentOneLineRate).forEach(([subject, students]: [string, any]) => {
     if (Array.isArray(students)) {
-      // 添加科目列（支持排序）
+      // 添加科目列（支持排序）—— 标题统一转为中文
       const subjectName = subjectMap[subject] || subject;
       subjectColumns.push({
         title: subjectName,
@@ -502,9 +541,11 @@ const processStudentRateData = (classData: any) => {
       // 将每个学生的该科目过线率添加到学生数据中
       students.forEach((student: any) => {
         if (!studentMap.has(student.uid)) {
+          // 姓名优先用接口返回的 name，缺失时从学生列表映射表查找
+          const name = student.name || studentNameMap.value.get(String(student.uid)) || '-';
           studentMap.set(student.uid, {
             uid: student.uid,
-            name: student.name,
+            name: name,
             key: student.uid
           });
         }
@@ -534,34 +575,40 @@ const fetchSubjectRateData = async (silent = false) => {
   if (!props.classId) return;
   try {
     loading.value = true;
-    const res = await postClassAlwaysTopBottomStudents({
-      class_ids: [props.classId],
-    }, {
-      errorHandler: (error: any) => {
-        return error;
-      },
-      getResponse: true,
-    });
-    const responseData = res.data || res;
-    const httpStatus = res.response?.status || res.status;
-    if (httpStatus === 200 && responseData.code === 200 && responseData.data) {
-      // 判断 data 是数组还是对象
-      if (Array.isArray(responseData.data) && responseData.data.length > 0) {
-        const classData = responseData.data[0];
-        processStudentRateData(classData);
-        if (!silent) message.success('数据加载成功');
-      } else if (typeof responseData.data === 'object' && responseData.data.student_one_line_rate) {
-        // data 是对象而非数组，直接使用
-        processStudentRateData(responseData.data);
-        if (!silent) message.success('数据加载成功');
-      } else {
-        message.info('暂无数据');
-        studentRateList.value = [];
-      }
-    } else {
-      message.warning(responseData.message || '获取数据失败');
-      studentRateList.value = [];
-    }
+    // 并行获取：学生姓名映射 + 过线率数据
+    await Promise.all([
+      fetchStudentNames(props.classId),
+      (async () => {
+        const res = await postClassAlwaysTopBottomStudents({
+          class_ids: [props.classId],
+        }, {
+          errorHandler: (error: any) => {
+            return error;
+          },
+          getResponse: true,
+        });
+        const responseData = res.data || res;
+        const httpStatus = res.response?.status || res.status;
+        if (httpStatus === 200 && responseData.code === 200 && responseData.data) {
+          // 判断 data 是数组还是对象
+          if (Array.isArray(responseData.data) && responseData.data.length > 0) {
+            const classData = responseData.data[0];
+            processStudentRateData(classData);
+            if (!silent) message.success('数据加载成功');
+          } else if (typeof responseData.data === 'object' && responseData.data.student_one_line_rate) {
+            // data 是对象而非数组，直接使用
+            processStudentRateData(responseData.data);
+            if (!silent) message.success('数据加载成功');
+          } else {
+            message.info('暂无数据');
+            studentRateList.value = [];
+          }
+        } else {
+          message.warning(responseData.message || '获取数据失败');
+          studentRateList.value = [];
+        }
+      })()
+    ]);
   } catch (err: any) {
     console.error('请求异常:', err);
     message.error('请求数据失败');

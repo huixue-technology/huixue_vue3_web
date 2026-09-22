@@ -28,8 +28,56 @@
         :class-info="currentClassInfo"
       />
       
-      <!-- 分数线对比表格 -->
-      <a-card class="compare-card" title="分数线对比表">
+      <!-- 分数线对比表格（两次考试对比） -->
+      <a-card class="compare-card">
+        <template #title>
+          <div class="section-title">分数线对比</div>
+        </template>
+        <!-- 筛选区 -->
+        <div class="compare-filter">
+          <a-space wrap :size="12" align="center">
+            <span>基准考试：</span>
+            <a-select
+              v-model:value="baseExamId"
+              placeholder="选择基准考试"
+              style="width: 200px"
+              allow-clear
+            >
+              <a-select-option v-for="exam in examList" :key="exam.id" :value="exam.id">
+                {{ exam.name }}
+              </a-select-option>
+            </a-select>
+            <span>对比考试：</span>
+            <a-select
+              v-model:value="compareExamId"
+              placeholder="选择对比考试"
+              style="width: 200px"
+              allow-clear
+            >
+              <a-select-option v-for="exam in examList" :key="exam.id" :value="exam.id">
+                {{ exam.name }}
+              </a-select-option>
+            </a-select>
+            <span>科目：</span>
+            <a-select
+              v-model:value="compareSubject"
+              style="width: 130px"
+            >
+              <a-select-option v-for="opt in subjectOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </a-select-option>
+            </a-select>
+            <span>分数线类别：</span>
+            <a-select
+              v-model:value="compareLineType"
+              style="width: 130px"
+            >
+              <a-select-option v-for="opt in lineTypeOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </a-select-option>
+            </a-select>
+          </a-space>
+        </div>
         <a-table
           :columns="compareColumns"
           :data-source="compareTableData"
@@ -39,24 +87,18 @@
           row-key="key"
         >
           <template #bodyCell="{ column, record }">
-            <template v-if="column.dataIndex === 'score'">
-              <span v-if="record.score !== null && record.score !== undefined">{{ record.score }}</span>
+            <template v-if="column.dataIndex === 'baseScore'">
+              <span v-if="record.baseScore !== null && record.baseScore !== undefined">{{ record.baseScore }}</span>
               <span v-else class="empty-value">未配置</span>
             </template>
-            <template v-else-if="column.dataIndex === 'count'">
-              <span v-if="record.score !== null && record.score !== undefined">{{ record.count ?? 0 }}</span>
+            <template v-else-if="column.dataIndex === 'compareScore'">
+              <span v-if="record.compareScore !== null && record.compareScore !== undefined">{{ record.compareScore }}</span>
               <span v-else class="empty-value">未配置</span>
             </template>
-            <template v-else-if="column.dataIndex === 'rate'">
-              <span v-if="record.score !== null && record.score !== undefined">{{ record.rate ?? 0 }}%</span>
-              <span v-else class="empty-value">未配置</span>
-            </template>
-            <template v-else-if="column.dataIndex === 'average'">
-              <span v-if="record.average !== null && record.average !== undefined">{{ record.average }}</span>
-              <span v-else class="empty-value">-</span>
-            </template>
-            <template v-else-if="column.dataIndex === 'max'">
-              <span v-if="record.max !== null && record.max !== undefined">{{ record.max }}</span>
+            <template v-else-if="column.dataIndex === 'change'">
+              <span v-if="record.change !== null && record.change !== undefined" :class="record.change > 0 ? 'change-up' : (record.change < 0 ? 'change-down' : 'change-flat')">
+                {{ record.change > 0 ? '↑' + record.change : (record.change < 0 ? '↓' + Math.abs(record.change) : '持平') }}
+              </span>
               <span v-else class="empty-value">-</span>
             </template>
           </template>
@@ -64,7 +106,7 @@
         <a-alert
           v-if="showEmptyTip"
           message="提示"
-          description="部分分数线数据（如211、985、清北）需要后台先配置分数线。当前考试可能只配置了特控线。"
+          description="部分分数线数据需要后台先配置（如211、985、清北线）。显示「未配置」表示该场考试未设置对应分数线。"
           type="info"
           show-icon
           closable
@@ -72,114 +114,80 @@
         />
       </a-card>
 
-      <!-- 进退步学生 -->
+      <!-- 进退步学生（两次考试对比：基准=上一次，对比=最新） -->
       <a-card class="updown-card">
         <template #title>
           <div class="section-title">进退步学生</div>
         </template>
         <div class="updown-filter">
-          <a-space wrap>
-            <span>对比次数：</span>
-            <a-input-number
-              v-model:value="updownNums"
-              :min="1"
-              :max="20"
-              placeholder="最近几次"
-              style="width: 120px;"
-            />
-            <span>排序方式：</span>
+          <a-space wrap :size="12" align="center">
+            <span>基准考试：</span>
             <a-select
-              v-model:value="updownSortBy"
-              placeholder="排序方式"
-              style="width: 140px;"
+              v-model:value="updownBaseExamId"
+              placeholder="选择基准考试"
+              style="width: 200px"
               allow-clear
             >
-              <a-select-option value="class_rank">班次排名</a-select-option>
-              <a-select-option value="grade_rank">段次排名</a-select-option>
-              <a-select-option value="class_score">班次分数</a-select-option>
-              <a-select-option value="grade_score">段次分数</a-select-option>
+              <a-select-option v-for="exam in examList" :key="exam.id" :value="exam.id">
+                {{ exam.name }}
+              </a-select-option>
             </a-select>
-            <span>进退步：</span>
+            <span>对比考试：</span>
             <a-select
-              v-model:value="updownFilterTrend"
-              placeholder="全部"
-              style="width: 120px;"
+              v-model:value="updownCompareExamId"
+              placeholder="选择对比考试"
+              style="width: 200px"
               allow-clear
             >
-              <a-select-option value="up">进步</a-select-option>
-              <a-select-option value="down">退步</a-select-option>
-              <a-select-option value="flat">持平</a-select-option>
+              <a-select-option v-for="exam in examList" :key="exam.id" :value="exam.id">
+                {{ exam.name }}
+              </a-select-option>
             </a-select>
-            <a-input
-              v-model:value="updownSearchName"
-              placeholder="按学生姓名搜索"
-              allow-clear
-              style="width: 160px;"
-            />
-            <a-button type="primary" size="small" :loading="updownLoading" @click="fetchUpDownData">查询全部学生</a-button>
+            <span>科目：</span>
+            <a-select
+              v-model:value="updownSubject"
+              style="width: 130px"
+            >
+              <a-select-option v-for="opt in updownSubjectOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </a-select-option>
+            </a-select>
+            <a-button type="primary" size="small" :loading="updownLoading" @click="fetchUpDownData">查询</a-button>
           </a-space>
-          <a-alert
-            v-if="selectedClass > 0 && updownTableData.length === 0 && !updownLoading"
-            message="点击查询全部学生按钮，将批量查询班级所有学生的进退步情况"
-            type="info"
-            show-icon
-            style="margin-top: 12px;"
-          />
         </div>
         <a-table
           :columns="updownColumns"
-          :data-source="updownTableData"
+          :data-source="updownData"
           :pagination="false"
           bordered
           size="middle"
           row-key="key"
           :scroll="{ x: 'max-content' }"
           :loading="updownLoading"
-          @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.dataIndex === 'name'">
               <span class="student-name">{{ record.name }}</span>
             </template>
-            <template v-else-if="column.dataIndex === 'latest_total_score'">
-              <span>{{ record.latest_total_score ?? '-' }}</span>
-            </template>
-            <template v-else-if="column.dataIndex === 'score_change'">
-              <span :class="getScoreChangeClass(record.score_change)">
-                {{ formatScoreChange(record.score_change) }}
+            <template v-else-if="column.dataIndex === 'classChange' || column.dataIndex === 'gradeChange'">
+              <span :class="getChangeClass(record[column.dataIndex])">
+                {{ formatChange(record[column.dataIndex]) }}
               </span>
             </template>
-            <template v-else-if="column.dataIndex === 'latest_class_rank'">
-              <span>{{ record.latest_class_rank ?? '-' }}</span>
-            </template>
-            <template v-else-if="column.dataIndex === 'class_change'">
-              <span :class="getChangeClass(record.class_change)">
-                {{ formatChange(record.class_change) }}
+            <template v-else-if="column.dataIndex === 'scoreChange'">
+              <span :class="getScoreChangeClass(record.scoreChange)">
+                {{ formatScoreChange(record.scoreChange) }}
               </span>
             </template>
-            <template v-else-if="column.dataIndex === 'latest_grade_rank'">
-              <span>{{ record.latest_grade_rank ?? '-' }}</span>
-            </template>
-            <template v-else-if="column.dataIndex === 'grade_change'">
-              <span :class="getChangeClass(record.grade_change)">
-                {{ formatChange(record.grade_change) }}
-              </span>
-            </template>
-            <template v-else-if="column.dataIndex === 'class_trend'">
-              <span class="trend-text">{{ record.class_trend || '-' }}</span>
-            </template>
-            <template v-else-if="column.dataIndex === 'grade_trend'">
-              <span class="trend-text">{{ record.grade_trend || '-' }}</span>
-            </template>
-            <template v-else-if="column.dataIndex === 'score_trend'">
-              <span class="trend-text">{{ record.score_trend || '-' }}</span>
+            <template v-else>
+              <span>{{ record[column.dataIndex] ?? '-' }}</span>
             </template>
           </template>
         </a-table>
         <a-alert
-          v-if="updownTableData.length === 0 && !updownLoading"
+          v-if="updownData.length === 0 && !updownLoading"
           message="暂无进退步数据"
-          description="请先选择班级并查询数据，对比考试为可选参数。"
+          description="请选择基准考试、对比考试和科目，点击查询按钮对比班级学生的进退步情况。"
           type="info"
           show-icon
           closable
@@ -343,18 +351,58 @@ const classSummaryData = ref<any>({}); // GET /api/analysis/class_analysis 返�
 const passLineRateData = ref<any>({});
 const studentGradesData = ref<any[]>([]);
 const classAnalysisRef = ref<any>(null); // 子组件引用
-const passLineConfigData = ref<any[]>([]); // 分数线配置数据
+const passLineConfigData = ref<any[]>([]); // 分数线配置数据（兼容旧逻辑，保留）
 const showEmptyTip = ref(false); // 显示空数据提示
 const flatPassLineRateData = ref<any[]>([]); // 展平后的过线率数据（供子组件折线图使用）
 
-// 进退步学生相关
+// ========== 分数线对比（两次考试对比） ==========
+const baseExamId = ref<number | null>(null); // 基准考试（左，默认倒数第二次）
+const compareExamId = ref<number | null>(null); // 对比考试（右，默认最新）
+const compareSubject = ref<string>('全部'); // 选择的科目
+const compareLineType = ref<string>('一本线'); // 选择的分数线类别
+const passLineConfigBase = ref<any[]>([]); // 基准考试分数线配置
+const passLineConfigCompare = ref<any[]>([]); // 对比考试分数线配置
+
+// 分数线类别选项（与后端 line_name 后缀对应）
+const lineTypeOptions = [
+  { label: '全部类别', value: '全部' },
+  { label: '一本线', value: '一本线' },
+  { label: '二本线', value: '二本线' },
+  { label: '211线', value: '211线' },
+  { label: '985线', value: '985线' },
+  { label: '清北线', value: '清北线' },
+];
+// 科目选项
+const subjectOptions = [
+  { label: '全部科目', value: '全部' },
+  { label: '总分', value: '总分' },
+  { label: '语文', value: '语文' },
+  { label: '数学', value: '数学' },
+  { label: '英语', value: '英语' },
+  { label: '物理', value: '物理' },
+  { label: '化学', value: '化学' },
+  { label: '生物', value: '生物' },
+  { label: '政治', value: '政治' },
+  { label: '历史', value: '历史' },
+  { label: '地理', value: '地理' },
+];
+// 进退步科目选项（每次对比一个具体科目，不含"全部"）
+const updownSubjectOptions = subjectOptions.filter(o => o.value !== '全部');
+
+// 根据班级选科判断方向（历史方向/物理方向/未选科）
+const getDirection = (): string => {
+  const sel = currentClassInfo.value?.subject_selection || '';
+  if (sel.includes('物')) return '物理方向';
+  if (sel.includes('史')) return '历史方向';
+  return '未选科';
+};
+
+// 进退步学生相关（两次考试对比：基准=上一次，对比=最新）
 const updownLoading = ref(false);
-const updownSortBy = ref<string>('');
-const updownCompareExamId = ref<number | null>(null);
-const updownNums = ref<number>(5); // 进退步对比的最近考试次数
+const updownBaseExamId = ref<number | null>(null); // 基准考试（左，默认上一次）
+const updownCompareExamId = ref<number | null>(null); // 对比考试（右，默认最新）
+const updownSubject = ref<string>('总分'); // 对比科目
 const updownData = ref<any[]>([]);
-const updownSearchName = ref<string>('');
-const updownFilterTrend = ref<string>(''); // up/down/flat
 const examList = ref<any[]>([]); // 考试列表
 const classStudentList = ref<any[]>([]); // 班级所有学生列表
 
@@ -392,6 +440,12 @@ onMounted(async()=>{
 
 watch(selectedClass, async () => {
   if (selectedClass.value > 0) {
+    // 切换班级时重置考试选择，让 fetchPassLineConfig / fetchExamList 重新设置默认值
+    baseExamId.value = null;
+    compareExamId.value = null;
+    updownBaseExamId.value = null;
+    updownCompareExamId.value = null;
+    updownData.value = [];
     await batchComputeData();
   }
 });
@@ -402,6 +456,15 @@ watch(questionStatExamId, async (val) => {
     questionStatPaperId.value = null;
     await fetchPaperOptions();
   }
+});
+
+// 分数线对比：基准考试变化时重新获取
+watch(baseExamId, () => {
+  if (baseExamId.value) refetchComparePassLine('base');
+});
+// 分数线对比：对比考试变化时重新获取
+watch(compareExamId, () => {
+  if (compareExamId.value) refetchComparePassLine('compare');
 });
 
 const batchComputeData = async () => {
@@ -561,53 +624,118 @@ const flattenPassRateData = (data: any): Record<string, number> => {
   return result;
 };
 
-// 获取分数线配置
+// 获取分数线配置（两次考试：基准 + 对比）
 const fetchPassLineConfig = async () => {
   if (selectedClass.value <= 0) {
     return;
   }
   
   try {
-    // 优先使用已选中的考试ID，否则取考试列表的第一个
-    const targetExamId = updownCompareExamId.value || (examList.value[0]?.id);
-    if (!targetExamId) {
-      passLineConfigData.value = [];
-      return;
+    // examList 按时间倒序（最新在前）
+    // 对比考试（右）= 最新考试 = examList[0]
+    // 基准考试（左）= 上一次考试 = examList[1]
+    const latestExam = examList.value[0];
+    const prevExam = examList.value[1];
+    
+    // 设置默认值（仅当未设置时）
+    if (compareExamId.value === null && latestExam) {
+      compareExamId.value = latestExam.id;
     }
-    const res = await getPassLine({ exam_id: targetExamId });
-    if (res.code === 200 && res.data) {
-        passLineConfigData.value = res.data.records || res.data.list || res.data || [];
-      } else {
+    if (baseExamId.value === null) {
+      baseExamId.value = prevExam ? prevExam.id : (latestExam ? latestExam.id : null);
+    }
+    
+    // 并行获取两次考试的分数线配置
+    const tasks: Promise<any>[] = [];
+    if (baseExamId.value) {
+      tasks.push(getPassLine({ exam_id: baseExamId.value, size: 200 }).then(res => {
+        passLineConfigBase.value = (res.code === 200 && res.data) ? (res.data.records || res.data.list || res.data || []) : [];
+      }));
+    } else {
+      passLineConfigBase.value = [];
+    }
+    if (compareExamId.value) {
+      tasks.push(getPassLine({ exam_id: compareExamId.value, size: 200 }).then(res => {
+        passLineConfigCompare.value = (res.code === 200 && res.data) ? (res.data.records || res.data.list || res.data || []) : [];
+        // 兼容旧逻辑：passLineConfigData 存对比考试数据
+        passLineConfigData.value = passLineConfigCompare.value;
+      }));
+    } else {
+      passLineConfigCompare.value = [];
       passLineConfigData.value = [];
     }
+    
+    await Promise.all(tasks);
   } catch (err) {
     console.error('获取分数线配置失败:', err);
+    passLineConfigBase.value = [];
+    passLineConfigCompare.value = [];
     passLineConfigData.value = [];
   }
 };
 
-// 定义表格列
-const compareColumns = [
-  { title: '层次', dataIndex: 'level', width: 100, align: 'center' },
-  { title: '分数线', dataIndex: 'score', width: 100, align: 'center' },
-  { title: '进线人数', dataIndex: 'count', width: 100, align: 'center' },
-  { title: '进线率', dataIndex: 'rate', width: 100, align: 'center' },
-  { title: '平均分', dataIndex: 'average', width: 100, align: 'center' },
-  { title: '最高分', dataIndex: 'max', width: 100, align: 'center' },
-];
+// 考试选择变化时，重新获取对应考试的分数线数据
+const refetchComparePassLine = async (which: 'base' | 'compare' | 'both' = 'both') => {
+  try {
+    const tasks: Promise<any>[] = [];
+    if ((which === 'base' || which === 'both') && baseExamId.value) {
+      tasks.push(getPassLine({ exam_id: baseExamId.value, size: 200 }).then(res => {
+        passLineConfigBase.value = (res.code === 200 && res.data) ? (res.data.records || res.data.list || res.data || []) : [];
+      }));
+    }
+    if ((which === 'compare' || which === 'both') && compareExamId.value) {
+      tasks.push(getPassLine({ exam_id: compareExamId.value, size: 200 }).then(res => {
+        passLineConfigCompare.value = (res.code === 200 && res.data) ? (res.data.records || res.data.list || res.data || []) : [];
+        passLineConfigData.value = passLineConfigCompare.value;
+      }));
+    }
+    await Promise.all(tasks);
+  } catch (err) {
+    console.error('重新获取分数线配置失败:', err);
+  }
+};
 
-// 进退步学生表格列
+// 分数线对比表格列（根据选择动态变化）
+const compareColumns = computed(() => {
+  const isLineMode = compareLineType.value === '全部'; // 行=分数线类别
+  const firstColTitle = isLineMode ? '分数线类别' : '科目';
+  return [
+    { title: firstColTitle, dataIndex: 'name', width: 120, align: 'center' },
+    { title: '基础分', dataIndex: 'baseScore', width: 100, align: 'center' },
+    { title: '对比分', dataIndex: 'compareScore', width: 100, align: 'center' },
+    { title: '涨跌', dataIndex: 'change', width: 100, align: 'center' },
+  ];
+});
+
+// 从分数线配置中查找指定类别+科目的分数
+const findLineScore = (data: any[], lineType: string, subject: string): number | null => {
+  if (!data || data.length === 0) return null;
+  const direction = getDirection();
+  const targetName = `${direction}${lineType}`;
+  const matched = data.find((item: any) => {
+    return item.line_name === targetName && item.subject === subject;
+  });
+  if (matched) return matched.score ?? null;
+  // 回退：不区分方向，按后缀匹配
+  const fallback = data.find((item: any) => {
+    const name = item.line_name || '';
+    return name.endsWith(lineType) && item.subject === subject;
+  });
+  return fallback?.score ?? null;
+};
+
+// 进退步学生表格列（基准 vs 对比 两次考试：班次/段次/分数 + 涨跌）
 const updownColumns = [
   { title: '学生姓名', dataIndex: 'name', width: 100, align: 'center', fixed: 'left' },
-  { title: '最新总分', dataIndex: 'latest_total_score', width: 80, align: 'center', sorter: (a: any, b: any) => (a.latest_total_score ?? 0) - (b.latest_total_score ?? 0), defaultSortOrder: 'descend' },
-  { title: '总分变化', dataIndex: 'score_change', width: 80, align: 'center', sorter: (a: any, b: any) => (a.score_change ?? 0) - (b.score_change ?? 0) },
-  { title: '班次', dataIndex: 'latest_class_rank', width: 60, align: 'center', sorter: (a: any, b: any) => (a.latest_class_rank ?? 9999) - (b.latest_class_rank ?? 9999) },
-  { title: '班次进退', dataIndex: 'class_change', width: 80, align: 'center', sorter: (a: any, b: any) => (a.class_change ?? 0) - (b.class_change ?? 0) },
-  { title: '段次', dataIndex: 'latest_grade_rank', width: 60, align: 'center', sorter: (a: any, b: any) => (a.latest_grade_rank ?? 9999) - (b.latest_grade_rank ?? 9999) },
-  { title: '段次进退', dataIndex: 'grade_change', width: 80, align: 'center', sorter: (a: any, b: any) => (a.grade_change ?? 0) - (b.grade_change ?? 0) },
-  { title: '班次排名变化', dataIndex: 'class_trend', width: 180, align: 'center' },
-  { title: '段次排名变化', dataIndex: 'grade_trend', width: 180, align: 'center' },
-  { title: '总分变化趋势', dataIndex: 'score_trend', width: 180, align: 'center' },
+  { title: '基础班次', dataIndex: 'baseClassRank', width: 90, align: 'center' },
+  { title: '基础段次', dataIndex: 'baseGradeRank', width: 90, align: 'center' },
+  { title: '基础分数', dataIndex: 'baseScore', width: 90, align: 'center' },
+  { title: '对比班次', dataIndex: 'compareClassRank', width: 90, align: 'center' },
+  { title: '对比段次', dataIndex: 'compareGradeRank', width: 90, align: 'center' },
+  { title: '对比分数', dataIndex: 'compareScore', width: 90, align: 'center' },
+  { title: '班次涨跌', dataIndex: 'classChange', width: 90, align: 'center' },
+  { title: '段次涨跌', dataIndex: 'gradeChange', width: 90, align: 'center' },
+  { title: '分数涨跌', dataIndex: 'scoreChange', width: 90, align: 'center' },
 ];
 
 // 格式化进退步显示（名次变化：正数=进步，负数=退步）
@@ -638,61 +766,6 @@ const getScoreChangeClass = (val: number | null | undefined): string => {
   return val > 0 ? 'change-up' : 'change-down';
 };
 
-// 表格排序变更处理（Ant Design Vue 支持前端排序，此处无需额外处理）
-const handleTableChange = () => {};
-
-// 分数线配置映射关系
-// key: passLineRateData 里的过线率字段名
-// subKey: 嵌套结构的子键（如 pass_rate.特控线.总分）
-// lineName: 用于匹配 getPassLine 返回的 line_name
-// statsKey: 用于匹配 pass_line_stats 里的线名（清北/985/211/一本）
-const lineConfig = [
-  { key: 'pass_rate', subKey: '特控线', level: '特控线', lineName: '特控线', statsKey: '一本' },
-  { key: 'pass_rate', subKey: '二本线', level: '二本线', lineName: '二本线', statsKey: '二本' },
-  { key: 'top2_rate', subKey: '', level: '211', lineName: '211', statsKey: '211' },
-  { key: 'top9_rate', subKey: '', level: '985', lineName: '985', statsKey: '985' },
-  { key: 'top_rate', subKey: '', level: '清北', lineName: '清北', statsKey: '清北' },
-];
-
-// 从 passLineConfigData 中查找对应层次的总分分数线
-const findPassLineScore = (lineName: string): number | null => {
-  if (!passLineConfigData.value || passLineConfigData.value.length === 0) {
-    return null;
-  }
-  
-  // 策略1：找 line_name 包含 lineName 且 subject 为「总分」的记录
-  let matched = passLineConfigData.value.find((item: any) => {
-    const name = item.line_name || '';
-    const subject = item.subject || '';
-    const cleanName = name.replace(/^(历史方向|物理方向)/, '');
-    return (cleanName === lineName || name.includes(lineName)) && subject === '总分';
-  });
-  
-  if (matched) {
-    return matched.score ?? null;
-  }
-  
-  // 策略2：找 line_name 完全等于 lineName 的记录（无前缀）
-  matched = passLineConfigData.value.find((item: any) => {
-    const name = item.line_name || '';
-    const subject = item.subject || '';
-    return name === lineName && subject === '总分';
-  });
-  
-  if (matched) {
-    return matched.score ?? null;
-  }
-  
-  // 策略3：找 line_name 包含 lineName 的所有记录，取第一条（可能没有总分科目）
-  matched = passLineConfigData.value.find((item: any) => {
-    const name = item.line_name || '';
-    const cleanName = name.replace(/^(历史方向|物理方向)/, '');
-    return cleanName === lineName || name.includes(lineName);
-  });
-  
-  return matched?.score ?? null;
-};
-
 // 获取班级考试列表
 const fetchExamList = async () => {
   if (selectedClass.value <= 0) return;
@@ -700,6 +773,15 @@ const fetchExamList = async () => {
     const res = await getClassExam({ class_id: selectedClass.value });
     if (res.code === 200 && res.data) {
       examList.value = Array.isArray(res.data) ? res.data : (res.data.records || res.data.list || []);
+      // 进退步默认考试：对比=最新（examList[0]），基准=上一次（examList[1]）
+      const latest = examList.value[0];
+      const prev = examList.value[1];
+      if (updownCompareExamId.value === null && latest) {
+        updownCompareExamId.value = latest.id;
+      }
+      if (updownBaseExamId.value === null) {
+        updownBaseExamId.value = prev ? prev.id : (latest ? latest.id : null);
+      }
     }
   } catch (err) {
     console.error('获取考试列表失败:', err);
@@ -727,30 +809,51 @@ const fetchClassStudents = async () => {
   }
 };
 
-// 批量获取所有学生的进退步数据
+// 从进退步记录中提取考试ID（兼容 exam_id 与 exam[0].id 两种结构）
+const getExamId = (item: any): number | null => {
+  if (!item) return null;
+  if (item.exam_id !== undefined && item.exam_id !== null) return Number(item.exam_id);
+  if (Array.isArray(item.exam) && item.exam[0]?.id !== undefined && item.exam[0]?.id !== null) {
+    return Number(item.exam[0].id);
+  }
+  return null;
+};
+
+// 批量获取所有学生的两次考试进退步对比数据（基准 vs 对比）
 const fetchUpDownData = async () => {
   if (selectedClass.value <= 0) {
     message.warning('请先选择班级');
     return;
   }
-  
+  if (!updownBaseExamId.value || !updownCompareExamId.value) {
+    message.warning('请选择基准考试和对比考试');
+    return;
+  }
+
   updownLoading.value = true;
-  
+
   try {
     // 1. 先获取班级所有学生
     await fetchClassStudents();
-    
+
     if (classStudentList.value.length === 0) {
       message.info('该班级没有学生');
       updownData.value = [];
-      updownLoading.value = false;
       return;
     }
-    
+
+    const subject = updownSubject.value || '总分';
+    // 字段名：总分→总分/总分班次/总分段次；单科→`${科目}`/`${科目}班次`/`${科目}段次`
+    const scoreKey = subject === '总分' ? '总分' : subject;
+    const classRankKey = subject === '总分' ? '总分班次' : `${subject}班次`;
+    const gradeRankKey = subject === '总分' ? '总分段次' : `${subject}段次`;
+    const baseExamId = updownBaseExamId.value;
+    const compareExamId = updownCompareExamId.value;
+
     // 2. 并行查询每个学生的进退步（限制并发数避免压垮服务器）
     const batchSize = 5; // 每批5个并发
     const allResults: any[] = [];
-    
+
     for (let i = 0; i < classStudentList.value.length; i += batchSize) {
       const batch = classStudentList.value.slice(i, i + batchSize);
       const batchResults = await Promise.all(
@@ -758,94 +861,61 @@ const fetchUpDownData = async () => {
           const studentId = student.uid || student.student_uid || student.id;
           const studentName = student.name || student.student_name || '-';
           if (!studentId) return null;
-          
-          const params: any = {
-            student_id: String(studentId),
-            nums: updownNums.value || 5,
-          };
-          if (updownCompareExamId.value) params.exam_id = updownCompareExamId.value;
-          if (updownSortBy.value) params.sort_by = updownSortBy.value;
-          
+
           try {
-            const res = await getUpDownDetailAnalysis(params);
-            if (res.code === 200 && res.data) {
-              const examList = Array.isArray(res.data) ? res.data : [res.data];
-              
-              // 按考试时间排序（用exam_id排序，id越大越新）
-              const sorted = [...examList].sort((a, b) => (a.exam_id || 0) - (b.exam_id || 0));
-              
-              // 尝试多种方式获取值
-              const getValue = (item: any, keys: string[]): number | null => {
-                for (const key of keys) {
-                  if (item[key] !== undefined && item[key] !== null && item[key] !== '') {
-                    const num = Number(item[key]);
-                    if (!isNaN(num)) return num;
-                  }
-                }
-                return null;
-              };
-              
-              // 可能的字段名组合
-              const classRankKeys = ['总分班次', '班次', 'class_rank', 'classRank', '班级排名'];
-              const gradeRankKeys = ['总分段次', '段次', 'grade_rank', 'gradeRank', '年级排名'];
-              const scoreKeys = ['总分', 'total_score', 'score', 'totalScore'];
-              const examNameKeys = ['exam_name', 'examName', '考试名称', 'name'];
-              
-              const latestItem = sorted[sorted.length - 1];
-              const prevItem = sorted.length >= 2 ? sorted[sorted.length - 2] : null;
-              
-              const latestClassRank = getValue(latestItem, classRankKeys);
-              const latestGradeRank = getValue(latestItem, gradeRankKeys);
-              const latestTotalScore = getValue(latestItem, scoreKeys);
-              
-              // 计算进退步
-              let classChange: number | null = null;
-              let gradeChange: number | null = null;
-              let scoreChange: number | null = null;
-              
-              if (prevItem) {
-                const prevClassRank = getValue(prevItem, classRankKeys);
-                const prevGradeRank = getValue(prevItem, gradeRankKeys);
-                const prevTotalScore = getValue(prevItem, scoreKeys);
-                
-                if (latestClassRank !== null && prevClassRank !== null) {
-                  classChange = prevClassRank - latestClassRank; // 正数=进步
-                }
-                if (latestGradeRank !== null && prevGradeRank !== null) {
-                  gradeChange = prevGradeRank - latestGradeRank; // 正数=进步
-                }
-                if (latestTotalScore !== null && prevTotalScore !== null) {
-                  scoreChange = latestTotalScore - prevTotalScore; // 正数=分数增加
-                }
-              }
-              
-              // 生成趋势（用考试ID作为简短标识）
-              const trend = sorted.map((exam: any) => {
-                const classRank = getValue(exam, classRankKeys);
-                const gradeRank = getValue(exam, gradeRankKeys);
-                const score = getValue(exam, scoreKeys);
-                return {
-                  exam_id: exam.exam_id,
-                  exam_name: getValue(exam, examNameKeys) || `考试${exam.exam_id}`,
-                  classRank,
-                  gradeRank,
-                  score,
-                };
-              });
-              
-              return {
-                student_id: String(studentId),
-                name: studentName,
-                class_change: classChange,
-                grade_change: gradeChange,
-                score_change: scoreChange,
-                latest_class_rank: latestClassRank,
-                latest_grade_rank: latestGradeRank,
-                latest_total_score: latestTotalScore,
-                trend: trend,
-              };
-            }
-            return null;
+            const res = await getUpDownDetailAnalysis({
+              student_id: String(studentId),
+              nums: 9999,
+            });
+            if (res.code !== 200 || !res.data) return null;
+
+            const records = Array.isArray(res.data) ? res.data : [res.data];
+            // 按考试ID建立映射，便于直接取基准/对比两场
+            const byExam = new Map<number, any>();
+            records.forEach((r: any) => {
+              const eid = getExamId(r);
+              if (eid != null) byExam.set(eid, r);
+            });
+
+            const read = (record: any, key: string): number | null => {
+              if (!record) return null;
+              const v = record[key];
+              if (v === undefined || v === null || v === '') return null;
+              const num = Number(v);
+              return isNaN(num) ? null : num;
+            };
+
+            const baseRecord = byExam.get(baseExamId);
+            const compareRecord = byExam.get(compareExamId);
+
+            const baseClassRank = read(baseRecord, classRankKey);
+            const baseGradeRank = read(baseRecord, gradeRankKey);
+            const baseScore = read(baseRecord, scoreKey);
+            const compareClassRank = read(compareRecord, classRankKey);
+            const compareGradeRank = read(compareRecord, gradeRankKey);
+            const compareScore = read(compareRecord, scoreKey);
+
+            // 涨跌：名次=基准-对比（正数=进步），分数=对比-基准（正数=进步）
+            const classChange = (baseClassRank != null && compareClassRank != null)
+              ? baseClassRank - compareClassRank : null;
+            const gradeChange = (baseGradeRank != null && compareGradeRank != null)
+              ? baseGradeRank - compareGradeRank : null;
+            const scoreChange = (baseScore != null && compareScore != null)
+              ? compareScore - baseScore : null;
+
+            return {
+              key: String(studentId),
+              name: studentName,
+              baseClassRank,
+              baseGradeRank,
+              baseScore,
+              compareClassRank,
+              compareGradeRank,
+              compareScore,
+              classChange,
+              gradeChange,
+              scoreChange,
+            };
           } catch (e) {
             console.error(`学生${studentId}查询失败:`, e);
             return null;
@@ -854,7 +924,7 @@ const fetchUpDownData = async () => {
       );
       allResults.push(...batchResults.filter(Boolean));
     }
-    
+
     updownData.value = allResults;
     if (allResults.length === 0) {
       message.info('未查询到进退步数据');
@@ -867,109 +937,50 @@ const fetchUpDownData = async () => {
   }
 };
 
-// 筛选后的进退步表格数据（功能3：支持姓名搜索和进退步筛选）
-const updownTableData = computed(() => {
-  let result = updownData.value.map((item: any, index: number) => {
-    const trend = item.trend || [];
-    const classTrend = trend.map((t: any) => t.classRank != null ? String(t.classRank) : '-').join(' → ');
-    const gradeTrend = trend.map((t: any) => t.gradeRank != null ? String(t.gradeRank) : '-').join(' → ');
-    const scoreTrend = trend.map((t: any) => t.score != null ? String(t.score) : '-').join(' → ');
-    return {
-      key: `${item.student_id || index}`,
-      name: item.name || '-',
-      latest_total_score: item.latest_total_score ?? null,
-      score_change: item.score_change ?? null,
-      class_change: item.class_change ?? null,
-      grade_change: item.grade_change ?? null,
-      latest_class_rank: item.latest_class_rank ?? null,
-      latest_grade_rank: item.latest_grade_rank ?? null,
-      class_trend: classTrend,
-      grade_trend: gradeTrend,
-      score_trend: scoreTrend,
-    };
-  });
-
-  // 姓名搜索
-  if (updownSearchName.value) {
-    const kw = updownSearchName.value.toLowerCase();
-    result = result.filter((r: any) => String(r.name || '').toLowerCase().includes(kw));
-  }
-
-  // 进退步筛选（按总分变化）
-  if (updownFilterTrend.value) {
-    result = result.filter((r: any) => {
-      const v = r.score_change;
-      if (v === null || v === undefined) return false;
-      if (updownFilterTrend.value === 'up') return v > 0;
-      if (updownFilterTrend.value === 'down') return v < 0;
-      if (updownFilterTrend.value === 'flat') return v === 0;
-      return true;
-    });
-  }
-
-  return result;
-});
-
 // 构建表格数据
+// 分数线对比表格数据：两次考试的分数线对比
 const compareTableData = computed(() => {
   const result: any[] = [];
-  let hasEmptyData = false;
-  
-  // 从数组中取第一个班级的数据
-  const firstClassData = Array.isArray(passLineRateData.value) 
-    ? (passLineRateData.value[0] || {}) 
-    : (passLineRateData.value || {});
-  
-  // 从班级综合分析数据中取最新考试（exam_analysis的最后一个key）的总分数据
-  const examAnalysis = firstClassDataOfClassAnalysis.value?.exam_analysis || {};
-  const examKeys = Object.keys(examAnalysis);
-  const latestExamKey = examKeys[examKeys.length - 1];
-  const sumAnalysis = (latestExamKey && examAnalysis[latestExamKey]?.['总分']) || {};
-  
-  lineConfig.forEach(config => {
-    // pass_rate 是嵌套结构 {特控线: {总分: 17.81,...}, 二本线: {...}}
-    // top2_rate/top9_rate/top_rate 是直接科目→率
-    let totalRate: number | undefined;
-    const rateField = firstClassData?.[config.key];
-    if (config.subKey && rateField && typeof rateField === 'object') {
-      // 嵌套结构：pass_rate[特控线][总分]
-      totalRate = rateField[config.subKey]?.['总分'];
-    } else if (rateField && typeof rateField === 'object') {
-      // 扁平结构：top2_rate[总分]
-      totalRate = rateField['总分'];
-    }
-    
-    const score = findPassLineScore(config.lineName);
-    // 后端返回已是百分比数值（如85.5表示85.5%），不再乘以100
-    const rate = (typeof totalRate === 'number') ? Math.round(totalRate * 10000) / 100 : null;
-    const average = sumAnalysis.average ?? null;
-    // 最高分来自 GET /api/analysis/class_analysis 的 class_summary.highest_total_score
-    const maxScore = classSummaryData.value?.highest_total_score ?? null;
-    // 进线人数来自 POST /api/average/class_pass_line_rate 的 pass_line_stats[statsKey].总分.pass_count
-    let count: number | null = null;
-    const statsKey = config.statsKey;
-    const passLineStats = firstClassData?.pass_line_stats;
-    if (statsKey && passLineStats && passLineStats[statsKey] && passLineStats[statsKey]['总分']) {
-      const passCount = passLineStats[statsKey]['总分'].pass_count;
-      count = (typeof passCount === 'number') ? passCount : null;
-    }
-    
-    if (score === null && rate === null && average === null) {
-      hasEmptyData = true;
-    }
-    
-    result.push({
-      key: `${config.key}_${config.subKey || 'flat'}`,
-      level: config.level,
-      score: score,
-      count: count,
-      rate: rate,
-      average: average,
-      max: maxScore,
+  const lineMode = compareLineType.value === '全部'; // 行=分数线类别
+
+  if (lineMode) {
+    // 行=各分数线类别，分数取所选科目（或总分）
+    const subject = compareSubject.value === '全部' ? '总分' : compareSubject.value;
+    lineTypeOptions.filter(o => o.value !== '全部').forEach(opt => {
+      const baseScore = findLineScore(passLineConfigBase.value, opt.value, subject);
+      const compareScore = findLineScore(passLineConfigCompare.value, opt.value, subject);
+      const change = (baseScore != null && compareScore != null) ? (compareScore - baseScore) : null;
+      result.push({
+        key: opt.value,
+        name: opt.label,
+        baseScore,
+        compareScore,
+        change,
+      });
     });
-  });
-  
-  showEmptyTip.value = hasEmptyData;
+  } else {
+    // 行=各科目，分数取所选分数线类别
+    const lineType = compareLineType.value;
+    const subjects = compareSubject.value === '全部'
+      ? subjectOptions.filter(o => o.value !== '全部').map(o => o.value)
+      : [compareSubject.value];
+    subjects.forEach(subject => {
+      const baseScore = findLineScore(passLineConfigBase.value, lineType, subject);
+      const compareScore = findLineScore(passLineConfigCompare.value, lineType, subject);
+      const change = (baseScore != null && compareScore != null) ? (compareScore - baseScore) : null;
+      result.push({
+        key: subject,
+        name: subject,
+        baseScore,
+        compareScore,
+        change,
+      });
+    });
+  }
+
+  // 是否有未配置数据
+  const hasEmpty = result.some(r => r.baseScore == null || r.compareScore == null);
+  showEmptyTip.value = hasEmpty;
   return result;
 });
 
@@ -1205,6 +1216,13 @@ const fetchHistoryPassLineData = async () => {
       padding: 16px;
     }
     
+    .compare-filter {
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #f5f7fa;
+      border-radius: 6px;
+    }
+    
     :deep(.ant-table-thead > tr > th) {
       background: linear-gradient(180deg, #f0f5ff 0%, #e6f0ff 100%);
       font-weight: 600;
@@ -1220,12 +1238,6 @@ const fetchHistoryPassLineData = async () => {
 
   .empty-value {
     color: #bfbfbf;
-  }
-
-  .trend-text {
-    color: #2c3e50;
-    font-size: 13px;
-    font-weight: 500;
   }
 
   :deep(.change-up) {

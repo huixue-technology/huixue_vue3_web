@@ -81,8 +81,20 @@ const props = defineProps<{
 // 激活的tab
 const activeTab = ref('pass_rate');
 
-// 科目名称映射（中文科目名）
+// 科目名称映射（支持拼音键和中文键，统一转为中文显示）
 const subjectMap: Record<string, string> = {
+  // 拼音键 → 中文
+  'yuwen': '语文',
+  'shuxue': '数学',
+  'yingyu': '英语',
+  'wuli': '物理',
+  'huaxue': '化学',
+  'shengwu': '生物',
+  'lishi': '历史',
+  'zhengzhi': '政治',
+  'dili': '地理',
+  'sum_': '总分',
+  // 中文键 → 中文（兼容已有数据）
   '语文': '语文',
   '数学': '数学',
   '英语': '英语',
@@ -107,8 +119,9 @@ const shouldShowSubject = (subjectKey: string): boolean => {
     return true;
   }
 
-  // 根据科目key判断是否应该显示
-  switch (subjectKey) {
+  // 先将科目键转为中文名，再根据中文名判断
+  const cnName = getSubjectName(subjectKey);
+  switch (cnName) {
     case '物理':
       return props.classInfo.subject_selection.includes('物') || props.classInfo.subject_selection.includes('理');
     case '化学':

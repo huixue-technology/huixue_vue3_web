@@ -299,9 +299,25 @@ const onFinish = async (values: any) => {
     
     message.success('注册并登录成功！');
     router.push('/teacher_info');
-  } catch (error) {
+  } catch (error: any) {
     console.error('注册过程出错:', error);
-    message.error('注册失败，请重试');
+    const status = error?.response?.status;
+    const reqUrl = String(error?.response?.url || '');
+    if (status === 400) {
+      if (reqUrl.includes('/api/teacher')) {
+        message.error('该教师工号已注册，请直接登录或更换工号');
+      } else if (reqUrl.includes('/api/user')) {
+        message.error('该登录账号已存在，请直接登录或更换账号');
+      } else {
+        message.error('提交信息有误或账号已存在，请检查后重试');
+      }
+    } else if (status === 401) {
+      message.error('认证失败，请重试');
+    } else if (status >= 500) {
+      message.error('服务器繁忙，请稍后再试');
+    } else {
+      message.error('注册失败，请检查网络或联系管理员');
+    }
   }
 }
 

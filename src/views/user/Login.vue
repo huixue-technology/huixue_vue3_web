@@ -49,6 +49,7 @@
 
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
+import { message } from 'ant-design-vue';
 import { UserOutlined, LockOutlined } from '@ant-design/icons-vue';
 import { postUserLogin } from '@/servers/api/user';
 import router from '@/router';
@@ -72,6 +73,7 @@ const formparams = reactive<FormParams>({
 const userStore = useUserStore();
 
 const onFinish = async (values: any) => {
+  try {
    const res = await postUserLogin(values);
    console.log(res);
    localStorage.setItem('user', JSON.stringify(res.data));
@@ -104,6 +106,19 @@ const onFinish = async (values: any) => {
    }else{
       router.push('/grade');
    }
+  } catch (error: any) {
+   console.error('登录失败:', error);
+   const status = error?.response?.status;
+   if (status === 401) {
+      message.error('账号或密码错误，请重试');
+   } else if (status === 400) {
+      message.error('登录信息有误，请检查输入');
+   } else if (status >= 500) {
+      message.error('服务器繁忙，请稍后再试');
+   } else {
+      message.error('登录失败，请检查网络或联系管理员');
+   }
+  }
 }
 
 const onFinishFailed = (errorInfo: any) => {
