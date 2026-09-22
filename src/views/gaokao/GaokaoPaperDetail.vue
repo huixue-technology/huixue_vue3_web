@@ -59,7 +59,9 @@
           <div v-else class="question-item__empty">该题内容待补录，可查看下方原卷裁图。</div>
 
           <ul v-if="optionList(question).length" class="question-item__options">
-            <li v-for="(option, index) in optionList(question)" :key="index">{{ option }}</li>
+            <li v-for="(option, index) in optionList(question)" :key="index">
+              <MarkdownContent :content="option" />
+            </li>
           </ul>
 
           <div v-if="question.answer" class="question-item__answer">
