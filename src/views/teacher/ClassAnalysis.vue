@@ -195,7 +195,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue';
 import { postClassAlwaysTopBottomStudents } from '@/servers/api/average';
-import { getStudentApi } from '@/servers/api/student';
+import { getStudentApi, postBatchGetStudentApi } from '@/servers/api/student';
 import { message } from 'ant-design-vue';
 import { getClassKnowledgePointMasteryApi, getClassKnowledgePointsApi } from '@/servers/api/analysis'
 import { debounce } from 'lodash';
@@ -260,6 +260,39 @@ const fetchStudentNames = async (classId: number) => {
     }
   } catch (err) {
     console.error('获取班级学生列表失败:', err);
+  }
+};
+// 用批量接口补齐花名册中缺失的姓名（覆盖「历史考试有、当前花名册没有」的学生）
+const fillMissingStudentNames = async (classData: any) => {
+  const studentOneLineRate = classData?.student_one_line_rate || {};
+  const missingUids = new Set<string>();
+  Object.values(studentOneLineRate).forEach((students: any) => {
+    if (!Array.isArray(students)) return;
+    students.forEach((student: any) => {
+      if (!student) return;
+      const uid = student.uid == null ? '' : String(student.uid);
+      if (!uid) return;
+      // 过线率数据里没带姓名，且花名册映射里也查不到，才需要批量补
+      if (!student.name && !studentNameMap.value.has(uid)) {
+        missingUids.add(uid);
+      }
+    });
+  });
+  if (missingUids.size === 0) return;
+  try {
+    const res = await postBatchGetStudentApi({ student_ids: [...missingUids] });
+    if (res?.code === 200 && res.data) {
+      const list = Array.isArray(res.data) ? res.data : (res.data.records || res.data.list || []);
+      list.forEach((s: any) => {
+        if (s.uid != null) {
+          studentNameMap.value.set(String(s.uid), s.name || '');
+        }
+      });
+    } else {
+      console.warn('批量获取学生姓名失败:', res?.msg || res?.message || res);
+    }
+  } catch (err) {
+    console.error('批量补齐学生姓名失败:', err);
   }
 };
 // 搜索相关
@@ -543,6 +576,9 @@ const processStudentRateData = (classData: any) => {
         if (!studentMap.has(student.uid)) {
           // 姓名优先用接口返回的 name，缺失时从学生列表映射表查找
           const name = student.name || studentNameMap.value.get(String(student.uid)) || '-';
+          if (name === '-') {
+            console.warn('[学生过线率] 未能解析学生姓名:', student.uid);
+          }
           studentMap.set(student.uid, {
             uid: student.uid,
             name: name,
@@ -575,40 +611,41 @@ const fetchSubjectRateData = async (silent = false) => {
   if (!props.classId) return;
   try {
     loading.value = true;
-    // 并行获取：学生姓名映射 + 过线率数据
-    await Promise.all([
-      fetchStudentNames(props.classId),
-      (async () => {
-        const res = await postClassAlwaysTopBottomStudents({
-          class_ids: [props.classId],
-        }, {
-          errorHandler: (error: any) => {
-            return error;
-          },
-          getResponse: true,
-        });
-        const responseData = res.data || res;
-        const httpStatus = res.response?.status || res.status;
-        if (httpStatus === 200 && responseData.code === 200 && responseData.data) {
-          // 判断 data 是数组还是对象
-          if (Array.isArray(responseData.data) && responseData.data.length > 0) {
-            const classData = responseData.data[0];
-            processStudentRateData(classData);
-            if (!silent) message.success('数据加载成功');
-          } else if (typeof responseData.data === 'object' && responseData.data.student_one_line_rate) {
-            // data 是对象而非数组，直接使用
-            processStudentRateData(responseData.data);
-            if (!silent) message.success('数据加载成功');
-          } else {
-            message.info('暂无数据');
-            studentRateList.value = [];
-          }
-        } else {
-          message.warning(responseData.message || '获取数据失败');
-          studentRateList.value = [];
-        }
-      })()
-    ]);
+    // 1. 先请求过线率数据，拿到学生 uid 列表
+    const res = await postClassAlwaysTopBottomStudents({
+      class_ids: [props.classId],
+    }, {
+      errorHandler: (error: any) => {
+        return error;
+      },
+      getResponse: true,
+    });
+    const responseData = res.data || res;
+    const httpStatus = res.response?.status || res.status;
+    let classData: any = null;
+    if (httpStatus === 200 && responseData.code === 200 && responseData.data) {
+      // 判断 data 是数组还是对象
+      if (Array.isArray(responseData.data) && responseData.data.length > 0) {
+        classData = responseData.data[0];
+      } else if (typeof responseData.data === 'object' && responseData.data.student_one_line_rate) {
+        // data 是对象而非数组，直接使用
+        classData = responseData.data;
+      } else {
+        message.info('暂无数据');
+        studentRateList.value = [];
+        return;
+      }
+    } else {
+      message.warning(responseData.message || '获取数据失败');
+      studentRateList.value = [];
+      return;
+    }
+    // 2. 依次补齐姓名（先花名册，再用批量接口补漏），避免与过线率数据并行导致的竞态
+    await fetchStudentNames(props.classId);
+    await fillMissingStudentNames(classData);
+    // 3. 姓名映射就绪后再渲染
+    processStudentRateData(classData);
+    if (!silent) message.success('数据加载成功');
   } catch (err: any) {
     console.error('请求异常:', err);
     message.error('请求数据失败');
