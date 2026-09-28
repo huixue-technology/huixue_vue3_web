@@ -123,17 +123,19 @@
             v-model:value="wrongRateFilters.min"
             class="filter-control"
             :min="0"
-            :max="1"
-            :step="0.01"
-            placeholder="最低错误率（0-1）"
+            :max="100"
+            :step="5"
+            addon-after="%"
+            placeholder="最低错误率"
           />
           <a-input-number
             v-model:value="wrongRateFilters.max"
             class="filter-control"
             :min="0"
-            :max="1"
-            :step="0.01"
-            placeholder="最高错误率（0-1）"
+            :max="100"
+            :step="5"
+            addon-after="%"
+            placeholder="最高错误率"
           />
         </template>
       </div>
@@ -600,8 +602,8 @@ const buildParams = (): API.getTeacherWrongQuestionSearchParams => {
     knowledge_keyword: text(filters.knowledge_keyword) || undefined,
   };
   if (mode.value === "class") {
-    if (wrongRateFilters.min !== null) params.min_wrong_rate = wrongRateFilters.min;
-    if (wrongRateFilters.max !== null) params.max_wrong_rate = wrongRateFilters.max;
+    if (wrongRateFilters.min !== null) params.min_wrong_rate = wrongRateFilters.min / 100;
+    if (wrongRateFilters.max !== null) params.max_wrong_rate = wrongRateFilters.max / 100;
     if (statScope.value === "all_students") params.top_n = 0;
     else if (statScope.value === "top_10") params.top_n = 10;
     else if (statScope.value === "top_20") params.top_n = 20;
@@ -697,12 +699,12 @@ const validateSearch = () => {
   const min = wrongRateFilters.min;
   const max = wrongRateFilters.max;
   if (mode.value === "class") {
-    if (min !== null && (!Number.isFinite(min) || min < 0 || min > 1)) {
-      errorText.value = "最低错误率必须位于 0 到 1 之间。";
+    if (min !== null && (!Number.isFinite(min) || min < 0 || min > 100)) {
+      errorText.value = "最低错误率必须位于 0% 到 100% 之间。";
       return false;
     }
-    if (max !== null && (!Number.isFinite(max) || max < 0 || max > 1)) {
-      errorText.value = "最高错误率必须位于 0 到 1 之间。";
+    if (max !== null && (!Number.isFinite(max) || max < 0 || max > 100)) {
+      errorText.value = "最高错误率必须位于 0% 到 100% 之间。";
       return false;
     }
     if (min !== null && max !== null && min > max) {
@@ -948,7 +950,7 @@ const formatScore = (value: unknown) => {
 const formatPercent = (value: unknown) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return "-";
-  return `${(num * 100).toFixed(1)}%`;
+  return `${(num * 100).toFixed(2)}%`;
 };
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
