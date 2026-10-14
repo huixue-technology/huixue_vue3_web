@@ -1,4 +1,5 @@
 import router from '@/router';
+import { apiErrorMessage } from './apiError';
 import { message } from 'ant-design-vue';
 import { extend } from 'umi-request';
 
@@ -15,7 +16,6 @@ const request = extend({
 // 请求拦截器
 request.interceptors.request.use((url, options) => {
   const token = localStorage.getItem('token');
-  console.log("拦截器请求执行", token)
   if (token) {
     return {
       url: url,
@@ -36,6 +36,10 @@ request.interceptors.request.use((url, options) => {
 const responseWhiteList = ['/user/login', '/user/register', '/user/teacher-register'];
 
 request.interceptors.response.use(async (response) => {
+  if (response.status >= 400 && response.status !== 401) {
+    const data = await response.clone().json().catch(() => null);
+    throw new Error(apiErrorMessage(data, `请求失败（${response.status}）`));
+  }
   switch (response.status) {
     case 401:
       // 白名单页面不进行 401 跳转（如注册页面加载学校列表等公开接口）
@@ -53,6 +57,7 @@ request.interceptors.response.use(async (response) => {
     default:
       break;
   }
+  if (response.status === 401) throw new Error('认证失败，请重新登录');
   return response;
 });
 

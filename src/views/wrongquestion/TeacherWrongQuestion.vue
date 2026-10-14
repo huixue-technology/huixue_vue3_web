@@ -109,7 +109,7 @@
           @pressEnter="handleSearch"
         />
         <template v-if="mode === 'class'">
-          <a-select v-model:value="statScope" class="filter-control" :options="statScopeOptions" placeholder="统计口径" />
+          <a-select v-model:value="statScope" class="filter-control" :options="statScopeOptions" placeholder="错题数量" />
           <a-input-number
             v-if="statScope === 'custom'"
             v-model:value="customTopN"
@@ -117,7 +117,7 @@
             :min="1"
             :max="1000"
             :precision="0"
-            placeholder="前 N 名"
+            placeholder="前 N 道题"
           />
           <a-input-number
             v-model:value="wrongRateFilters.min"
@@ -148,13 +148,13 @@
             <a-button type="primary" ghost @click="handleOpenCart">购物车</a-button>
           </a-badge>
           <a-button type="primary" :loading="loading" @click="handleSearch">查询</a-button>
-          <a-button :loading="recommendLoading" @click="loadRecommend">推荐筛选</a-button>
+          <a-button :loading="recommendLoading" @click="loadRecommend">错题频次分析</a-button>
           <a-button @click="resetFilters">重置</a-button>
         </div>
       </div>
     </section>
 
-    <a-modal v-model:open="statConfigOpen" title="学校错误率统计配置" :confirm-loading="statConfigSaving" @ok="saveStatConfig">
+    <a-modal v-model:open="statConfigOpen" title="学校错误率统计配置（不影响当前错题查询）" :confirm-loading="statConfigSaving" @ok="saveStatConfig">
       <a-form layout="vertical">
         <a-form-item label="统计范围">
           <a-select v-model:value="statConfigTopN" :options="statConfigOptions" />
@@ -192,14 +192,14 @@
         <div class="result-head-left">
           <a-checkbox
             v-model:checked="selectAllQuestions"
-            :indeterminate="selectedQuestionKeys.size > 0 && selectedQuestionKeys.size < rows.length"
+            :indeterminate="selectedQuestionKeys.size > 0 && selectedQuestionKeys.size < selectableRows.length"
             @change="handleSelectAllQuestions"
           >
             全选
           </a-checkbox>
           <h3>{{ mode === "class" ? "班级错题" : "学生错题" }}</h3>
         </div>
-        <span>共 {{ pagination.total }} 题</span>
+        <span>共 {{ pagination.matchedTotal }} 道错题</span>
       </div>
 
       <a-alert v-if="errorText" type="warning" show-icon :message="errorText" class="state-alert" />
@@ -210,19 +210,21 @@
           <article v-for="record in rows" :key="recordKey(record)" class="question-card">
             <div class="question-main">
               <a-checkbox
+                v-if="!record.is_context"
                 :checked="selectedQuestionKeys.has(recordKey(record))"
                 class="question-checkbox"
                 @change="toggleQuestionSelection(record)"
               />
               <div class="question-main-content">
               <div class="question-title">
-                <strong>{{ record.string_number || record.question_key || "-" }} 题</strong>
+                <strong>{{ record.question_number || "-" }} 题</strong>
+                <a-tag v-if="record.is_context">母题题干</a-tag>
                 <a-tag v-if="record.subject" color="blue">{{ record.subject }}</a-tag>
                 <a-tag v-if="record.question_type" color="gold">{{ record.question_type }}</a-tag>
                 <a-tag v-if="record.class_id" color="cyan">班级 {{ record.class_id }}</a-tag>
               </div>
-              <div class="metric-row">
-                <span v-if="mode === 'student'">得分 {{ formatScore(record.student_score) }}/{{ formatScore(record.full_score) }}</span>
+              <div v-if="!record.is_context" class="metric-row">
+                <span v-if="mode === 'student'">得分 {{ formatScore(record.score) }}/{{ formatScore(record.full_score) }}</span>
                 <span v-else>错题人数 {{ record.wrong_count ?? "-" }}</span>
                 <span v-if="record.participant_count">参与 {{ record.participant_count }}</span>
                 <span v-if="record.wrong_rate !== undefined && record.wrong_rate !== null">错率 {{ formatPercent(record.wrong_rate) }}</span>
@@ -230,8 +232,8 @@
               </div>
             </div>
 
-            <div v-if="stringList(record.knowledge_points).length" class="tag-row">
-              <a-tag v-for="point in stringList(record.knowledge_points)" :key="point" color="geekblue">{{ point }}</a-tag>
+            <div v-if="stringList(record.keywords).length" class="tag-row">
+              <a-tag v-for="point in stringList(record.keywords)" :key="point" color="geekblue">{{ point }}</a-tag>
             </div>
 
             <div class="content-grid">
@@ -256,11 +258,11 @@
               </div>
               <div class="analysis-box">
                 <div class="box-title">解析</div>
-                <div v-if="text(record.analysis)" class="analysis-body">
-                  <div v-if="extractAnalysisText(record.analysis)" class="analysis-text">{{ extractAnalysisText(record.analysis) }}</div>
-                  <div v-if="extractImageUrls(record.analysis).length" class="image-row">
+                <div v-if="text(record.answer)" class="analysis-body">
+                  <div v-if="extractAnalysisText(record.answer)" class="analysis-text">{{ extractAnalysisText(record.answer) }}</div>
+                  <div v-if="extractImageUrls(record.answer).length" class="image-row">
                     <a-image
-                      v-for="(url, index) in extractImageUrls(record.analysis)"
+                      v-for="(url, index) in extractImageUrls(record.answer)"
                       :key="`analysis-${index}`"
                       :src="url"
                       class="question-image"
@@ -272,7 +274,7 @@
             </div>
             <div class="answer-row">
               <div class="box-title">答案</div>
-              <div v-if="text(record.answer)" class="markdown-body" v-html="renderMarkdown(record.answer)"></div>
+              <div v-if="text(record.quick_answer)" class="markdown-body" v-html="renderMarkdown(record.quick_answer)"></div>
               <a-empty v-else description="暂无答案" />
             </div>
           </article>
@@ -285,7 +287,7 @@
           :page-size="pagination.size"
           :total="pagination.total"
           show-size-changer
-          :show-total="(total: number) => `共 ${total} 条`"
+          :show-total="(total: number) => `共 ${total} 组`"
           @change="handlePageChange"
           @showSizeChange="handleSizeChange"
         />
@@ -300,10 +302,10 @@
       wrap-class-name="analysis-viewer-modal"
     >
       <div
-        v-if="analysisViewer.record && text(analysisViewer.record.analysis)"
+        v-if="analysisViewer.record && text(analysisViewer.record.answer)"
         class="markdown-body analysis-viewer-body"
         @click="handleAnalysisImageClick"
-        v-html="renderMarkdown(analysisViewer.record.analysis)"
+        v-html="renderMarkdown(analysisViewer.record.answer)"
       ></div>
       <a-empty v-else description="暂无解析" />
     </a-modal>
@@ -346,6 +348,8 @@ import {
 } from "@/servers/api/wrongQuestion";
 import { postCartList } from "@/servers/api/cart";
 import { useWrongQuestionCart } from "@/composables/useWrongQuestionCart";
+import { apiErrorMessage } from "@/utils/apiError";
+import { flattenQuestionGroups } from "@/utils/wrongQuestion";
 import { useUserStore } from "@/store";
 import WrongQuestionCartDrawer from "./components/WrongQuestionCartDrawer.vue";
 
@@ -354,22 +358,23 @@ type CountItem = { name: string; count: number };
 type WrongQuestionRecord = {
   exam_id?: number | string;
   exam_name?: string;
-  test_paper_id?: number | string;
+  paper_id?: number | string;
   class_id?: string;
   student_id?: string;
   student_name?: string;
-  question_key?: string;
-  string_number?: string;
+  question_number?: string;
+  is_context?: boolean;
+  sub_questions?: WrongQuestionRecord[];
+  quick_answer?: string;
   subject?: string;
   question_type?: string;
-  knowledge_points?: string[] | string;
+  keywords?: string[] | string;
   images?: string[] | string;
   answer?: string;
-  analysis?: string;
   question_id?: number | string;
   id?: number | string;
   test_question_id?: number | string;
-  student_score?: number | string;
+  score?: number | string;
   full_score?: number | string;
   wrong_count?: number | string;
   participant_count?: number | string;
@@ -394,7 +399,7 @@ const errorText = ref("");
 const allClasses = ref<Array<Option & { grade: string }>>([]);
 const gradeOptions = ref<Option[]>([]);
 const classOptions = ref<Option[]>([]);
-const paperOptions = ref<Option[]>([]);
+const paperOptions = ref<Array<Option & { exam_id: number }>>([]);
 const studentOptions = ref<Option[]>([]);
 const recommendKnowledge = ref<CountItem[]>([]);
 const recommendTypes = ref<CountItem[]>([]);
@@ -424,8 +429,9 @@ const filters = reactive({
   knowledge_keyword: "",
 });
 
-const pagination = reactive({ page: 1, size: 5, total: 0 });
-const statScope = ref<"school_default" | "all_students" | "top_10" | "top_20" | "custom">("school_default");
+const pagination = reactive({ page: 1, size: 5, total: 0, matchedTotal: 0 });
+const selectableRows = computed(() => rows.value.filter((record) => !record.is_context));
+const statScope = ref<"school_default" | "all_students" | "top_10" | "top_20" | "custom">("all_students");
 const customTopN = ref<number | null>(null);
 const wrongRateFilters = reactive<{ min: number | null; max: number | null }>({ min: null, max: null });
 const statConfigOpen = ref(false);
@@ -437,11 +443,10 @@ const statConfigTopN = ref<"all_students" | "custom">("all_students");
 const statConfigCustomTopN = ref<number | null>(null);
 
 const statScopeOptions: Option[] = [
-  { label: "学校默认", value: "school_default" },
-  { label: "全班统计", value: "all_students" },
-  { label: "前 10 名", value: "top_10" },
-  { label: "前 20 名", value: "top_20" },
-  { label: "按排名前 N，允许同分并列扩展", value: "custom" },
+  { label: "全部错题", value: "all_students" },
+  { label: "错误率最高的 10 道题", value: "top_10" },
+  { label: "错误率最高的 20 道题", value: "top_20" },
+  { label: "错误率最高的 N 道题", value: "custom" },
 ];
 const statConfigOptions: Option[] = [
   { label: "全班统计", value: "all_students" },
@@ -462,14 +467,14 @@ const canChooseClass = computed(() => Boolean(filters.subject && filters.school_
 const canChoosePaper = computed(() => Boolean(filters.subject && filters.school_id && filters.grade && filters.class_id));
 const analysisViewerTitle = computed(() => {
   const record = analysisViewer.record;
-  const question = text(record?.string_number || record?.question_key || "-");
+  const question = text(record?.question_number || "-");
   return `${question} 题解析`;
 });
 const questionPreviewImages = computed(() => (questionPreview.record ? stringList(questionPreview.record.images).map(fileUrl).filter(Boolean) : []));
-const analysisPreviewImages = computed(() => (analysisViewer.record ? markdownImageUrls(analysisViewer.record.analysis) : []));
+const analysisPreviewImages = computed(() => (analysisViewer.record ? markdownImageUrls(analysisViewer.record.answer) : []));
 const ruleText = computed(() =>
   mode.value === "class"
-    ? "筛选班级错题前，需要先确定科目、学校、年级和班级；可直接把列表错题加入购物车。"
+    ? "筛选班级错题前，需要先确定科目、学校、年级、班级和试卷；可直接把列表错题加入购物车。"
     : "先用学校、年级、班级定位学生，再选择科目和试卷查看个人错题。"
 );
 const displayedCartCount = computed(() => (mode.value === "class" ? classCartItems.value.length : cartCount.value));
@@ -579,28 +584,18 @@ const buildBaseParams = (): API.getTeacherWrongQuestionSearchParams => ({
   page: pagination.page,
   size: pagination.size,
   subject: filters.subject,
-  school_id: text(filters.school_id) || undefined,
+  school_id: text(filters.school_id),
   grade: normalizeGradeForApi(filters.grade),
-  class_id: filters.class_id,
+  class_id: text(filters.class_id),
   test_paper_id: filters.test_paper_id,
+  exam_id: paperOptions.value.find((paper) => paper.value === filters.test_paper_id)?.exam_id || 0,
   student_id: mode.value === "student" ? filters.student_id : undefined,
   question_type: text(filters.question_type) || undefined,
   knowledge_keyword: text(filters.knowledge_keyword) || undefined,
 });
 
 const buildParams = (): API.getTeacherWrongQuestionSearchParams => {
-  const params: API.getTeacherWrongQuestionSearchParams = {
-    page: pagination.page,
-    size: pagination.size,
-    subject: filters.subject,
-    school_id: text(filters.school_id) || undefined,
-    grade: normalizeGradeForApi(filters.grade),
-    class_id: filters.class_id,
-    test_paper_id: filters.test_paper_id,
-    student_id: mode.value === "student" ? filters.student_id : undefined,
-    question_type: text(filters.question_type) || undefined,
-    knowledge_keyword: text(filters.knowledge_keyword) || undefined,
-  };
+  const params = buildBaseParams();
   if (mode.value === "class") {
     if (wrongRateFilters.min !== null) params.min_wrong_rate = wrongRateFilters.min / 100;
     if (wrongRateFilters.max !== null) params.max_wrong_rate = wrongRateFilters.max / 100;
@@ -665,6 +660,7 @@ const loadPapers = async () => {
       .map((item: any) => ({
         label: text(item.name) || text(item.paper_name) || `试卷 ${item.id || item.paper_id}`,
         value: Number(item.id || item.paper_id),
+        exam_id: Number(item.exam_id),
       }))
       .filter((item: Option) => Number.isFinite(Number(item.value)))
       .sort(sortOptions);
@@ -679,7 +675,7 @@ const loadStudents = async () => {
   if (!filters.class_id) return;
   studentLoading.value = true;
   try {
-    const res = await getStudentApi({ school: filters.school_id, grade: normalizeGradeForApi(filters.grade), class_id: filters.class_id, page: 1, size: 1000 } as any);
+    const res = await getStudentApi({ school: filters.school_id, grade: normalizeGradeForApi(filters.grade), class_id: text(filters.class_id), page: 1, size: 1000 } as any);
     const data = Array.isArray(res?.data) ? res.data : [];
     studentOptions.value = data
       .map((item: any) => ({
@@ -728,8 +724,12 @@ const validateSearch = () => {
     errorText.value = "学生错题模式需要先选择班级和学生。";
     return false;
   }
-  if (mode.value === "student" && !filters.test_paper_id) {
-    errorText.value = "学生错题模式请选择试卷。";
+  if (!filters.test_paper_id) {
+    errorText.value = "请选择试卷以确定考试范围。";
+    return false;
+  }
+  if (!Number.isInteger(buildParams().exam_id) || buildParams().exam_id <= 0) {
+    errorText.value = "所选试卷缺少有效考试 ID，请先维护试卷考试关联。";
     return false;
   }
   errorText.value = "";
@@ -741,20 +741,24 @@ const search = async (resetPage = false) => {
   if (!validateSearch()) {
     rows.value = [];
     pagination.total = 0;
+    pagination.matchedTotal = 0;
     return;
   }
   loading.value = true;
   try {
     const res = await searchTeacherWrongQuestionApi(buildParams());
-    if (Number(res?.code) !== 200) throw new Error(res?.msg || "查询失败");
-    rows.value = Array.isArray(res?.data) ? res.data : [];
-    pagination.total = Number(res?.total || rows.value.length || 0);
+    if (Number(res?.code) !== 200) throw new Error(apiErrorMessage(res, "查询失败"));
+    rows.value = flattenQuestionGroups<WrongQuestionRecord>(Array.isArray(res?.data) ? res.data : []);
+    selectedQuestionKeys.value = new Set();
+    pagination.total = Number(res?.total ?? 0);
+    pagination.matchedTotal = Number(res?.matched_total ?? 0);
     if (mode.value === "student" && filters.student_id) {
       fetchCartCount(filters.student_id);
     }
   } catch (error: any) {
     rows.value = [];
     pagination.total = 0;
+    pagination.matchedTotal = 0;
     errorText.value = error?.message || "查询错题失败";
   } finally {
     loading.value = false;
@@ -765,8 +769,15 @@ const loadRecommend = async () => {
   if (!validateSearch()) return;
   recommendLoading.value = true;
   try {
-    const res = await getTeacherWrongQuestionRecommendApi({ ...buildBaseParams(), limit: 12 });
-    if (Number(res?.code) !== 200) throw new Error(res?.msg || "推荐失败");
+    const res = await getTeacherWrongQuestionRecommendApi({
+      class_id: text(filters.class_id),
+      test_paper_id: filters.test_paper_id,
+      student_id: mode.value === "student" ? filters.student_id : undefined,
+      question_type: text(filters.question_type) || undefined,
+      knowledge_keyword: text(filters.knowledge_keyword) || undefined,
+      limit: 12,
+    });
+    if (Number(res?.code) !== 200) throw new Error(apiErrorMessage(res, "推荐失败"));
     recommendKnowledge.value = Array.isArray(res?.data?.knowledge_points) ? res.data.knowledge_points : [];
     recommendTypes.value = Array.isArray(res?.data?.question_types) ? res.data.question_types : [];
   } catch (error: any) {
@@ -781,11 +792,12 @@ const clearQueryResult = () => {
   rows.value = [];
   pagination.page = 1;
   pagination.total = 0;
+  pagination.matchedTotal = 0;
   recommendKnowledge.value = [];
   recommendTypes.value = [];
 };
 const resetStatFilters = () => {
-  statScope.value = "school_default";
+  statScope.value = "all_students";
   customTopN.value = null;
   wrongRateFilters.min = null;
   wrongRateFilters.max = null;
@@ -883,6 +895,7 @@ const resetFilters = async () => {
   rows.value = [];
   pagination.page = 1;
   pagination.total = 0;
+  pagination.matchedTotal = 0;
   recommendKnowledge.value = [];
   recommendTypes.value = [];
   paperOptions.value = [];
@@ -1007,24 +1020,25 @@ const extractAnalysisText = (value: unknown): string => {
   return raw.replace(/!\[[^\]]*\]\([^)\s]+(?:\s+["'][^"']*["'])?\)/g, "").trim();
 };
 const recordKey = (record: WrongQuestionRecord) =>
-  [record.exam_id, record.test_paper_id, record.class_id, record.student_id, record.question_key || record.string_number].map(text).join("-");
+  [record.exam_id, record.paper_id, record.class_id, record.student_id, record.question_number].map(text).join("-");
 
 // ===== 购物车相关 =====
 
 const selectAllQuestions = computed({
-  get: () => rows.value.length > 0 && selectedQuestionKeys.value.size === rows.value.length,
+  get: () => selectableRows.value.length > 0 && selectedQuestionKeys.value.size === selectableRows.value.length,
   set: () => {},
 });
 
 const handleSelectAllQuestions = () => {
-  if (selectedQuestionKeys.value.size === rows.value.length) {
+  if (selectedQuestionKeys.value.size === selectableRows.value.length) {
     selectedQuestionKeys.value = new Set();
   } else {
-    selectedQuestionKeys.value = new Set(rows.value.map((r) => recordKey(r)));
+    selectedQuestionKeys.value = new Set(selectableRows.value.map((r) => recordKey(r)));
   }
 };
 
 const toggleQuestionSelection = (record: WrongQuestionRecord) => {
+  if (record.is_context) return;
   const key = recordKey(record);
   const next = new Set(selectedQuestionKeys.value);
   if (next.has(key)) {
@@ -1069,7 +1083,7 @@ const handleAddToCart = async () => {
         .map((record) => ({
           ...record,
           id: recordKey(record),
-          test_question_id: String(record.question_id || record.question_key || record.string_number || ""),
+          test_question_id: String(record.question_id || ""),
           add_cart_time: new Date().toLocaleString("zh-CN"),
         }))
         .filter((item) => !existingKeys.has(String(item.id || item.question_id || item.test_question_id || "")));
@@ -1085,8 +1099,8 @@ const handleAddToCart = async () => {
         try {
           const res = await postCartList({
             student_id: String(filters.student_id || ""),
-            test_question_id: String(record.question_id || record.question_key || record.string_number || ""),
-            test_paper_id: String(record.test_paper_id || ""),
+            test_question_id: String(record.question_id || ""),
+            test_paper_id: String(record.paper_id || ""),
           });
           if (Number(res?.code) === 200) added++;
         } catch { /* skip failed */ }

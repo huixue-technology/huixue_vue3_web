@@ -57,11 +57,11 @@
             </div>
             <div class="cart-item-row">
               <span class="cart-label">试卷ID</span>
-              <span class="cart-value">{{ item.test_paper_id || '-' }}</span>
+              <span class="cart-value">{{ item.paper_id || item.test_paper_id || '-' }}</span>
             </div>
-            <div v-if="item.string_number || item.question_key" class="cart-item-row">
+            <div v-if="item.question_number || item.string_number || item.question_key" class="cart-item-row">
               <span class="cart-label">题号</span>
-              <span class="cart-value">{{ item.string_number || item.question_key }}</span>
+              <span class="cart-value">{{ item.question_number || item.string_number || item.question_key }}</span>
             </div>
             <div v-if="item.question_type" class="cart-item-row">
               <span class="cart-label">题型</span>

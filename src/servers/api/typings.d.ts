@@ -602,20 +602,11 @@ declare namespace API {
   };
 
   type getClassQuestionWrongStudentsParams = {
-    /** 页码 */
+    question_id: number;
+    class_id?: string;
     page?: number;
-    /** 每页数量 */
     size?: number;
-    /** 考试ID */
-    exam_id: number;
-    /** 试卷ID */
-    test_paper_id: number;
-    /** 班级ID */
-    class_id: string;
-    /** 题号 */
-    question_key: string;
   };
-
   type getClassScoreParams = {
     /** 班级ID */
     class_id: number;
@@ -966,24 +957,16 @@ declare namespace API {
     school_id?: string;
     /** 年级 */
     grade?: string;
-    /** 年级别名 */
-    student_grade?: string;
     /** 班级ID */
     class_id?: string;
     /** 考试ID */
     exam_id?: number;
     /** 试卷ID */
     test_paper_id?: number;
-    /** 试卷ID别名 */
-    paper_id?: number;
-    /** 学生ID */
-    student_id?: string;
     /** 题型 */
     question_type?: string;
     /** 关键词 */
     knowledge_keyword?: string;
-    /** 关键词别名 */
-    keyword?: string;
     /** 年份 */
     year?: string;
     /** 是否已复习 */
@@ -1004,24 +987,16 @@ declare namespace API {
     school_id?: string;
     /** 年级 */
     grade?: string;
-    /** 年级别名 */
-    student_grade?: string;
     /** 班级ID */
     class_id?: string;
     /** 考试ID */
     exam_id?: number;
     /** 试卷ID */
     test_paper_id?: number;
-    /** 试卷ID别名 */
-    paper_id?: number;
-    /** 学生ID */
-    student_id?: string;
     /** 题型 */
     question_type?: string;
     /** 关键词 */
     knowledge_keyword?: string;
-    /** 关键词别名 */
-    keyword?: string;
     /** 年份 */
     year?: string;
     /** 是否已复习 */
@@ -1065,24 +1040,18 @@ declare namespace API {
     school_id?: string;
     /** 年级 */
     grade?: string;
-    /** 年级别名 */
-    student_grade?: string;
     /** 班级ID */
     class_id?: string;
     /** 考试ID */
     exam_id?: number;
     /** 试卷ID */
     test_paper_id?: number;
-    /** 试卷ID别名 */
-    paper_id?: number;
     /** 学生ID */
     student_id?: string;
     /** 题型 */
     question_type?: string;
     /** 关键词 */
     knowledge_keyword?: string;
-    /** 关键词别名 */
-    keyword?: string;
     /** 年份 */
     year?: string;
     /** 是否已复习 */
@@ -1099,36 +1068,25 @@ declare namespace API {
     /** 科目 */
     subject?: string;
     /** 学校ID */
-    school_id?: string;
+    school_id: string;
     /** 年级 */
     grade?: string;
-    /** 年级别名 */
-    student_grade?: string;
     /** 班级ID */
-    class_id?: string;
+    class_id: string;
     /** 考试ID */
-    exam_id?: number;
+    exam_id: number;
     /** 试卷ID */
     test_paper_id?: number;
-    /** 试卷ID别名 */
-    paper_id?: number;
     /** 学生ID */
     student_id?: string;
     /** 题型 */
     question_type?: string;
     /** 关键词 */
     knowledge_keyword?: string;
-    /** 关键词别名 */
-    keyword?: string;
     /** 年份 */
     year?: string;
-    /** 是否已复习 */
-    is_reviewed?: string;
-    /** 错误率下限，范围 0 到 1（含边界） */
     min_wrong_rate?: number;
-    /** 错误率上限，范围 0 到 1（含边界） */
     max_wrong_rate?: number;
-    /** 错误率统计前 N 名；0 表示全班，最大 1000 */
     top_n?: number;
   };
 
@@ -1333,20 +1291,6 @@ declare namespace API {
     exam_ids: number[];
   };
 
-  type postClassQuestionStatRebuildParams = {
-    /** 考试ID */
-    exam_id: number;
-    /** 试卷ID */
-    test_paper_id: number;
-    /** 班级ID */
-    class_id?: string;
-    /** 错误率下限，范围 0 到 1（含边界） */
-    min_wrong_rate?: number;
-    /** 错误率上限，范围 0 到 1（含边界） */
-    max_wrong_rate?: number;
-    /** 错误率统计前 N 名；0 表示全班，最大 1000 */
-    top_n?: number;
-  };
 
   type postClassUploadApiParams = {
     /** 学校ID */
@@ -1387,12 +1331,6 @@ declare namespace API {
     test_paper_id: number;
   };
 
-  type postPaperQuestionScoreParams = {
-    /** 学校ID */
-    school_id: string;
-    /** 试卷编号 */
-    paper_id: string;
-  };
 
   type postPaperUploadApiParams = {
     /** 学校id */
@@ -1432,7 +1370,7 @@ declare namespace API {
     /** 学校ID */
     school_id: string;
     /** 试卷编号 */
-    paper_id: string;
+    paper_id: number;
   };
 
   type postQuickAdminClassImportParams = {
@@ -1686,22 +1624,11 @@ declare namespace API {
   };
 
   type StudentWrongQuestionReview = {
-    /** 试卷ID */
-    test_paper_id: Record<string, any>;
-    /** 试卷ID别名 */
-    paper_id?: Record<string, any>;
-    /** 题号 */
+    test_paper_id: number;
     question_key: string;
-    /** 题号别名 */
-    question_number?: string;
-    /** 题号别名 */
-    string_number?: string;
-    /** 班级ID */
     class_id?: string;
-    /** 是否已复习 */
     is_reviewed: boolean;
   };
-
   type TaskStatus = {
     /** 任务ID */
     task_id: string;
@@ -1790,7 +1717,7 @@ declare namespace API {
     /** 错题 question_id 列表 */
     question_ids: number[];
     /** 学生 student_id */
-    student_id: string;
+    student_id?: string;
     /** 是否包含答案 */
     is_need_answer?: boolean;
     /** 是否包含解析 */

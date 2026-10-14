@@ -41,11 +41,12 @@
         @change="handleSearch"
       />
       <a-button type="primary" :loading="loading" @click="handleSearch">查询</a-button>
-      <a-button :loading="recommendLoading" @click="loadRecommend">推荐筛选</a-button>
+      <a-button :loading="recommendLoading" @click="loadRecommend">错题频次分析</a-button>
       <a-button @click="resetFilters">重置</a-button>
     </section>
 
     <section v-if="recommendKnowledge.length || recommendTypes.length" class="recommend-panel">
+      <span>个人错题频次（不按年份或复习状态筛选）</span>
       <a-tag
         v-for="item in recommendKnowledge"
         :key="`k-${item.name}`"
@@ -69,12 +70,12 @@
     <section class="result-panel">
       <div class="result-head">
         <div class="result-head-left">
-          <a-checkbox v-model:checked="selectAllQuestions" :indeterminate="selectedQuestionKeys.size > 0 && selectedQuestionKeys.size < rows.length" @change="handleSelectAllQuestions">
+          <a-checkbox v-model:checked="selectAllQuestions" :indeterminate="selectedQuestionKeys.size > 0 && selectedQuestionKeys.size < selectableRows.length" @change="handleSelectAllQuestions">
             全选
           </a-checkbox>
           <h3>错题列表</h3>
         </div>
-        <span>共 {{ pagination.total }} 题</span>
+        <span>共 {{ pagination.matchedTotal }} 道错题</span>
       </div>
 
       <a-spin :spinning="loading">
@@ -83,22 +84,24 @@
           <article v-for="record in rows" :key="recordKey(record)" class="question-card">
             <div class="question-main">
               <a-checkbox
+                v-if="!record.is_context"
                 :checked="selectedQuestionKeys.has(recordKey(record))"
                 class="question-checkbox"
                 @change="toggleQuestionSelection(record)"
               />
               <div class="question-main-content">
               <div class="question-title">
-                <strong>{{ record.string_number || record.question_key || "-" }} 题</strong>
+                <strong>{{ record.question_number || "-" }} 题</strong>
+                <a-tag v-if="record.is_context">母题题干</a-tag>
                 <a-tag v-if="record.subject" color="blue">{{ record.subject }}</a-tag>
                 <a-tag v-if="record.question_type" color="gold">{{ record.question_type }}</a-tag>
                 <a-tag v-if="record.year" color="green">{{ record.year }}</a-tag>
-                <a-tag :color="record.is_reviewed ? 'green' : 'default'">
+                <a-tag v-if="!record.is_context" :color="record.is_reviewed ? 'green' : 'default'">
                   {{ record.is_reviewed ? "已复习" : "未复习" }}
                 </a-tag>
               </div>
-              <div class="metric-row">
-                <span>我的得分 {{ formatScore(record.student_score) }}/{{ formatScore(record.full_score) }}</span>
+              <div v-if="!record.is_context" class="metric-row">
+                <span>我的得分 {{ formatScore(record.score) }}/{{ formatScore(record.full_score) }}</span>
                 <span v-if="record.exam_name">{{ record.exam_name }}</span>
                 <a-button
                   size="small"
@@ -112,8 +115,8 @@
               </div>
             </div>
 
-            <div v-if="stringList(record.knowledge_points).length" class="tag-row">
-              <a-tag v-for="point in stringList(record.knowledge_points)" :key="point" color="geekblue">{{ point }}</a-tag>
+            <div v-if="stringList(record.keywords).length" class="tag-row">
+              <a-tag v-for="point in stringList(record.keywords)" :key="point" color="geekblue">{{ point }}</a-tag>
             </div>
 
             <div class="content-grid">
@@ -154,7 +157,7 @@
             </div>
             <div class="answer-row">
               <div class="box-title">答案</div>
-              <div v-if="text(record.answer)" class="markdown-body" v-html="renderMarkdown(record.answer)"></div>
+              <div v-if="text(record.quick_answer)" class="markdown-body" v-html="renderMarkdown(record.quick_answer)"></div>
               <a-empty v-else description="暂无答案" />
             </div>
           </article>
@@ -167,7 +170,7 @@
           :page-size="pagination.size"
           :total="pagination.total"
           show-size-changer
-          :show-total="(total: number) => `共 ${total} 条`"
+          :show-total="(total: number) => `共 ${total} 组`"
           @change="handlePageChange"
           @showSizeChange="handleSizeChange"
         />
@@ -214,6 +217,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import router from "@/router";
+import { apiErrorMessage } from "@/utils/apiError";
+import { flattenQuestionGroups } from "@/utils/wrongQuestion";
 import { useUserStore } from "@/store";
 import {
   getStudentWrongQuestionRecommend as getStudentWrongQuestionRecommendApi,
@@ -230,16 +235,17 @@ type WrongQuestionRecord = {
   [key: string]: unknown;
   exam_id?: number | string;
   exam_name?: string;
-  test_paper_id?: number | string;
-  question_key?: string;
-  string_number?: string;
+  paper_id?: number | string;
+  question_number?: string;
+  is_context?: boolean;
+  sub_questions?: WrongQuestionRecord[];
+  quick_answer?: string;
   subject?: string;
   question_type?: string;
-  knowledge_points?: string[] | string;
+  keywords?: string[] | string;
   images?: string[] | string;
   answer?: string;
-  analysis?: string;
-  student_score?: number | string;
+  score?: number | string;
   full_score?: number | string;
   class_id?: string;
   question_id?: number | string;
@@ -282,7 +288,8 @@ const filters = reactive({
   is_reviewed: undefined as string | undefined,
 });
 
-const pagination = reactive({ page: 1, size: 5, total: 0 });
+const pagination = reactive({ page: 1, size: 5, total: 0, matchedTotal: 0 });
+const selectableRows = computed(() => rows.value.filter((record) => !record.is_context));
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
 const reviewStatusOptions: Option[] = [
   { label: "未复习", value: "false" },
@@ -293,7 +300,7 @@ const text = (value: unknown) => String(value ?? "").trim();
 const filterOption = (input: string, option: any) => text(option?.label).toLowerCase().includes(input.toLowerCase());
 const analysisViewerTitle = computed(() => {
   const record = analysisViewer.record;
-  const question = text(record?.string_number || record?.question_key || "-");
+  const question = text(record?.question_number || "-");
   return `${question} 题解析`;
 });
 const questionPreviewImages = computed(() => (questionPreview.record ? questionImagePaths(questionPreview.record).map(displayImageUrl).filter(Boolean) : []));
@@ -316,13 +323,16 @@ const search = async (resetPage = false) => {
   loading.value = true;
   try {
     const res = await searchStudentWrongQuestionApi({ student_uid: studentUid.value, ...buildParams() });
-    if (Number(res?.code) !== 200) throw new Error(res?.msg || "查询失败");
-    rows.value = Array.isArray(res?.data) ? res.data : [];
-    pagination.total = Number(res?.total || rows.value.length || 0);
+    if (Number(res?.code) !== 200) throw new Error(apiErrorMessage(res, "查询失败"));
+    rows.value = flattenQuestionGroups<WrongQuestionRecord>(Array.isArray(res?.data) ? res.data : []);
+    selectedQuestionKeys.value = new Set();
+    pagination.total = Number(res?.total ?? 0);
+    pagination.matchedTotal = Number(res?.matched_total ?? 0);
     preloadRecordImages(rows.value);
   } catch (error: any) {
     rows.value = [];
     pagination.total = 0;
+    pagination.matchedTotal = 0;
     message.error(error?.message || "查询错题失败");
   } finally {
     loading.value = false;
@@ -335,10 +345,11 @@ const loadRecommend = async () => {
   try {
     const res = await getStudentWrongQuestionRecommendApi({
       student_uid: studentUid.value,
-      ...buildParams(),
+      question_type: text(filters.question_type) || undefined,
+      knowledge_keyword: text(filters.knowledge_keyword) || undefined,
       limit: 12,
     });
-    if (Number(res?.code) !== 200) throw new Error(res?.msg || "推荐失败");
+    if (Number(res?.code) !== 200) throw new Error(apiErrorMessage(res, "推荐失败"));
     recommendKnowledge.value = Array.isArray(res?.data?.knowledge_points) ? res.data.knowledge_points : [];
     recommendTypes.value = Array.isArray(res?.data?.question_types) ? res.data.question_types : [];
     questionTypeOptions.value = recommendTypes.value.map((item) => ({ label: item.name, value: item.name }));
@@ -473,16 +484,7 @@ const questionImagePaths = (record: WrongQuestionRecord) =>
     ].flatMap(imageFieldList)
   );
 
-const analysisContent = (record?: WrongQuestionRecord | null) =>
-  text(
-    record?.analysis ??
-      record?.answer_analysis ??
-      record?.answerAnalysis ??
-      record?.analysis_content ??
-      record?.analysisContent ??
-      record?.explanation ??
-      ""
-  );
+const analysisContent = (record?: WrongQuestionRecord | null) => text(record?.answer);
 
 const fileRequestUrl = (path: unknown) => {
   const value = text(path);
@@ -588,24 +590,25 @@ onBeforeUnmount(() => {
   }
 });
 const recordKey = (record: WrongQuestionRecord) =>
-  [record.exam_id, record.test_paper_id, record.question_key || record.string_number].map(text).join("-");
+  [record.exam_id, record.paper_id, record.class_id, record.student_id, record.question_number].map(text).join("-");
 
 // ===== 购物车选择相关 =====
 
 const selectAllQuestions = computed({
-  get: () => rows.value.length > 0 && selectedQuestionKeys.value.size === rows.value.length,
+  get: () => selectableRows.value.length > 0 && selectedQuestionKeys.value.size === selectableRows.value.length,
   set: () => {},
 });
 
 const handleSelectAllQuestions = () => {
-  if (selectedQuestionKeys.value.size === rows.value.length) {
+  if (selectedQuestionKeys.value.size === selectableRows.value.length) {
     selectedQuestionKeys.value = new Set();
   } else {
-    selectedQuestionKeys.value = new Set(rows.value.map((r) => recordKey(r)));
+    selectedQuestionKeys.value = new Set(selectableRows.value.map((r) => recordKey(r)));
   }
 };
 
 const toggleQuestionSelection = (record: WrongQuestionRecord) => {
+  if (record.is_context) return;
   const key = recordKey(record);
   const next = new Set(selectedQuestionKeys.value);
   if (next.has(key)) {
@@ -632,8 +635,8 @@ const handleAddToCart = async () => {
       try {
         const res = await postCartList({
           student_id: studentUid.value,
-          test_question_id: String(record.question_id || record.question_key || record.string_number || ""),
-          test_paper_id: String(record.test_paper_id || ""),
+          test_question_id: String(record.question_id || ""),
+          test_paper_id: String(record.paper_id || ""),
         });
         if (Number(res?.code) === 200) added++;
       } catch {
@@ -659,10 +662,10 @@ const handleGoToCart = () => {
 };
 
 const toggleReviewed = async (record: WrongQuestionRecord) => {
-  if (!studentUid.value) return;
+  if (!studentUid.value || record.is_context) return;
   const currentKey = recordKey(record);
-  const questionKey = text(record.question_key || record.string_number);
-  if (!record.test_paper_id || !questionKey) {
+  const questionKey = text(record.question_number);
+  if (!record.paper_id || !questionKey) {
     message.warning("缺少试卷或题号信息");
     return;
   }
@@ -670,22 +673,18 @@ const toggleReviewed = async (record: WrongQuestionRecord) => {
   reviewUpdatingKey.value = currentKey;
   try {
     const nextValue = !record.is_reviewed;
-    // 生成类型 StudentWrongQuestionReview.test_paper_id 被错误定义为 Record<string, any>，实际后端接收 string
     const res = await putStudentWrongQuestionReview(
       { student_uid: studentUid.value },
       {
-        test_paper_id: record.test_paper_id,
+        test_paper_id: Number(record.paper_id),
         question_key: questionKey,
         class_id: record.class_id,
         is_reviewed: nextValue,
-      } as any
+      }
     );
-    if (Number(res?.code) !== 200) throw new Error(res?.msg || "更新复习状态失败");
+    if (Number(res?.code) !== 200) throw new Error(apiErrorMessage(res, "更新复习状态失败"));
     record.is_reviewed = nextValue;
-    if (filters.is_reviewed && filters.is_reviewed !== String(nextValue)) {
-      rows.value = rows.value.filter((item) => recordKey(item) !== currentKey);
-      pagination.total = Math.max(0, pagination.total - 1);
-    }
+    if (filters.is_reviewed && filters.is_reviewed !== String(nextValue)) await search(false);
     message.success(nextValue ? "已标记为已复习" : "已取消复习标记");
   } catch (error: any) {
     message.error(error?.message || "更新复习状态失败");

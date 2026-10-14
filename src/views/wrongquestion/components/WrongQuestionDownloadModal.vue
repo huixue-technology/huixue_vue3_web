@@ -32,6 +32,7 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { message } from "ant-design-vue";
+import { apiErrorMessage } from "@/utils/apiError";
 import { postWrongQuestionDownload } from "@/servers/api/wrongQuestion";
 
 type WrongQuestionRecord = Record<string, any>;
@@ -62,6 +63,7 @@ function numberId(value: unknown): number | undefined {
 
 function extractQuestionIds(list: WrongQuestionRecord[]) {
   const ids = list
+    .filter((item) => !item.is_context)
     .map((item) => numberId(item.question_id ?? item.test_question_id))
     .filter((id): id is number => id !== undefined);
   return Array.from(new Set(ids));
@@ -88,9 +90,9 @@ function filenameFromDisposition(disposition: string) {
 
 function extensionFromType(type: string) {
   if (type.includes("wordprocessingml.document")) return "docx";
-  if (type.includes("pdf")) return "pdf";
+  if (type.includes("pdf")) return "docx";
   if (type.includes("zip")) return "zip";
-  return "pdf";
+  return "docx";
 }
 
 function downloadBlob(blob: Blob, filename?: string) {
@@ -108,7 +110,7 @@ async function readBackendError(blob: Blob) {
   if (!blob.type.includes("json") && !blob.type.includes("text")) return "";
   try {
     const data = JSON.parse(await blob.text());
-    return data?.msg || data?.message || data?.detail || "";
+    return apiErrorMessage(data, "下载失败");
   } catch {
     return "";
   }
@@ -121,7 +123,7 @@ async function resolveDownloadError(error: any) {
     if (backendMessage) return backendMessage;
   }
   if (typeof data === "string") return data;
-  if (data && typeof data === "object") return data.msg || data.message || data.detail || "";
+  if (data && typeof data === "object") return apiErrorMessage(data, "下载失败");
 
   const response = error?.response;
   if (response?.clone) {
@@ -129,7 +131,7 @@ async function resolveDownloadError(error: any) {
       const contentType = response.headers?.get?.("content-type") || "";
       if (contentType.includes("json")) {
         const json = await response.clone().json();
-        return json?.msg || json?.message || json?.detail || "";
+        return apiErrorMessage(json, "下载失败");
       }
       const responseText = await response.clone().text();
       if (responseText) return responseText;
@@ -188,6 +190,7 @@ async function handleDownload() {
       return;
     }
 
+    if (response && !response.ok) throw new Error(await readBackendError(blob) || `下载失败（${response.status}）`);
     const backendError = await readBackendError(blob);
     if (backendError) throw new Error(backendError);
 

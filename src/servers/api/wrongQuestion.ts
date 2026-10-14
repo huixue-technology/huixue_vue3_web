@@ -17,21 +17,6 @@ export async function getClassQuestionStat(
   });
 }
 
-/** 重建班级题目统计数据缓存。 POST /api/wrong-question/class-question-stat/rebuild */
-export async function postClassQuestionStatRebuild(
-  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.postClassQuestionStatRebuildParams,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/wrong-question/class-question-stat/rebuild", {
-    method: "POST",
-    params: {
-      ...params,
-    },
-    ...(options || {}),
-  });
-}
-
 /** 班级题目错题学生名单：查询某题做错的学生列表。 GET /api/wrong-question/class-question-wrong-students */
 export async function getClassQuestionWrongStudents(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
