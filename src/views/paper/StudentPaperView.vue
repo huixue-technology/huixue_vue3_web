@@ -126,7 +126,7 @@ type QuestionItem = {
   keywords?: string[] | string;
   answer?: string;
   score?: number | string;
-  images?: string[] | string;
+  content: string;
   [key: string]: any;
 };
 

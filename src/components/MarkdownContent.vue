@@ -1,15 +1,47 @@
 <template>
-  <div class="markdown-content" v-html="html"></div>
+  <div class="markdown-content">
+    <div @click="handleImageClick" v-html="html"></div>
+    <div v-if="preview && previewImages.length" style="display: none" aria-hidden="true">
+      <a-image-preview-group
+        :preview="{ visible: previewVisible, current: previewCurrent, onVisibleChange: handlePreviewVisibleChange }"
+      >
+        <a-image v-for="(src, index) in previewImages" :key="`${index}-${src}`" :src="src" />
+      </a-image-preview-group>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, nextTick, ref } from "vue";
 import DOMPurify from "dompurify";
 import katex from "katex";
 import { marked } from "marked";
 import "katex/dist/katex.min.css";
 
-const props = defineProps<{ content?: string | null }>();
+const props = defineProps<{
+  content?: string | null;
+  preview?: boolean;
+  resolveImageUrl?: (src: string) => string;
+}>();
+
+const previewImages = ref<string[]>([]);
+const previewVisible = ref(false);
+const previewCurrent = ref(0);
+const handlePreviewVisibleChange = (visible: boolean) => {
+  previewVisible.value = visible;
+};
+const handleImageClick = async (event: MouseEvent) => {
+  if (
+    !props.preview ||
+    !(event.target instanceof HTMLImageElement) ||
+    !(event.currentTarget instanceof HTMLElement)
+  ) return;
+  const images = Array.from(event.currentTarget.querySelectorAll("img"));
+  previewImages.value = images.map((image) => image.currentSrc || image.src);
+  previewCurrent.value = images.indexOf(event.target);
+  await nextTick();
+  previewVisible.value = true;
+};
 
 // 试题文本中的公式以 $$...$$ 包裹（切题接口输出约定）
 const MATH_PATTERN = /\$\$([\s\S]+?)\$\$/g;
@@ -43,9 +75,19 @@ const renderRichText = (source?: string | null): string => {
     mathBlocks[Number(index)] ?? ""
   );
   // KaTeX 会输出 MathML 与 SVG 片段，需放开对应白名单
-  return DOMPurify.sanitize(merged, {
+  const sanitized = DOMPurify.sanitize(merged, {
     USE_PROFILES: { html: true, mathMl: true, svg: true },
   });
+  const container = document.createElement("div");
+  container.innerHTML = sanitized;
+  container.querySelectorAll("img").forEach((image) => {
+    // 鉴权图片加载后是 blob 地址，在 HTML 清理后替换，避免被过滤。
+    const src = image.getAttribute("src");
+    if (src && props.resolveImageUrl) image.src = props.resolveImageUrl(src);
+    image.setAttribute("loading", "lazy");
+    image.setAttribute("decoding", "async");
+  });
+  return container.innerHTML;
 };
 
 const html = computed(() => renderRichText(props.content));

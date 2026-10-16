@@ -193,7 +193,7 @@ export async function postTestPaperPdf(
   });
 }
 
-/** 上传题目图片，返回可保存到 test_question.images 的存储路径。 POST /api/tp/question-image */
+/** 上传题目图片，返回用于题干 Markdown 图片引用的存储路径。 POST /api/tp/question-image */
 export async function postTestPaperQuestionImage(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postTestPaperQuestionImageParams,

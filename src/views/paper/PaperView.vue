@@ -147,7 +147,7 @@ type QuestionItem = {
   correct_rate?: number;
   keywords?: string[] | string;
   answer?: string;
-  images?: string[] | string;
+  content: string;
   [key: string]: any;
 };
 

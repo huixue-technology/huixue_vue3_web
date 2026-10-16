@@ -121,23 +121,14 @@
 
             <div class="content-grid">
               <div class="media-box">
-                <div class="box-title box-title-row">
-                  <span>题目图片</span>
-                  <a-button v-if="questionImagePaths(record).length" type="link" size="small" @click="openQuestionViewer(record)">放大</a-button>
-                </div>
-                <div v-if="questionImagePaths(record).length" class="image-row">
-                  <img
-                    v-for="(image, index) in questionImagePaths(record)"
-                    :key="`${recordKey(record)}-${index}`"
-                    :src="displayImageUrl(image)"
-                    class="question-image"
-                    loading="lazy"
-                    decoding="async"
-                    alt="question image"
-                    @click="openQuestionViewer(record)"
-                  />
-                </div>
-                <a-empty v-else description="暂无题图" />
+                <div class="box-title">题干</div>
+                <MarkdownContent
+                  v-if="record.content"
+                  :content="record.content"
+                  :resolve-image-url="displayImageUrl"
+                  preview
+                />
+                <a-empty v-else description="暂无题干" />
               </div>
               <div class="analysis-box">
                 <div class="box-title">解析</div>
@@ -195,12 +186,6 @@
 
     <div class="hidden-preview-group" aria-hidden="true">
       <a-image-preview-group
-        v-if="questionPreviewImages.length"
-        :preview="{ visible: questionPreview.open, current: questionPreview.current, onVisibleChange: handleQuestionPreviewVisibleChange }"
-      >
-        <a-image v-for="(src, index) in questionPreviewImages" :key="`question-preview-${index}-${src}`" :src="src" />
-      </a-image-preview-group>
-      <a-image-preview-group
         v-if="analysisPreviewImages.length"
         :preview="{ visible: analysisPreview.open, current: analysisPreview.current, onVisibleChange: handleAnalysisPreviewVisibleChange }"
       >
@@ -214,6 +199,7 @@
 </template>
 
 <script setup lang="ts">
+import MarkdownContent from "@/components/MarkdownContent.vue";
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import router from "@/router";
@@ -243,7 +229,7 @@ type WrongQuestionRecord = {
   subject?: string;
   question_type?: string;
   keywords?: string[] | string;
-  images?: string[] | string;
+  content: string;
   answer?: string;
   score?: number | string;
   full_score?: number | string;
@@ -267,11 +253,6 @@ const questionTypeOptions = ref<Option[]>([]);
 const studentUid = ref("");
 const studentName = ref("");
 const reviewUpdatingKey = ref("");
-const questionPreview = reactive<{ open: boolean; current: number; record: WrongQuestionRecord | null }>({
-  open: false,
-  current: 0,
-  record: null,
-});
 const analysisViewer = reactive<{ open: boolean; record: WrongQuestionRecord | null }>({
   open: false,
   record: null,
@@ -303,7 +284,6 @@ const analysisViewerTitle = computed(() => {
   const question = text(record?.question_number || "-");
   return `${question} 题解析`;
 });
-const questionPreviewImages = computed(() => (questionPreview.record ? questionImagePaths(questionPreview.record).map(displayImageUrl).filter(Boolean) : []));
 const analysisPreviewImages = computed(() => (analysisViewer.record ? extractImageUrls(analysisContent(analysisViewer.record)).map(displayImageUrl).filter(Boolean) : []));
 const buildParams = () => ({
   page: pagination.page,
@@ -386,18 +366,9 @@ const useType = async (name: string) => {
   filters.question_type = name;
   await search(true);
 };
-const openQuestionViewer = async (record: WrongQuestionRecord) => {
-  questionPreview.record = record;
-  questionPreview.current = 0;
-  await nextTick();
-  questionPreview.open = true;
-};
 const openAnalysisViewer = (record: WrongQuestionRecord) => {
   analysisViewer.record = record;
   analysisViewer.open = true;
-};
-const handleQuestionPreviewVisibleChange = (visible: boolean) => {
-  questionPreview.open = visible;
 };
 const handleAnalysisPreviewVisibleChange = (visible: boolean) => {
   analysisPreview.open = visible;
@@ -432,57 +403,7 @@ const stringList = (value: unknown): string[] => {
   return [raw];
 };
 
-const imageFieldList = (value: unknown): string[] => {
-  if (Array.isArray(value)) return value.flatMap(imageFieldList);
-  if (value && typeof value === "object") {
-    const item = value as Record<string, unknown>;
-    return imageFieldList(
-      item.url ??
-        item.src ??
-        item.path ??
-        item.file_path ??
-        item.filePath ??
-        item.image_url ??
-        item.imageUrl ??
-        item.file_url ??
-        item.fileUrl
-    );
-  }
-
-  const raw = text(value).replace(/^['"<]+|['">]+$/g, "");
-  if (!raw) return [];
-  try {
-    return imageFieldList(JSON.parse(raw));
-  } catch {}
-
-  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:") || raw.startsWith("blob:") || raw.startsWith("/api/tp/file")) {
-    return [raw];
-  }
-
-  return raw
-    .split(/[,，;\n\r]+/)
-    .map((item) => item.trim().replace(/^['"<]+|['">]+$/g, ""))
-    .filter(Boolean);
-};
-
 const uniqueList = (values: string[]) => Array.from(new Set(values.map(text).filter(Boolean)));
-
-const questionImagePaths = (record: WrongQuestionRecord) =>
-  uniqueList(
-    [
-      record.images,
-      record.question_images,
-      record.questionImages,
-      record.image_urls,
-      record.imageUrls,
-      record.question_image_urls,
-      record.questionImageUrls,
-      record.image,
-      record.question_image,
-      record.image_path,
-      record.question_image_path,
-    ].flatMap(imageFieldList)
-  );
 
 const analysisContent = (record?: WrongQuestionRecord | null) => text(record?.answer);
 
@@ -577,7 +498,7 @@ const extractAnalysisText = (value: unknown): string => {
 };
 const preloadRecordImages = (records: WrongQuestionRecord[]) => {
   for (const record of records) {
-    for (const path of [...questionImagePaths(record), ...extractImageUrls(analysisContent(record)), ...extractImageUrls(record.answer)]) {
+    for (const path of [...markdownImagePaths(record.content), ...extractImageUrls(analysisContent(record)), ...extractImageUrls(record.answer)]) {
       const requestUrl = fileRequestUrl(path);
       if (isProtectedFileUrl(requestUrl)) fetchProtectedImageUrl(requestUrl);
     }

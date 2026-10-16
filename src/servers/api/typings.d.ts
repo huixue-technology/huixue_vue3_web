@@ -1665,8 +1665,8 @@ declare namespace API {
     keywords?: string[];
     /** 年级 */
     grade?: string;
-    /** 题目图片存储路径列表 */
-    images?: string[];
+    /** 题干，支持 Markdown 和 LaTeX */
+    content?: string;
     /** 题目答案 */
     quick_answer?: string;
     /** 题目解析，支持 Markdown */
