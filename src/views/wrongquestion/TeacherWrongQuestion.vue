@@ -236,7 +236,7 @@
               <a-tag v-for="point in stringList(record.keywords)" :key="point" color="geekblue">{{ point }}</a-tag>
             </div>
 
-            <div class="content-grid">
+            <div class="content-grid" :class="{ 'is-single': record.sub_questions?.length }">
               <div class="media-box">
                 <div class="box-title">题干</div>
                 <MarkdownContent
@@ -246,7 +246,7 @@
                 />
                 <a-empty v-else description="暂无题干" />
               </div>
-              <div class="analysis-box">
+              <div v-if="!record.sub_questions?.length" class="analysis-box">
                 <div class="box-title">解析</div>
                 <MarkdownContent
                   v-if="record.answer"
@@ -256,7 +256,7 @@
                 <a-empty v-else description="暂无解析" />
               </div>
             </div>
-            <div class="answer-row">
+            <div v-if="!record.sub_questions?.length" class="answer-row">
               <div class="box-title">答案</div>
               <MarkdownContent
                 v-if="record.quick_answer"
@@ -1134,6 +1134,11 @@ onMounted(async () => {
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
   gap: 12px;
   margin-top: 12px;
+}
+
+/* 母题只展示题干时，题干占满整行 */
+.content-grid.is-single {
+  grid-template-columns: 1fr;
 }
 
 .media-box,

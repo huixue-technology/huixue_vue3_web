@@ -48,8 +48,11 @@ const MATH_PATTERN = /\$\$([\s\S]+?)\$\$/g;
 const PLACEHOLDER_PREFIX = "@@KATEX";
 const PLACEHOLDER_PATTERN = /@@KATEX(\d+)@@/g;
 
-// 题号形如 “1.”“16．”，行首出现时会被 Markdown 当成有序列表导致整段缩进，需转义
-const QUESTION_NUMBER_PATTERN = /^(\s*)(\d{1,2})([.、．])(?=\s*\S)/gm;
+// 只有 ASCII 的 “.” 和 “)” 会被 Markdown 当成有序列表标记，行首出现时会被重排缩进，需转义；
+// 中文顿号“、”、全角句点“．”既不是列表标记，CommonMark 也不会反转义，转义它们反而会残留可见反斜杠
+const QUESTION_NUMBER_PATTERN = /^(\s*)(\d{1,2})([.)])(?=\s)/gm;
+// 清理历史数据里被错误转义的反斜杠（如 “1\．”“1\、”，全角标点前 marked 不会反转义）
+const BROKEN_ESCAPE_PATTERN = /\\+([^\x00-\x7F])/g;
 
 // 先把公式抽成占位符（避免 marked 破坏 LaTeX 语法），解析 Markdown 后再换回渲染结果
 const renderRichText = (source?: string | null): string => {
@@ -68,7 +71,8 @@ const renderRichText = (source?: string | null): string => {
         return match;
       }
     })
-    .replace(QUESTION_NUMBER_PATTERN, (_match, indent, number, dot) => `${indent}${number}\\${dot}`);
+    .replace(QUESTION_NUMBER_PATTERN, (_match, indent, number, dot) => `${indent}${number}\\${dot}`)
+    .replace(BROKEN_ESCAPE_PATTERN, "$1");
 
   const markdownHtml = marked.parse(withPlaceholders, { breaks: true, gfm: true }) as string;
   const merged = markdownHtml.replace(PLACEHOLDER_PATTERN, (_match, index) =>
@@ -95,6 +99,8 @@ const html = computed(() => renderRichText(props.content));
 
 <style scoped lang="less">
 .markdown-content {
+  // 覆盖全局 #app 的 text-align: center（Vue 脚手架默认样式），试题文本默认左对齐
+  text-align: left;
   word-break: break-word;
   line-height: 1.9;
 
