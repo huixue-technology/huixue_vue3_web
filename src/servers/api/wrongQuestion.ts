@@ -17,7 +17,7 @@ export async function getClassQuestionStat(
   });
 }
 
-/** 班级题目错题学生名单：查询某题做错的学生列表。 GET /api/wrong-question/class-question-wrong-students */
+/** 单个题目错题学生名单：查询某题做错的学生列表。 GET /api/wrong-question/class-question-wrong-students */
 export async function getClassQuestionWrongStudents(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getClassQuestionWrongStudentsParams,
@@ -26,6 +26,10 @@ export async function getClassQuestionWrongStudents(
   return request<any>("/api/wrong-question/class-question-wrong-students", {
     method: "GET",
     params: {
+      // page has a default value: 1
+      page: "1",
+      // size has a default value: 10
+      size: "10",
       ...params,
     },
     ...(options || {}),
@@ -47,7 +51,7 @@ export async function postWrongQuestionDownload(
   });
 }
 
-/** 学生端错题推荐，基于个人错题记录推荐练习。 GET /api/wrong-question/recommend/student/${param0} */
+/** 学生端错题分析，返回个人高频错题知识点及题型统计。 GET /api/wrong-question/recommend/student/${param0} */
 export async function getStudentWrongQuestionRecommend(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getStudentWrongQuestionRecommendParams,
@@ -57,13 +61,15 @@ export async function getStudentWrongQuestionRecommend(
   return request<any>(`/api/wrong-question/recommend/student/${param0}`, {
     method: "GET",
     params: {
+      // limit has a default value: 20
+      limit: "20",
       ...queryParams,
     },
     ...(options || {}),
   });
 }
 
-/** 教师端错题推荐，基于高频错误知识点推荐练习。 GET /api/wrong-question/recommend/teacher */
+/** 教师端错题分析，返回班级高频错题知识点及题型统计。 GET /api/wrong-question/recommend/teacher */
 export async function getTeacherWrongQuestionRecommend(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getTeacherWrongQuestionRecommendParams,
@@ -72,6 +78,8 @@ export async function getTeacherWrongQuestionRecommend(
   return request<any>("/api/wrong-question/recommend/teacher", {
     method: "GET",
     params: {
+      // limit has a default value: 20
+      limit: "20",
       ...params,
     },
     ...(options || {}),
@@ -97,7 +105,7 @@ export async function putStudentWrongQuestionReview(
   });
 }
 
-/** 学生端错题搜索，只能查看自己的错题。 GET /api/wrong-question/search/student/${param0} */
+/** 学生端错题搜索：按母题组分页，total 为组数，matched_total 为命中错题数。 sub_questions 保留个人得分和订正状态；is_context=true 的母题只提供题干。 GET /api/wrong-question/search/student/${param0} */
 export async function getStudentWrongQuestionSearch(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getStudentWrongQuestionSearchParams,
@@ -107,13 +115,21 @@ export async function getStudentWrongQuestionSearch(
   return request<any>(`/api/wrong-question/search/student/${param0}`, {
     method: "GET",
     params: {
+      // page has a default value: 1
+      page: "1",
+      // size has a default value: 10
+      size: "10",
+
+      // max_wrong_rate has a default value: 1
+      max_wrong_rate: "1",
+
       ...queryParams,
     },
     ...(options || {}),
   });
 }
 
-/** 教师端错题搜索，支持按科目、年级、班级、题型、关键词等筛选。 GET /api/wrong-question/search/teacher */
+/** 教师端错题搜索：按母题组分页，total 为组数，matched_total 为命中错题数。 sub_questions 仅包含命中筛选条件的子题；is_context=true 的母题只提供题干。 GET /api/wrong-question/search/teacher */
 export async function getTeacherWrongQuestionSearch(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getTeacherWrongQuestionSearchParams,
@@ -122,6 +138,13 @@ export async function getTeacherWrongQuestionSearch(
   return request<any>("/api/wrong-question/search/teacher", {
     method: "GET",
     params: {
+      // page has a default value: 1
+      page: "1",
+      // size has a default value: 10
+      size: "10",
+
+      // max_wrong_rate has a default value: 1
+      max_wrong_rate: "1",
       ...params,
     },
     ...(options || {}),

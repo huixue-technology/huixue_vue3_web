@@ -236,3 +236,14 @@ UI 更新 ← 响应数据 ← 拦截器处理 ← 后端响应
 - Settings（设置翻译）
 - Menu items（菜单项）
 - Global headers（全局标题）
+
+## 重新生成后端接口
+
+接口请求函数和类型由 Swagger 2 文档生成，勿手改生成目录。
+
+1. 后端接口声明修改后，在后端目录执行 `uv run python dump_swagger.py`，更新 `swagger.json`。
+2. 在本前端的 `.env.local` 设置 `OPENAPI_SCHEMA_PATH=../huixue_flask_service/swagger.json`（也支持服务的 `/swagger.json` 地址）。
+3. 执行 `npm install`，再执行 `npm run openapi`。
+4. 执行 `npx tsc --noEmit` 和 `npm run build`，检查生成后受影响的调用。
+
+使用开启 Basic Auth 的文档地址时，在本地环境文件中配置 `OPENAPI_BASIC_USER`、`OPENAPI_BASIC_PASS`，不要提交凭据。

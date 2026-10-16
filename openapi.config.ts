@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+/// <reference types="node" />
 import fs from 'fs';
 import path from 'path';
 import { generateService } from '@umijs/openapi';
@@ -40,11 +40,20 @@ const authorization =
     ? `Basic ${Buffer.from(`${openapiUser}:${openapiPass}`).toString('base64')}`
     : undefined;
 
+const schemaPath = process.env.OPENAPI_SCHEMA_PATH || 'http://127.0.0.1:5000/swagger.json';
+
 generateService({
-  // 支持 OPENAPI_SCHEMA_PATH 指向本地 swagger.json 或自建服务，未设置时回退远程服务
-  schemaPath:
-    process.env.OPENAPI_SCHEMA_PATH || 'http://103.236.97.252:56004/swagger.json',
+  schemaPath: /^https?:\/\//i.test(schemaPath) ? schemaPath : path.resolve(root, schemaPath),
   authorization,
   serversPath: './src/servers',
+  hook: {
+    customType(schema, namespace, getType) {
+      const type = getType(schema, namespace);
+      return schema?.nullable ? `${type} | null` : type;
+    },
+  },
   requestLibPath: "import request from '@/utils/request'",
+}).catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
 });

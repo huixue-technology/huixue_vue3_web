@@ -94,7 +94,6 @@ import { message } from "ant-design-vue";
 import {
   getStudentTestPaper,
   getTestPaperQuestion,
-  getTestPaperQuestionScore as getTestPaperQuestionScoreApi,
 } from "@/servers/api/tp";
 import {
   getStudentWrongQuestionRecommend as getStudentWrongQuestionRecommendApi,
@@ -502,32 +501,6 @@ const loadExamOptions = async () => {
     .sort((a, b) => b.value - a.value);
 };
 
-const loadQuestionScores = async (paper: PaperItem) => {
-  studentQuestionScoreMap.value = {};
-  if (!paper?.id || !paper?.exam_id || !studentUid.value) return;
-
-  loadingQuestionScores.value = true;
-  try {
-    const response = await getTestPaperQuestionScoreApi({
-      exam_id: Number(paper.exam_id),
-      test_paper_id: Number(paper.id),
-      student_id: studentUid.value,
-    });
-    if (response.code !== 200) {
-      message.error("小题得分加载失败");
-      return;
-    }
-    const records = Array.isArray(response.data) ? (response.data as QuestionScoreRecord[]) : [];
-    if (records.length) {
-      studentQuestionScoreMap.value = normalizeScoreDetail(records[0].score_detail);
-    }
-  } catch (_error) {
-    message.error("小题得分加载失败");
-  } finally {
-    loadingQuestionScores.value = false;
-  }
-};
-
 const loadQuestions = async (paperId: number) => {
   loadingQuestions.value = true;
   try {
@@ -651,7 +624,7 @@ const handleWrongQuestionSearchSizeChange = async (_current: number, size: numbe
 };
 
 const loadPaperDetail = async (paper: PaperItem) => {
-  await Promise.all([loadQuestions(Number(paper.id)), loadQuestionScores(paper)]);
+  await loadQuestions(Number(paper.id));
 };
 
 const selectPaper = async (paper: PaperItem) => {

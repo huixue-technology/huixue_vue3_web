@@ -3,7 +3,7 @@
 import request from "@/utils/request";
 
 /** 查询试卷列表 试卷主数据接口：上传试卷、查询试卷列表、删除试卷。
-按考试、学校、年级、年份、学期、科目、名称等条件查询试卷，并补充考试名称、考试年份等展示字段。 GET /api/tp/ */
+按考试、学校、年级、年份、学期、科目、名称等条件查询试卷，仅返回试卷字段。考试展示信息由前端根据 exam_id 获取。 GET /api/tp/ */
 export async function getTestPaper(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getTestPaperParams,
@@ -19,7 +19,7 @@ export async function getTestPaper(
 }
 
 /** 上传试卷题目表 试卷主数据接口：上传试卷、查询试卷列表、删除试卷。
-上传 xlsx 试卷题目表，创建试卷记录并解析题目、题型、分值、答案和题目图片。文件表头需要包含题号、题型、分值、答案、题目图片；解析列可选。 POST /api/tp/ */
+上传 xlsx 试卷题目表。必填表头：题号、题型、分值、答案，以及题干或题目图片；题干为 Markdown，图片导入为正文中的图片引用；解析列可选。 POST /api/tp/ */
 export async function postTestPaper(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postTestPaperParams,
@@ -193,7 +193,7 @@ export async function postTestPaperPdf(
   });
 }
 
-/** 上传题目图片，返回用于题干 Markdown 图片引用的存储路径。 POST /api/tp/question-image */
+/** 上传题目配图，将返回的 url 以 ![配图](url) 写入题目 content。 POST /api/tp/question-image */
 export async function postTestPaperQuestionImage(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.postTestPaperQuestionImageParams,
@@ -291,38 +291,6 @@ export async function postTestPaperQuestionKeywords(
   });
 }
 
-/** 查询小题分 小题分接口：查询或删除学生在某场考试某张试卷中的小题得分。
-按考试、试卷、学生筛选小题分记录；默认会补充学生姓名和班级，便于前端列表展示。 GET /api/tp/question-score */
-export async function getTestPaperQuestionScore(
-  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.getTestPaperQuestionScoreParams,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/tp/question-score", {
-    method: "GET",
-    params: {
-      ...params,
-    },
-    ...(options || {}),
-  });
-}
-
-/** 删除小题分 小题分接口：查询或删除学生在某场考试某张试卷中的小题得分。
-删除指定考试和试卷下的全部小题分，同时清理对应错题统计缓存。 DELETE /api/tp/question-score */
-export async function deleteTestPaperQuestionScore(
-  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.deleteTestPaperQuestionScoreParams,
-  options?: { [key: string]: any }
-) {
-  return request<any>("/api/tp/question-score", {
-    method: "DELETE",
-    params: {
-      ...params,
-    },
-    ...(options || {}),
-  });
-}
-
 /** 查询试卷题目 试卷题目接口：查看、编辑、删除某张试卷下的题目。
 根据 test_paper_id 查询试卷下所有题目，paper_id 是兼容旧前端的别名参数。 GET /api/tp/questions */
 export async function getTestPaperQuestion(
@@ -372,7 +340,7 @@ export async function deleteTestPaperQuestion(
 }
 
 /** 查询学生试卷列表 学生视角试卷接口：查询某个学生实际参与过的试卷。
-根据学生UID查询该学生有小题分记录的试卷，可按考试、科目、年级等条件筛选。 GET /api/tp/student/${param0} */
+根据学生UID查询该学生有小题分记录的试卷，可按考试、科目、年级等条件筛选；仅返回试卷字段，考试展示信息由前端根据 exam_id 获取。 GET /api/tp/student/${param0} */
 export async function getStudentTestPaper(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getStudentTestPaperParams,

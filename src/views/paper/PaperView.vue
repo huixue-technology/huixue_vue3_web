@@ -104,7 +104,6 @@ import {
   getStudentTestPaper,
   getTestPaper as getTestPaperApi,
   getTestPaperQuestion,
-  getTestPaperQuestionScore as getTestPaperQuestionScoreApi,
 } from "@/servers/api/tp";
 import {
   getClassQuestionStat as getTestPaperClassQuestionStatApi,
@@ -914,48 +913,8 @@ const resetQuestionScoreState = () => {
   wrongStudentsPagination.total = 0;
 };
 
-const loadQuestionScores = async (paper: PaperItem) => {
-  resetQuestionScoreState();
-  if (!paper?.id || !paper?.exam_id) return;
-
-  loadingQuestionScores.value = true;
-  try {
-    if (isTeacher.value) {
-      const res = await getTestPaperQuestionScoreApi({
-        exam_id: Number(paper.exam_id),
-        test_paper_id: Number(paper.id),
-      });
-      if (res.code !== 200) {
-        message.error("小题分加载失败");
-        return;
-      }
-      questionScoreRecords.value = Array.isArray(res.data) ? res.data : [];
-      return;
-    }
-
-    if (!studentUid.value) return;
-    const res = await getTestPaperQuestionScoreApi({
-      exam_id: Number(paper.exam_id),
-      test_paper_id: Number(paper.id),
-      student_id: studentUid.value,
-    });
-    if (res.code !== 200) {
-      message.error("小题分加载失败");
-      return;
-    }
-    const records = Array.isArray(res.data) ? res.data : [];
-    if (records.length) {
-      studentQuestionScoreMap.value = normalizeScoreDetail(records[0].score_detail);
-    }
-  } catch (error) {
-    message.error("小题分加载失败");
-  } finally {
-    loadingQuestionScores.value = false;
-  }
-};
-
 const loadPaperDetail = async (paper: PaperItem) => {
-  await Promise.all([loadQuestions(Number(paper.id)), loadQuestionScores(paper)]);
+  await loadQuestions(Number(paper.id));
 };
 
 watch(

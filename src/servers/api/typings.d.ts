@@ -319,13 +319,6 @@ declare namespace API {
     question_id: number;
   };
 
-  type deleteTestPaperQuestionScoreParams = {
-    /** 考试ID */
-    exam_id: number;
-    /** 试卷ID */
-    test_paper_id: number;
-  };
-
   type deleteUserDetailApiParams = {
     user_id: string;
   };
@@ -602,11 +595,16 @@ declare namespace API {
   };
 
   type getClassQuestionWrongStudentsParams = {
+    /** 题目ID */
     question_id: number;
+    /** 班级ID */
     class_id?: string;
+    /** 页码 */
     page?: number;
+    /** 每页数量 */
     size?: number;
   };
+
   type getClassScoreParams = {
     /** 班级ID */
     class_id: number;
@@ -947,9 +945,9 @@ declare namespace API {
   };
 
   type getStudentWrongQuestionRecommendParams = {
-    /** 页码 */
+    /** 页码，按母题组分页 */
     page?: number;
-    /** 每页数量 */
+    /** 每页题目组数，独立题算一组 */
     size?: number;
     /** 科目 */
     subject?: string;
@@ -963,6 +961,8 @@ declare namespace API {
     exam_id?: number;
     /** 试卷ID */
     test_paper_id?: number;
+    /** 学生ID */
+    student_id?: string;
     /** 题型 */
     question_type?: string;
     /** 关键词 */
@@ -971,15 +971,15 @@ declare namespace API {
     year?: string;
     /** 是否已复习 */
     is_reviewed?: string;
-    /** 推荐数量 */
+    /** 知识点和题型分别返回的最大数量，必须为正整数，默认 20；按错题记录频次降序排列 */
     limit?: number;
     student_uid: string;
   };
 
   type getStudentWrongQuestionSearchParams = {
-    /** 页码 */
+    /** 页码，按母题组分页 */
     page?: number;
-    /** 每页数量 */
+    /** 每页题目组数，独立题算一组 */
     size?: number;
     /** 科目 */
     subject?: string;
@@ -993,20 +993,22 @@ declare namespace API {
     exam_id?: number;
     /** 试卷ID */
     test_paper_id?: number;
+    /** 学生ID */
+    student_id?: string;
     /** 题型 */
     question_type?: string;
     /** 关键词 */
     knowledge_keyword?: string;
     /** 年份 */
     year?: string;
+    /** 错误率下限 */
+    min_wrong_rate?: number;
+    /** 错误率上限 */
+    max_wrong_rate?: number;
+    /** 教师搜索返回错误率最高的 N 道题；0 表示不限制 */
+    top_n?: number;
     /** 是否已复习 */
     is_reviewed?: string;
-    /** 错误率下限，范围 0 到 1（含边界） */
-    min_wrong_rate?: number;
-    /** 错误率上限，范围 0 到 1（含边界） */
-    max_wrong_rate?: number;
-    /** 错误率统计前 N 名；0 表示全班，最大 1000 */
-    top_n?: number;
     student_uid: string;
   };
 
@@ -1030,9 +1032,9 @@ declare namespace API {
   };
 
   type getTeacherWrongQuestionRecommendParams = {
-    /** 页码 */
+    /** 页码，按母题组分页 */
     page?: number;
-    /** 每页数量 */
+    /** 每页题目组数，独立题算一组 */
     size?: number;
     /** 科目 */
     subject?: string;
@@ -1056,25 +1058,25 @@ declare namespace API {
     year?: string;
     /** 是否已复习 */
     is_reviewed?: string;
-    /** 推荐数量 */
+    /** 知识点和题型分别返回的最大数量，必须为正整数，默认 20；按错题记录频次降序排列 */
     limit?: number;
   };
 
   type getTeacherWrongQuestionSearchParams = {
-    /** 页码 */
+    /** 页码，按母题组分页 */
     page?: number;
-    /** 每页数量 */
+    /** 每页题目组数，独立题算一组 */
     size?: number;
     /** 科目 */
     subject?: string;
     /** 学校ID */
-    school_id: string;
+    school_id?: string;
     /** 年级 */
     grade?: string;
     /** 班级ID */
-    class_id: string;
+    class_id?: string;
     /** 考试ID */
-    exam_id: number;
+    exam_id?: number;
     /** 试卷ID */
     test_paper_id?: number;
     /** 学生ID */
@@ -1085,8 +1087,11 @@ declare namespace API {
     knowledge_keyword?: string;
     /** 年份 */
     year?: string;
+    /** 错误率下限 */
     min_wrong_rate?: number;
+    /** 错误率上限 */
     max_wrong_rate?: number;
+    /** 教师搜索返回错误率最高的 N 道题；0 表示不限制 */
     top_n?: number;
   };
 
@@ -1123,21 +1128,6 @@ declare namespace API {
     test_paper_id?: number;
     /** 试卷ID别名，兼容旧参数 */
     paper_id?: number;
-  };
-
-  type getTestPaperQuestionScoreParams = {
-    /** 页码，从 1 开始 */
-    page?: number;
-    /** 每页数量，默认 100，最大 500 */
-    size?: number;
-    /** 考试ID */
-    exam_id?: number;
-    /** 试卷ID */
-    test_paper_id?: number;
-    /** 学生UID */
-    student_id?: string;
-    /** 是否补充学生姓名和班级，默认 true */
-    include_student?: string;
   };
 
   type getUpDownDetailAnalysisParams = {
@@ -1291,7 +1281,6 @@ declare namespace API {
     exam_ids: number[];
   };
 
-
   type postClassUploadApiParams = {
     /** 学校ID */
     school_id: string;
@@ -1330,7 +1319,6 @@ declare namespace API {
     /** 试卷ID */
     test_paper_id: number;
   };
-
 
   type postPaperUploadApiParams = {
     /** 学校id */
@@ -1624,11 +1612,22 @@ declare namespace API {
   };
 
   type StudentWrongQuestionReview = {
+    /** 试卷ID */
     test_paper_id: number;
+    /** 试卷ID别名 */
+    paper_id?: number;
+    /** 题号 */
     question_key: string;
+    /** 题号别名 */
+    question_number?: string;
+    /** 题号别名 */
+    string_number?: string;
+    /** 班级ID */
     class_id?: string;
+    /** 是否已复习 */
     is_reviewed: boolean;
   };
+
   type TaskStatus = {
     /** 任务ID */
     task_id: string;
@@ -1665,7 +1664,7 @@ declare namespace API {
     keywords?: string[];
     /** 年级 */
     grade?: string;
-    /** 题干，支持 Markdown 和 LaTeX */
+    /** 题干（Markdown + LaTeX），配图使用 /api/tp/file?path=... 图片引用 */
     content?: string;
     /** 题目答案，支持 Markdown */
     quick_answer?: string;
@@ -1726,6 +1725,6 @@ declare namespace API {
 
   type WrongQuestionStatConfig = {
     /** 错误率统计前 N 名；null 恢复全班统计，取值范围 1 到 1000 */
-    top_n: number;
+    top_n: number | null;
   };
 }
