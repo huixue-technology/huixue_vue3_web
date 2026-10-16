@@ -132,23 +132,23 @@
               </div>
               <div class="analysis-box">
                 <div class="box-title">解析</div>
-                <div v-if="text(analysisContent(record))" class="analysis-body">
-                  <div v-if="extractAnalysisText(analysisContent(record))" class="analysis-text">{{ extractAnalysisText(analysisContent(record)) }}</div>
-                  <div v-if="extractImageUrls(analysisContent(record)).length" class="image-row">
-                    <a-image
-                      v-for="(url, index) in extractImageUrls(analysisContent(record))"
-                      :key="`analysis-${index}`"
-                      :src="displayImageUrl(url)"
-                      class="question-image"
-                    />
-                  </div>
-                </div>
+                <MarkdownContent
+                  v-if="record.answer"
+                  :content="record.answer"
+                  :resolve-image-url="displayImageUrl"
+                  preview
+                />
                 <a-empty v-else description="暂无解析" />
               </div>
             </div>
             <div class="answer-row">
               <div class="box-title">答案</div>
-              <div v-if="text(record.quick_answer)" class="markdown-body" v-html="renderMarkdown(record.quick_answer)"></div>
+              <MarkdownContent
+                v-if="record.quick_answer"
+                :content="record.quick_answer"
+                :resolve-image-url="displayImageUrl"
+                preview
+              />
               <a-empty v-else description="暂无答案" />
             </div>
           </article>
@@ -168,39 +168,13 @@
       </div>
     </section>
 
-    <a-modal
-      v-model:open="analysisViewer.open"
-      :title="analysisViewerTitle"
-      :footer="null"
-      :width="960"
-      wrap-class-name="analysis-viewer-modal"
-    >
-      <div
-        v-if="analysisViewer.record && text(analysisContent(analysisViewer.record))"
-        class="markdown-body analysis-viewer-body"
-        @click="handleAnalysisImageClick"
-        v-html="renderMarkdown(analysisContent(analysisViewer.record))"
-      ></div>
-      <a-empty v-else description="暂无解析" />
-    </a-modal>
-
-    <div class="hidden-preview-group" aria-hidden="true">
-      <a-image-preview-group
-        v-if="analysisPreviewImages.length"
-        :preview="{ visible: analysisPreview.open, current: analysisPreview.current, onVisibleChange: handleAnalysisPreviewVisibleChange }"
-      >
-        <a-image v-for="(src, index) in analysisPreviewImages" :key="`analysis-preview-${index}-${src}`" :src="src" />
-      </a-image-preview-group>
-    </div>
-
-    <!-- 错题购物车抽屉 -->
     <WrongQuestionCartDrawer v-model:open="cartDrawerOpen" :student-id="studentUid" />
   </div>
 </template>
 
 <script setup lang="ts">
 import MarkdownContent from "@/components/MarkdownContent.vue";
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import router from "@/router";
 import { apiErrorMessage } from "@/utils/apiError";
@@ -253,15 +227,6 @@ const questionTypeOptions = ref<Option[]>([]);
 const studentUid = ref("");
 const studentName = ref("");
 const reviewUpdatingKey = ref("");
-const analysisViewer = reactive<{ open: boolean; record: WrongQuestionRecord | null }>({
-  open: false,
-  record: null,
-});
-const analysisPreview = reactive({
-  open: false,
-  current: 0,
-});
-
 const filters = reactive({
   year: "",
   question_type: "",
@@ -279,12 +244,6 @@ const reviewStatusOptions: Option[] = [
 
 const text = (value: unknown) => String(value ?? "").trim();
 const filterOption = (input: string, option: any) => text(option?.label).toLowerCase().includes(input.toLowerCase());
-const analysisViewerTitle = computed(() => {
-  const record = analysisViewer.record;
-  const question = text(record?.question_number || "-");
-  return `${question} 题解析`;
-});
-const analysisPreviewImages = computed(() => (analysisViewer.record ? extractImageUrls(analysisContent(analysisViewer.record)).map(displayImageUrl).filter(Boolean) : []));
 const buildParams = () => ({
   page: pagination.page,
   size: pagination.size,
@@ -308,7 +267,6 @@ const search = async (resetPage = false) => {
     selectedQuestionKeys.value = new Set();
     pagination.total = Number(res?.total ?? 0);
     pagination.matchedTotal = Number(res?.matched_total ?? 0);
-    preloadRecordImages(rows.value);
   } catch (error: any) {
     rows.value = [];
     pagination.total = 0;
@@ -366,26 +324,6 @@ const useType = async (name: string) => {
   filters.question_type = name;
   await search(true);
 };
-const openAnalysisViewer = (record: WrongQuestionRecord) => {
-  analysisViewer.record = record;
-  analysisViewer.open = true;
-};
-const handleAnalysisPreviewVisibleChange = (visible: boolean) => {
-  analysisPreview.open = visible;
-};
-const openAnalysisImagePreview = async (src: string) => {
-  const index = analysisPreviewImages.value.findIndex((item) => item === src);
-  if (index < 0) return;
-  analysisPreview.current = index;
-  await nextTick();
-  analysisPreview.open = true;
-};
-const handleAnalysisImageClick = (event: MouseEvent) => {
-  const target = event.target;
-  if (!(target instanceof HTMLImageElement) || !target.classList.contains("markdown-image")) return;
-  openAnalysisImagePreview(target.dataset.previewSrc || target.currentSrc || target.src);
-};
-
 const transparentImage =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 const protectedImageUrls = reactive<Record<string, string>>({});
@@ -402,10 +340,6 @@ const stringList = (value: unknown): string[] => {
   } catch {}
   return [raw];
 };
-
-const uniqueList = (values: string[]) => Array.from(new Set(values.map(text).filter(Boolean)));
-
-const analysisContent = (record?: WrongQuestionRecord | null) => text(record?.answer);
 
 const fileRequestUrl = (path: unknown) => {
   const value = text(path);
@@ -447,64 +381,6 @@ const formatScore = (value: unknown) => {
   if (!Number.isFinite(num)) return "-";
   return Number.isInteger(num) ? String(num) : num.toFixed(2);
 };
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-const createMarkdownImagePattern = () => /!\[([^\]]*)\]\(\s*(?:<([^>]+)>|"([^"]+)"|'([^']+)'|([^)]+?))\s*(?:\s+["'][^"']*["'])?\)/g;
-const markdownImagePaths = (value: unknown) => {
-  const urls: string[] = [];
-  let match: RegExpExecArray | null;
-  const pattern = createMarkdownImagePattern();
-  while ((match = pattern.exec(text(value))) !== null) {
-    const src = text(match[2] ?? match[3] ?? match[4] ?? match[5]);
-    if (src) urls.push(src);
-  }
-  const htmlPattern = /<img\b[^>]*\bsrc=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/gi;
-  while ((match = htmlPattern.exec(text(value))) !== null) {
-    const src = text(match[1] ?? match[2] ?? match[3]);
-    if (src) urls.push(src);
-  }
-  return uniqueList(urls);
-};
-const renderMarkdownLine = (line: string) => {
-  const imagePattern = createMarkdownImagePattern();
-  let cursor = 0;
-  let html = "";
-  let match: RegExpExecArray | null;
-
-  while ((match = imagePattern.exec(line)) !== null) {
-    html += escapeHtml(line.slice(cursor, match.index));
-    const src = displayImageUrl(match[2] ?? match[3] ?? match[4] ?? match[5]);
-    if (src) {
-      html += `<img class="markdown-image" src="${escapeHtml(src)}" data-preview-src="${escapeHtml(src)}" alt="${escapeHtml(match[1] || "answer image")}" loading="lazy" decoding="async" />`;
-    }
-    cursor = match.index + match[0].length;
-  }
-
-  html += escapeHtml(line.slice(cursor));
-  return `<p>${html}</p>`;
-};
-const renderMarkdown = (value: unknown) => text(value).split(/\r?\n/).map(renderMarkdownLine).join("");
-
-// 从解析文本中提取出图片URL
-const extractImageUrls = (value: unknown): string[] => {
-  return markdownImagePaths(value);
-};
-
-// 从解析文本中提取纯文本部分（不含图片标记）
-const extractAnalysisText = (value: unknown): string => {
-  const raw = text(value);
-  if (!raw) return "";
-  return raw.replace(/!\[[^\]]*\]\([^)\s]+(?:\s+["'][^"']*["'])?\)/g, "").trim();
-};
-const preloadRecordImages = (records: WrongQuestionRecord[]) => {
-  for (const record of records) {
-    for (const path of [...markdownImagePaths(record.content), ...extractImageUrls(analysisContent(record)), ...extractImageUrls(record.answer)]) {
-      const requestUrl = fileRequestUrl(path);
-      if (isProtectedFileUrl(requestUrl)) fetchProtectedImageUrl(requestUrl);
-    }
-  }
-};
-
 onBeforeUnmount(() => {
   for (const url of Object.values(protectedImageUrls)) {
     if (url) URL.revokeObjectURL(url);
@@ -789,102 +665,9 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-.box-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.image-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.question-image,
-:deep(.question-image) {
-  width: 420px;
-  max-width: 100%;
-  border: 1px solid #dce6f1;
-  border-radius: 6px;
-  background: #fff;
-  cursor: zoom-in;
-}
-
-:deep(.question-image img) {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-}
-
-.markdown-body {
-  max-height: 420px;
-  overflow: auto;
-  padding: 10px;
-  border-radius: 6px;
-  background: #fff;
-  color: #26384c;
-  line-height: 1.7;
-}
-
-.markdown-body :deep(p) {
-  margin: 0 0 8px;
-}
-
-.markdown-body :deep(.markdown-image) {
-  display: block;
-  max-width: 100%;
-  max-height: 360px;
-  margin: 8px 0;
-  object-fit: contain;
-}
-
-.analysis-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.analysis-text {
-  color: #26384c;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.analysis-viewer-body {
-  max-height: min(72vh, 760px);
-  padding: 16px;
-  font-size: 16px;
-}
-
-.analysis-viewer-body :deep(.markdown-image) {
-  max-height: none;
-  margin: 12px 0;
-  cursor: zoom-in;
-}
-
-:global(.analysis-viewer-modal .ant-modal) {
-  max-width: calc(100vw - 32px);
-}
-
-:global(.analysis-viewer-modal .ant-modal-body) {
-  padding-top: 12px;
-}
-
 .pagination-wrap {
   margin-top: 16px;
   text-align: right;
-}
-
-.hidden-preview-group {
-  position: fixed;
-  left: -9999px;
-  top: -9999px;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
 }
 
 @media (max-width: 900px) {

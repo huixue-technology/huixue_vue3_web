@@ -248,23 +248,21 @@
               </div>
               <div class="analysis-box">
                 <div class="box-title">解析</div>
-                <div v-if="text(record.answer)" class="analysis-body">
-                  <div v-if="extractAnalysisText(record.answer)" class="analysis-text">{{ extractAnalysisText(record.answer) }}</div>
-                  <div v-if="extractImageUrls(record.answer).length" class="image-row">
-                    <a-image
-                      v-for="(url, index) in extractImageUrls(record.answer)"
-                      :key="`analysis-${index}`"
-                      :src="url"
-                      class="question-image"
-                    />
-                  </div>
-                </div>
+                <MarkdownContent
+                  v-if="record.answer"
+                  :content="record.answer"
+                  preview
+                />
                 <a-empty v-else description="暂无解析" />
               </div>
             </div>
             <div class="answer-row">
               <div class="box-title">答案</div>
-              <div v-if="text(record.quick_answer)" class="markdown-body" v-html="renderMarkdown(record.quick_answer)"></div>
+              <MarkdownContent
+                v-if="record.quick_answer"
+                :content="record.quick_answer"
+                preview
+              />
               <a-empty v-else description="暂无答案" />
             </div>
           </article>
@@ -284,31 +282,6 @@
       </div>
     </section>
 
-    <a-modal
-      v-model:open="analysisViewer.open"
-      :title="analysisViewerTitle"
-      :footer="null"
-      :width="960"
-      wrap-class-name="analysis-viewer-modal"
-    >
-      <div
-        v-if="analysisViewer.record && text(analysisViewer.record.answer)"
-        class="markdown-body analysis-viewer-body"
-        @click="handleAnalysisImageClick"
-        v-html="renderMarkdown(analysisViewer.record.answer)"
-      ></div>
-      <a-empty v-else description="暂无解析" />
-    </a-modal>
-
-    <div class="hidden-preview-group" aria-hidden="true">
-      <a-image-preview-group
-        v-if="analysisPreviewImages.length"
-        :preview="{ visible: analysisPreview.open, current: analysisPreview.current, onVisibleChange: handleAnalysisPreviewVisibleChange }"
-      >
-        <a-image v-for="(src, index) in analysisPreviewImages" :key="`analysis-preview-${index}-${src}`" :src="src" />
-      </a-image-preview-group>
-    </div>
-
     <!-- 错题购物车抽屉 -->
     <WrongQuestionCartDrawer
       v-model:open="cartDrawerOpen"
@@ -321,7 +294,7 @@
 
 <script setup lang="ts">
 import MarkdownContent from "@/components/MarkdownContent.vue";
-import { computed, nextTick, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import { getClassesApi } from "@/servers/api/classes";
 import { getSchoolApi, getWrongQuestionStatConfigApi, putWrongQuestionStatConfigApi } from "@/servers/api/school";
@@ -389,15 +362,6 @@ const studentOptions = ref<Option[]>([]);
 const recommendKnowledge = ref<CountItem[]>([]);
 const recommendTypes = ref<CountItem[]>([]);
 const schoolList = ref<any[]>([]);
-const analysisViewer = reactive<{ open: boolean; record: WrongQuestionRecord | null }>({
-  open: false,
-  record: null,
-});
-const analysisPreview = reactive({
-  open: false,
-  current: 0,
-});
-
 const filters = reactive({
   subject: undefined as string | undefined,
   school_id: undefined as string | undefined,
@@ -445,12 +409,6 @@ const questionTypeOptions: Option[] = ["单选题", "多选题", "填空题", "�
 
 const canChooseClass = computed(() => Boolean(filters.subject && filters.school_id && filters.grade));
 const canChoosePaper = computed(() => Boolean(filters.subject && filters.school_id && filters.grade && filters.class_id));
-const analysisViewerTitle = computed(() => {
-  const record = analysisViewer.record;
-  const question = text(record?.question_number || "-");
-  return `${question} 题解析`;
-});
-const analysisPreviewImages = computed(() => (analysisViewer.record ? markdownImageUrls(analysisViewer.record.answer) : []));
 const ruleText = computed(() =>
   mode.value === "class"
     ? "筛选班级错题前，需要先确定科目、学校、年级、班级和试卷；可直接把列表错题加入购物车。"
@@ -469,7 +427,6 @@ const normalizeGradeForApi = (value: unknown) => {
   if (!grade) return undefined;
   return grade.endsWith("级") || !/^\d{4}$/.test(grade) ? grade : `${grade}级`;
 };
-const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
 const filterOption = (input: string, option: any) => text(option?.label).toLowerCase().includes(input.toLowerCase());
 const sortOptions = (a: Option, b: Option) => String(a.label).localeCompare(String(b.label), "zh-Hans-CN", { numeric: true });
 const schoolOptions = computed(() =>
@@ -889,26 +846,6 @@ const useType = async (name: string) => {
   filters.question_type = name;
   await search(true);
 };
-const openAnalysisViewer = (record: WrongQuestionRecord) => {
-  analysisViewer.record = record;
-  analysisViewer.open = true;
-};
-const handleAnalysisPreviewVisibleChange = (visible: boolean) => {
-  analysisPreview.open = visible;
-};
-const openAnalysisImagePreview = async (src: string) => {
-  const index = analysisPreviewImages.value.findIndex((item) => item === src);
-  if (index < 0) return;
-  analysisPreview.current = index;
-  await nextTick();
-  analysisPreview.open = true;
-};
-const handleAnalysisImageClick = (event: MouseEvent) => {
-  const target = event.target;
-  if (!(target instanceof HTMLImageElement) || !target.classList.contains("markdown-image")) return;
-  openAnalysisImagePreview(target.dataset.previewSrc || target.currentSrc || target.src);
-};
-
 const stringList = (value: unknown): string[] => {
   if (Array.isArray(value)) return value.map(text).filter(Boolean);
   const raw = text(value);
@@ -919,12 +856,6 @@ const stringList = (value: unknown): string[] => {
   } catch {}
   return [raw];
 };
-const fileUrl = (path: unknown) => {
-  const value = text(path);
-  if (!value) return "";
-  if (/^(https?:)?\/\//i.test(value) || value.startsWith("data:") || value.startsWith("/api/tp/file")) return value;
-  return getTestPaperFileUrl(value);
-};
 const formatScore = (value: unknown) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return "-";
@@ -934,60 +865,6 @@ const formatPercent = (value: unknown) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return "-";
   return `${(num * 100).toFixed(2)}%`;
-};
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-const createMarkdownImagePattern = () => /!\[([^\]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
-const markdownImageUrls = (value: unknown) => {
-  const urls: string[] = [];
-  let match: RegExpExecArray | null;
-  const pattern = createMarkdownImagePattern();
-  while ((match = pattern.exec(text(value))) !== null) {
-    const src = fileUrl(match[2]);
-    if (src) urls.push(src);
-  }
-  return urls;
-};
-const renderMarkdownLine = (line: string) => {
-  const imagePattern = createMarkdownImagePattern();
-  let cursor = 0;
-  let html = "";
-  let match: RegExpExecArray | null;
-
-  while ((match = imagePattern.exec(line)) !== null) {
-    html += escapeHtml(line.slice(cursor, match.index));
-    const src = fileUrl(match[2]);
-    if (src) {
-      html += `<img class="markdown-image" src="${escapeHtml(src)}" data-preview-src="${escapeHtml(src)}" alt="${escapeHtml(match[1] || "answer image")}" loading="lazy" decoding="async" />`;
-    }
-    cursor = match.index + match[0].length;
-  }
-
-  html += escapeHtml(line.slice(cursor));
-  return `<p>${html}</p>`;
-};
-const renderMarkdown = (value: unknown) => text(value).split(/\r?\n/).map(renderMarkdownLine).join("");
-
-// 从解析文本中提取出图片URL
-const extractImageUrls = (value: unknown): string[] => {
-  const raw = text(value);
-  if (!raw) return [];
-  const imagePattern = /!\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
-  const urls: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = imagePattern.exec(raw)) !== null) {
-    const src = fileUrl(match[1]);
-    if (src) urls.push(src);
-  }
-  return urls;
-};
-
-// 从解析文本中提取纯文本部分（不含图片标记）
-const extractAnalysisText = (value: unknown): string => {
-  const raw = text(value);
-  if (!raw) return "";
-  // 去掉 markdown 图片标记
-  return raw.replace(/!\[[^\]]*\]\([^)\s]+(?:\s+["'][^"']*["'])?\)/g, "").trim();
 };
 const recordKey = (record: WrongQuestionRecord) =>
   [record.exam_id, record.paper_id, record.class_id, record.student_id, record.question_number].map(text).join("-");
@@ -1279,89 +1156,9 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-.box-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.image-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.question-image,
-:deep(.question-image) {
-  width: 420px;
-  max-width: 100%;
-  border: 1px solid #dce6f1;
-  border-radius: 6px;
-  background: #fff;
-  cursor: zoom-in;
-}
-
-:deep(.question-image img) {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-}
-
-.markdown-body {
-  max-height: 420px;
-  overflow: auto;
-  padding: 10px;
-  border-radius: 6px;
-  background: #fff;
-  color: #26384c;
-  line-height: 1.7;
-}
-
-.markdown-body :deep(p) {
-  margin: 0 0 8px;
-}
-
-.markdown-body :deep(.markdown-image) {
-  display: block;
-  max-width: 100%;
-  max-height: 360px;
-  margin: 8px 0;
-  object-fit: contain;
-}
-
-.analysis-viewer-body {
-  max-height: min(72vh, 760px);
-  padding: 16px;
-  font-size: 16px;
-}
-
-.analysis-viewer-body :deep(.markdown-image) {
-  max-height: none;
-  margin: 12px 0;
-  cursor: zoom-in;
-}
-
-:global(.analysis-viewer-modal .ant-modal) {
-  max-width: calc(100vw - 32px);
-}
-
-:global(.analysis-viewer-modal .ant-modal-body) {
-  padding-top: 12px;
-}
-
 .pagination-wrap {
   margin-top: 16px;
   text-align: right;
-}
-
-.hidden-preview-group {
-  position: fixed;
-  left: -9999px;
-  top: -9999px;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
 }
 
 @media (max-width: 900px) {

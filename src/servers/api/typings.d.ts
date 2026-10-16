@@ -1667,7 +1667,7 @@ declare namespace API {
     grade?: string;
     /** 题干，支持 Markdown 和 LaTeX */
     content?: string;
-    /** 题目答案 */
+    /** 题目答案，支持 Markdown */
     quick_answer?: string;
     /** 题目解析，支持 Markdown */
     answer?: string;

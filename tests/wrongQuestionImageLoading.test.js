@@ -27,13 +27,10 @@ for (const filePath of componentPaths) {
     /const pagination = reactive\(\{\s*page:\s*1,\s*size:\s*5,\s*total:\s*0/,
     `${filePath} should define reactive pagination with page: 1, size: 5, total: 0`
   );
-  assertIncludes(source, 'loading="lazy"', filePath);
-  assertIncludes(source, 'decoding="async"', filePath);
-  assertMatches(
-    source,
-    /<img class="markdown-image"[^`]*loading="lazy"[^`]*decoding="async"/,
-    `${filePath} markdown images should lazy-load and decode asynchronously`
-  );
+  assertIncludes(source, '<MarkdownContent', filePath);
 }
 
+const renderer = readFileSync(join(rootDir, "src/components/MarkdownContent.vue"), "utf8");
+assertIncludes(renderer, 'image.setAttribute("loading", "lazy")', "MarkdownContent.vue");
+assertIncludes(renderer, 'image.setAttribute("decoding", "async")', "MarkdownContent.vue");
 console.log("wrongQuestionImageLoading ok");
