@@ -1235,7 +1235,7 @@ const fetchStudentGrades = async (studentId: string, examId: number) => {
 // 获取分数线
 const fetchPassLine = async (examId: number) => {
   try {
-    const res = await getPassLine({ exam_id: examId });
+    const res = await getPassLine({ exam_id: examId, size: 100 });
     if (res.code === 200 && res.data.length > 0) {
       const rows: any[] = res.data;
       const subjectSel = classInfo.value?.subject_selection || '';

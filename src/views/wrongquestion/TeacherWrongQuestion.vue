@@ -524,7 +524,7 @@ const buildBaseParams = (): API.getTeacherWrongQuestionSearchParams => ({
   grade: normalizeGradeForApi(filters.grade),
   class_id: text(filters.class_id),
   test_paper_id: filters.test_paper_id,
-  exam_id: paperOptions.value.find((paper) => paper.value === filters.test_paper_id)?.exam_id || 0,
+  exam_id: paperOptions.value.find((paper) => paper.value === filters.test_paper_id)?.exam_id || undefined,
   student_id: mode.value === "student" ? filters.student_id : undefined,
   question_type: text(filters.question_type) || undefined,
   knowledge_keyword: text(filters.knowledge_keyword) || undefined,
@@ -660,14 +660,7 @@ const validateSearch = () => {
     errorText.value = "学生错题模式需要先选择班级和学生。";
     return false;
   }
-  if (!filters.test_paper_id) {
-    errorText.value = "请选择试卷以确定考试范围。";
-    return false;
-  }
-  if (!Number.isInteger(buildParams().exam_id) || buildParams().exam_id <= 0) {
-    errorText.value = "所选试卷缺少有效考试 ID，请先维护试卷考试关联。";
-    return false;
-  }
+  // 试卷可不选：不选则汇总该班级全部考试的错题（后端已支持 exam_id/test_paper_id 可选）。
   errorText.value = "";
   return true;
 };
@@ -706,6 +699,9 @@ const loadRecommend = async () => {
   recommendLoading.value = true;
   try {
     const res = await getTeacherWrongQuestionRecommendApi({
+      subject: filters.subject,
+      school_id: text(filters.school_id),
+      grade: normalizeGradeForApi(filters.grade),
       class_id: text(filters.class_id),
       test_paper_id: filters.test_paper_id,
       student_id: mode.value === "student" ? filters.student_id : undefined,

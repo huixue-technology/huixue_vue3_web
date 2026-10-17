@@ -305,7 +305,7 @@ const inquiry = async() => {
       showTable.value = true;
     })
     
-    getPassLine({exam_id:Number(selectedExam.value)}).then(async (res) => {
+    getPassLine({exam_id:Number(selectedExam.value), size: 100}).then(async (res) => {
       // 行式数据按 line_group_id 分组聚合
       const grouped = new Map<number, Record<string, number>>();
       (res.data || []).forEach((row: any) => {

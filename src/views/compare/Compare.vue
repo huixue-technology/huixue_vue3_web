@@ -187,7 +187,7 @@ const generateTable = async (examData : any[], types: Object)=>{
 
     try {
       console.log('调用 getPassLine, exam_id:', examId);
-      passLine = await getPassLine({'exam_id':examId});
+      passLine = await getPassLine({'exam_id':examId, size: 100});
       console.log('getPassLine 响应:', passLine);
     } catch (error) {
       console.error('获取特控线数据失败，考试ID:', examId, error);

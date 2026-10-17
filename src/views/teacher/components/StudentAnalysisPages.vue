@@ -157,7 +157,7 @@ const generateTable = async (examData: any[], types: Record<string, string>) => 
     let selectedPassLine = null
     try {
       if (examId) {
-        const passLineRes = await getPassLine({ exam_id: examId })
+        const passLineRes = await getPassLine({ exam_id: examId, size: 100 })
         if (passLineRes?.data) {
           if (Array.isArray(passLineRes.data) && passLineRes.data.length > 0) {
             // 行式聚合：取第一个分数线组组装成 {科目: 分数}
