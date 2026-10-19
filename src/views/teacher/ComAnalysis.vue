@@ -359,14 +359,14 @@ const flatPassLineRateData = ref<any[]>([]); // 展平后的过线率数据（�
 const baseExamId = ref<number | null>(null); // 基准考试（左，默认倒数第二次）
 const compareExamId = ref<number | null>(null); // 对比考试（右，默认最新）
 const compareSubject = ref<string>('全部'); // 选择的科目
-const compareLineType = ref<string>('一本线'); // 选择的分数线类别
+const compareLineType = ref<string>('特控线'); // 选择的分数线类别
 const passLineConfigBase = ref<any[]>([]); // 基准考试分数线配置
 const passLineConfigCompare = ref<any[]>([]); // 对比考试分数线配置
 
 // 分数线类别选项（与后端 line_name 后缀对应）
 const lineTypeOptions = [
   { label: '全部类别', value: '全部' },
-  { label: '一本线', value: '一本线' },
+  { label: '特控线', value: '特控线' },
   { label: '二本线', value: '二本线' },
   { label: '211线', value: '211线' },
   { label: '985线', value: '985线' },
@@ -701,7 +701,7 @@ const compareColumns = computed(() => {
   const firstColTitle = isLineMode ? '分数线类别' : '科目';
   return [
     { title: firstColTitle, dataIndex: 'name', width: 120, align: 'center' },
-    { title: '基础分', dataIndex: 'baseScore', width: 100, align: 'center' },
+    { title: '基准分', dataIndex: 'baseScore', width: 100, align: 'center' },
     { title: '对比分', dataIndex: 'compareScore', width: 100, align: 'center' },
     { title: '涨跌', dataIndex: 'change', width: 100, align: 'center' },
   ];
@@ -727,9 +727,9 @@ const findLineScore = (data: any[], lineType: string, subject: string): number |
 // 进退步学生表格列（基准 vs 对比 两次考试：班次/段次/分数 + 涨跌）
 const updownColumns = [
   { title: '学生姓名', dataIndex: 'name', width: 100, align: 'center', fixed: 'left' },
-  { title: '基础班次', dataIndex: 'baseClassRank', width: 90, align: 'center' },
-  { title: '基础段次', dataIndex: 'baseGradeRank', width: 90, align: 'center' },
-  { title: '基础分数', dataIndex: 'baseScore', width: 90, align: 'center' },
+  { title: '基准班次', dataIndex: 'baseClassRank', width: 90, align: 'center' },
+  { title: '基准段次', dataIndex: 'baseGradeRank', width: 90, align: 'center' },
+  { title: '基准分数', dataIndex: 'baseScore', width: 90, align: 'center' },
   { title: '对比班次', dataIndex: 'compareClassRank', width: 90, align: 'center' },
   { title: '对比段次', dataIndex: 'compareGradeRank', width: 90, align: 'center' },
   { title: '对比分数', dataIndex: 'compareScore', width: 90, align: 'center' },
