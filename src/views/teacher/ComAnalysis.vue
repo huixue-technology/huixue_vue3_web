@@ -296,7 +296,7 @@
         <a-alert
           v-if="historyPassLineData.length === 0 && !historyChartLoading"
           message="暂无历史考试进线数据"
-          description="请先选择班级并点击查询数据。历史数据来自各场考试的过线率统计。"
+          description="后端暂未返回按场次统计的班级进线数据，接口就绪后此处会自动展示。"
           type="info"
           show-icon
           style="margin-top: 12px;"
@@ -1131,32 +1131,25 @@ const fetchHistoryPassLineData = async () => {
     const firstClassData = Array.isArray(passLineRateData.value)
       ? (passLineRateData.value[0] || {})
       : (passLineRateData.value || {});
-    const passLineStats = firstClassData?.pass_line_stats || {};
-    const rateField = firstClassData?.pass_rate || {};
     const subjectKey = '总分';
 
     const result = (examList.value || []).map((exam: any) => {
       const examId = exam.id;
-      const countInfo = passLineStats['一本']?.[subjectKey] || {};
-      const examRate = rateField?.['特控线']?.[subjectKey];
-      const examAnalysis = firstClassData?.exam_analysis?.[examId] || {};
-      const examStat = examAnalysis?.[subjectKey] || {};
-      const examPassCount = examStat?.pass_count ?? countInfo.pass_count ?? 0;
-      const examRateVal = typeof examRate === 'number' ? examRate : (countInfo.pass_rate ?? 0);
+      // 只取后端返回的该场考试明细；exam_analysis 缺失时留 null，
+      // 不用累计口径的 pass_line_stats 冒充单场数据
+      const examStat = firstClassData?.exam_analysis?.[examId]?.[subjectKey] || {};
       return {
         exam_id: examId,
         exam_name: exam.name || `考试${examId}`,
-        pass_count: examPassCount,
-        pass_rate: typeof examRateVal === 'number' ? Math.round(examRateVal * 100) / 100 : 0,
+        pass_count: typeof examStat.pass_count === 'number' ? examStat.pass_count : null,
+        pass_rate: typeof examStat.pass_rate === 'number' ? Math.round(examStat.pass_rate * 100) / 100 : null,
       };
     });
 
-    historyPassLineData.value = result.length > 0 ? result : [{
-      exam_id: 0,
-      exam_name: '暂无历史考试',
-      pass_count: 0,
-      pass_rate: 0,
-    }];
+    // 后端暂未提供按场次数据时保持为空，由下方 alert 提示，不伪造占位数据
+    historyPassLineData.value = result.filter(
+      (item: any) => item.pass_count !== null || item.pass_rate !== null
+    );
   } catch (err) {
     console.error('构建历史考试数据失败:', err);
     historyPassLineData.value = [];
