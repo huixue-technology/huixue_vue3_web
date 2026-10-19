@@ -542,7 +542,7 @@ const fetchClassList = async () => {
         if (classOptions.value.length === 0) {
           message.warning('未找到同年级的班级');
         } else {
-          message.success(`成功加载 ${classOptions.value.length} 个班级`);
+          // message.success(`成功加载 ${classOptions.value.length} 个班级`);
           // 默认选中老师所在的班级（班主任班），并尝试加载该班学生
           selectedClassId.value = Number(teacherClassId);
           currentClassId.value = String(teacherClassId);
@@ -700,12 +700,12 @@ const filterOption = (input: string, option: any) => {
 // 查询成绩
 const handleSearch = async () => {
   if (!studentId.value) {
-    message.warning(isTeacher.value ? '请选择学生' : '请输入学生学号');
+    // message.warning(isTeacher.value ? '请选择学生' : '请输入学生学号');
     return;
   }
   
   if (!selectedExamId.value) {
-    message.warning('请选择考试');
+    // message.warning('请选择考试');
     return;
   }
 
