@@ -289,7 +289,7 @@
         <a-row :gutter="16">
           <a-col :xs="24" :md="24">
             <div class="chart-wrapper">
-              <e-charts :option="historyPassLineChartOption" style="height: 380px; width: 100%;" />
+              <e-charts :option="historyPassLineChartOption" autoresize style="height: 380px; width: 100%;" />
             </div>
           </a-col>
         </a-row>
@@ -483,8 +483,9 @@ const batchComputeData = async () => {
       getClassPassLineRatefunc(),
       getClassComprehensiveStudentGradesfunc(),
       fetchPassLineConfig(),
-      fetchHistoryPassLineData(),
     ]);
+    // 历史进线图依赖过线率数据，必须在 getClassPassLineRatefunc 完成后执行
+    await fetchHistoryPassLineData();
     
     // 刷新子组件（学生过线率统计）
     if (classAnalysisRef.value && classAnalysisRef.value.refresh) {

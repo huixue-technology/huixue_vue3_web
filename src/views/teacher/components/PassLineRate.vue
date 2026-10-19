@@ -5,7 +5,7 @@
       <a-col :xs="24" :md="16">
         <a-card class="chart-card" title="各科目过线率折线图">
           <div class="chart-wrapper">
-            <e-charts :option="passLineChartOption" />
+            <e-charts :option="passLineChartOption" autoresize style="height: 360px; width: 100%;" />
           </div>
         </a-card>
       </a-col>
