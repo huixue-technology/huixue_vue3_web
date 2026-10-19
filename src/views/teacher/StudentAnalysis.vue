@@ -29,7 +29,7 @@
         </a-col>
         <a-col :xs="24" :sm="12" :md="6">
           <div class="filter-item">
-            <span class="filter-label">选择考试：</span>
+            <span class="filter-label">基准考试：</span>
             <a-select
               v-model:value="selectedExamId"
               placeholder="请选择考试"

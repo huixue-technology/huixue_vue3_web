@@ -427,7 +427,7 @@ const displayedSubjects = computed(() => {
 
 const columns = computed(() => {
   const baseColumns = [
-    { title: '学号', dataIndex: 'studentId', key: 'studentId', width: 100 },
+    // { title: '学号', dataIndex: 'studentId', key: 'studentId', width: 100 },
     { title: '姓名', dataIndex: 'studentName', key: 'studentName', width: 150 },
   ];
   // 只渲染当前选中的科目；未选中时保留当前数据中存在的科目列
