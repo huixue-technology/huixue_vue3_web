@@ -152,7 +152,7 @@
                 {{ opt.label }}
               </a-select-option>
             </a-select>
-            <a-button type="primary" size="small" :loading="updownLoading" @click="fetchUpDownData">查询</a-button>
+            <a-button type="primary" size="small" :loading="updownLoading" @click="fetchUpDownData()">查询</a-button>
           </a-space>
         </div>
         <a-table
@@ -208,7 +208,7 @@
               placeholder="请选择考试"
               style="width: 200px;"
               allow-clear
-              @change="fetchQuestionStat"
+              @change="fetchQuestionStat()"
             >
               <a-select-option
                 v-for="exam in examList"
@@ -224,7 +224,7 @@
               placeholder="请选择试卷"
               style="width: 200px;"
               allow-clear
-              @change="fetchQuestionStat"
+              @change="fetchQuestionStat()"
             >
               <a-select-option
                 v-for="p in paperOptions"
@@ -238,7 +238,7 @@
               type="primary"
               size="small"
               :loading="questionStatLoading"
-              @click="fetchQuestionStat"
+              @click="fetchQuestionStat()"
               style="margin-left: 12px;"
             >查询小题统计</a-button>
           </a-space>
@@ -446,6 +446,9 @@ watch(selectedClass, async () => {
     updownBaseExamId.value = null;
     updownCompareExamId.value = null;
     updownData.value = [];
+    questionStatExamId.value = null;
+    questionStatPaperId.value = null;
+    questionStatData.value = [];
     await batchComputeData();
   }
 });
@@ -455,6 +458,10 @@ watch(questionStatExamId, async (val) => {
   if (val != null) {
     questionStatPaperId.value = null;
     await fetchPaperOptions();
+    // 试卷默认选中后自动加载小题统计，无需手动点击查询
+    if (questionStatPaperId.value) {
+      await fetchQuestionStat(true);
+    }
   }
 });
 
@@ -476,6 +483,10 @@ const batchComputeData = async () => {
   try {
     // 先获取考试列表（分数线配置依赖考试ID）
     await fetchExamList();
+    // 默认考试就绪后自动加载进退步学生数据（不阻塞其他模块）
+    if (updownBaseExamId.value && updownCompareExamId.value) {
+      fetchUpDownData(true);
+    }
     // 并行请求其他数据
     await Promise.all([
       getClassAnalysisfunc(),
@@ -783,6 +794,10 @@ const fetchExamList = async () => {
       if (updownBaseExamId.value === null) {
         updownBaseExamId.value = prev ? prev.id : (latest ? latest.id : null);
       }
+      // 考题得分率默认选中最新一场考试
+      if (questionStatExamId.value == null && latest) {
+        questionStatExamId.value = latest.id;
+      }
     }
   } catch (err) {
     console.error('获取考试列表失败:', err);
@@ -821,13 +836,14 @@ const getExamId = (item: any): number | null => {
 };
 
 // 批量获取所有学生的两次考试进退步对比数据（基准 vs 对比）
-const fetchUpDownData = async () => {
+const fetchUpDownData = async (silent = false) => {
+  if (updownLoading.value) return;
   if (selectedClass.value <= 0) {
-    message.warning('请先选择班级');
+    if (!silent) message.warning('请先选择班级');
     return;
   }
   if (!updownBaseExamId.value || !updownCompareExamId.value) {
-    message.warning('请选择基准考试和对比考试');
+    if (!silent) message.warning('请选择基准考试和对比考试');
     return;
   }
 
@@ -838,7 +854,7 @@ const fetchUpDownData = async () => {
     await fetchClassStudents();
 
     if (classStudentList.value.length === 0) {
-      message.info('该班级没有学生');
+      if (!silent) message.info('该班级没有学生');
       updownData.value = [];
       return;
     }
@@ -927,7 +943,7 @@ const fetchUpDownData = async () => {
     }
 
     updownData.value = allResults;
-    if (allResults.length === 0) {
+    if (allResults.length === 0 && !silent) {
       message.info('未查询到进退步数据');
     }
   } catch (err) {
@@ -1052,16 +1068,16 @@ const fetchPaperOptions = async () => {
 };
 
 // 小题得分率数据
-const fetchQuestionStat = async () => {
+const fetchQuestionStat = async (silent = false) => {
   if (questionStatExamId.value == null) {
-    message.warning('请先选择考试');
+    if (!silent) message.warning('请先选择考试');
     return;
   }
   if (!questionStatPaperId.value) {
     await fetchPaperOptions();
   }
   if (!questionStatPaperId.value) {
-    message.warning('该考试下没有试卷，请先上传试卷');
+    if (!silent) message.warning('该考试下没有试卷，请先上传试卷');
     questionStatData.value = [];
     return;
   }

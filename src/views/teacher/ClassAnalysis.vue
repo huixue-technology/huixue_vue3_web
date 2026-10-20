@@ -462,8 +462,8 @@ const handleKnowledgeSubjectChange = () => {
   knowledgePoint.value = '';
   knowledgePointOptions.value = [];
 }
-// 防抖：知识点输入模糊搜索候选接口（300ms）
-const handleKnowledgeSearch = debounce(async (keyword: string) => {
+// 拉取知识点候选（非防抖，供输入搜索与自动加载共用）
+const fetchKnowledgePointOptions = async (keyword: string, silent = false) => {
   if (!props.classId || !knowledgeSubject.value) {
     knowledgePointOptions.value = [];
     return;
@@ -483,7 +483,7 @@ const handleKnowledgeSearch = debounce(async (keyword: string) => {
         value: item
       }))
       // total大于返回数量，提示用户
-      if (res.total > res.data.length) {
+      if (!silent && res.total > res.data.length) {
         message.info('搜索结果较多，请输入更精确关键词');
       }
     } else {
@@ -493,20 +493,24 @@ const handleKnowledgeSearch = debounce(async (keyword: string) => {
     console.error('知识点候选搜索失败', err);
     knowledgePointOptions.value = [];
   }
+};
+// 防抖：知识点输入模糊搜索候选接口（300ms）
+const handleKnowledgeSearch = debounce((keyword: string) => {
+  fetchKnowledgePointOptions(keyword);
 }, 300);
 // 用户选中下拉条目，回填完整知识点名称
 const handleKnowledgeSelect = (item: any) => {
   knowledgePoint.value = item.knowledge_point;
 }
 // 查询掌握度数据
-const fetchKnowledgeData = async () => {
+const fetchKnowledgeData = async (silent = false) => {
   if (!props.classId) {
-    message.warning('请先选择班级');
+    if (!silent) message.warning('请先选择班级');
     return;
   }
   const trimPoint = knowledgePoint.value?.trim() ?? '';
   if (!knowledgeSubject.value || !trimPoint) {
-    message.warning('请选择科目并从下拉选择知识点');
+    if (!silent) message.warning('请选择科目并从下拉选择知识点');
     return;
   }
   try {
@@ -522,22 +526,46 @@ const fetchKnowledgeData = async () => {
       knowledgeSummary.value = bizData;
       knowledgeExamList.value = bizData.exams ?? [];
       if (knowledgeExamList.value.length === 0) {
-        message.info('该知识点暂无有效考试统计数据');
+        if (!silent) message.info('该知识点暂无有效考试统计数据');
       } else {
-        message.success('查询成功');
+        if (!silent) message.success('查询成功');
       }
     } else {
-      message.warning(res?.msg || '未获取到知识点数据');
+      if (!silent) message.warning(res?.msg || '未获取到知识点数据');
       knowledgeSummary.value = null;
       knowledgeExamList.value = [];
     }
   } catch (err: any) {
     console.error('知识点接口异常', err);
-    message.error('请求知识点数据异常');
+    if (!silent) message.error('请求知识点数据异常');
     knowledgeSummary.value = null;
     knowledgeExamList.value = [];
   } finally {
     knowledgeLoading.value = false;
+  }
+};
+// 进入页面/切换班级时：自动扫描科目，选中第一个有知识点候选的科目并加载其默认知识点
+let knowledgeAutoLoading = false;
+const autoLoadKnowledgeData = async () => {
+  if (!props.classId || knowledgeAutoLoading) return;
+  knowledgeAutoLoading = true;
+  try {
+    for (const subject of subjectOptions.value) {
+      knowledgeSubject.value = subject;
+      await fetchKnowledgePointOptions('', true);
+      const first = knowledgePointOptions.value[0];
+      if (first) {
+        knowledgePoint.value = first.value?.knowledge_point ?? first.label;
+        await fetchKnowledgeData(true);
+        return;
+      }
+    }
+    // 所有科目均无知识点候选时保持空状态，由模板空提示兜底
+    knowledgeSubject.value = '';
+    knowledgePoint.value = '';
+    knowledgePointOptions.value = [];
+  } finally {
+    knowledgeAutoLoading = false;
   }
 };
 // classId变更清空知识点模块
@@ -547,11 +575,15 @@ watch(()=>props.classId, ()=>{
 // 初始化
 onMounted(() => {
   fetchSubjectRateData();
+  if (props.classId) {
+    autoLoadKnowledgeData();
+  }
 });
 // 监听 classId 变化
 watch(() => props.classId, () => {
   if (props.classId) {
     fetchSubjectRateData();
+    autoLoadKnowledgeData();
   }
 });
 // 处理数据并更新表格
@@ -658,7 +690,8 @@ const fetchSubjectRateData = async (silent = false) => {
 defineExpose({
   refresh: () => {
     fetchSubjectRateData(true);
-    clearKnowledgeFilter();
+    // 知识点模块由 autoLoadKnowledgeData 在 classId 变化时自动加载，
+    // 此处不再清空，避免父组件查询完成后覆盖已加载的默认数据
   },
 });
 </script>
