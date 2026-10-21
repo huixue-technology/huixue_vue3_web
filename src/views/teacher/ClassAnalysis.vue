@@ -627,7 +627,7 @@ const processStudentRateData = (classData: any) => {
   // 更新表格列（基础列 + 科目列）
   studentRateColumns.value = [
     { title: '学生姓名', dataIndex: 'name', width: 120, fixed: 'left', align: 'center' },
-    { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left', align: 'center', customRender: ({ text }: any) => maskStudentId(text) },
+    // { title: '学号', dataIndex: 'uid', width: 120, fixed: 'left', align: 'center', customRender: ({ text }: any) => maskStudentId(text) },
     ...subjectColumns
   ];
   // 更新可用科目列表
