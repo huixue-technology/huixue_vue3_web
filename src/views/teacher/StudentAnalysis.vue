@@ -1113,7 +1113,7 @@ onMounted(async () => {
         classes = allClassRes.data;
       }
       if (classes.length > 0) {
-        message.warning('未找到班主任绑定班级，已切换为全班级');
+        console.warn('未找到班主任绑定班级，已切换为全班级');
       }
     }
 
