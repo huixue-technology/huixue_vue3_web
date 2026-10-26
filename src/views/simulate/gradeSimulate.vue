@@ -154,8 +154,7 @@
                         :min="0"
                         :max="getMaxScore(record.subject)"
                         :precision="1"
-                        @change="handleScoreChange"
-                        style="width: 100%"
+                        @change="handleScoreChange(record)"
                       />
                       <span v-else :class="getScoreClass(record.score, record.subject)">
                         {{ record.score }}
@@ -164,6 +163,15 @@
                           <ArrowDownOutlined v-else />
                           {{ Math.abs(record.scoreDiff) }}
                         </span>
+                      </span>
+                      <span
+                        v-if="record.subject !== '总分' && record.scoreDiff !== undefined && record.scoreDiff !== 0"
+                        :class="getScoreDiffClass(record.scoreDiff)"
+                        class="score-change-icon"
+                      >
+                        <ArrowUpOutlined v-if="record.scoreDiff > 0" />
+                        <ArrowDownOutlined v-else />
+                        {{ Math.abs(record.scoreDiff) }}
                       </span>
                   </div>
                 </template>
@@ -555,7 +563,6 @@ const fetchClassList = async () => {
       }
     } else {
       console.warn('未找到老师所属班级，尝试获取所有班级');
-      message.warning('未找到老师所属班级信息，将显示该学校所有班级');
       // 如果没有找到老师班级，则显示该学校所有班级
       const res = await getClassesApi({ 
         school_id: schoolId.value,
@@ -570,7 +577,6 @@ const fetchClassList = async () => {
           value: item.id
         }));
         console.log('班级列表(后备方案):', classOptions.value);
-        message.success(`成功加载 ${classOptions.value.length} 个班级`);
       } else {
         message.error('获取班级列表失败: ' + (res.msg || '未知错误'));
       }
@@ -819,18 +825,26 @@ const parseGradeData = (gradeData: any) => {
 };
 
 // 处理成绩修改
-const handleScoreChange = () => {
+const handleScoreChange = (record?: ScoreRecord) => {
+  // 计算单科成绩差值（模拟 - 原始）
+  if (record) {
+    const originalRecord = originalScores.value.find(r => r.subjectKey === record.subjectKey);
+    record.scoreDiff = originalRecord
+      ? Number(((Number(record.score) || 0) - originalRecord.score).toFixed(1))
+      : 0;
+  }
+
   // 计算总分
   const total = simulatedScores.value
     .filter(s => s.subject !== '总分')
-    .reduce((sum, s) => sum + s.score, 0);
+    .reduce((sum, s) => sum + (Number(s.score) || 0), 0);
   
   const totalRecord = simulatedScores.value.find(s => s.subject === '总分');
   if (totalRecord) {
     totalRecord.score = total;
     // 计算总分差值（模拟 - 原始）
     const origTotal = originalScores.value.find(s => s.subject === '总分')?.score || 0;
-    totalRecord.scoreDiff = totalRecord.score - origTotal;
+    totalRecord.scoreDiff = Number((totalRecord.score - origTotal).toFixed(1));
   }
 };
 
@@ -1099,8 +1113,32 @@ const getRankDiffText = (diff: number) => {
     }
     
     .editable-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+
       :deep(.ant-input-number) {
-        width: 100%;
+        width: 50%;
+      }
+
+      // 上下调节按钮移到输入框左侧
+      :deep(.ant-input-number-handler-wrap) {
+        left: 0;
+        right: auto;
+        border-left: none;
+        border-right: 1px solid #d9d9d9;
+        border-radius: 6px 0 0 6px;
+      }
+
+      :deep(.ant-input-number-input) {
+        padding-left: 26px;
+      }
+
+      > .score-change-icon {
+        margin-left: 0;
+        flex-shrink: 0;
+        white-space: nowrap;
       }
     }
   }
