@@ -536,7 +536,7 @@ const fetchStudentListAndExams = async () => {
         name: exam.name
       }));
       // 默认选择最新的考试（最后一个）
-      selectedExamId.value = examList.value[examList.value.length - 1].id;
+      selectedExamId.value = examList.value[0].id;
     } else {
       message.warning(examRes.msg || '获取考试列表失败');
     }
@@ -649,7 +649,7 @@ const fetchComparisonData = async () => {
 
 const resetFilters = () => {
   if (examList.value.length > 0) {
-    selectedExamId.value = examList.value[examList.value.length - 1].id;
+    selectedExamId.value = examList.value[0].id;
   }
   if (classList.value.length > 0) {
     selectedClassId.value = classList.value[0].id;

@@ -489,7 +489,7 @@ const currentStudentInfo = computed(() => {
 
 const getPreviousExamId = computed(() => {
   if (examList.value.length >= 2) {
-    return examList.value[examList.value.length - 2].id;
+    return examList.value[1].id;
   }
   return undefined;
 });
@@ -1193,7 +1193,7 @@ const fetchExamList = async () => {
       
       if (examList.value.length > 0) {
         // 默认选中最后一个考试
-        selectedExamId.value = examList.value[examList.value.length - 1].id;
+        selectedExamId.value = examList.value[0].id;
         
         // 如果已经有选中的学生，获取该学生的考试成绩
         if (selectedStudentId.value) {
