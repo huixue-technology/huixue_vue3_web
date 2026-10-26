@@ -162,7 +162,7 @@
           bordered
           size="middle"
           row-key="key"
-          :scroll="{ x: 'max-content' }"
+          :scroll="{ x: 'max-content',y: '500px' }"
           :loading="updownLoading"
         >
           <template #bodyCell="{ column, record }">
@@ -644,17 +644,15 @@ const fetchPassLineConfig = async () => {
   
   try {
     // examList 按时间倒序（最新在前）
-    // 对比考试（右）= 最新考试 = examList[0]
-    // 基准考试（左）= 上一次考试 = examList[1]
     const latestExam = examList.value[0];
     const prevExam = examList.value[1];
     
-    // 设置默认值（仅当未设置时）
-    if (compareExamId.value === null && latestExam) {
-      compareExamId.value = latestExam.id;
-    }
+    // 基准考试：最新考试；对比考试：上一场考试
     if (baseExamId.value === null) {
-      baseExamId.value = prevExam ? prevExam.id : (latestExam ? latestExam.id : null);
+      baseExamId.value = latestExam ? latestExam.id : null;
+    }
+    if (compareExamId.value === null) {
+      compareExamId.value = prevExam ? prevExam.id : (latestExam ? latestExam.id : null);
     }
     
     // 并行获取两次考试的分数线配置
@@ -669,7 +667,6 @@ const fetchPassLineConfig = async () => {
     if (compareExamId.value) {
       tasks.push(getPassLine({ exam_id: compareExamId.value, size: 200 }).then(res => {
         passLineConfigCompare.value = (res.code === 200 && res.data) ? (res.data.records || res.data.list || res.data || []) : [];
-        // 兼容旧逻辑：passLineConfigData 存对比考试数据
         passLineConfigData.value = passLineConfigCompare.value;
       }));
     } else {
@@ -785,14 +782,13 @@ const fetchExamList = async () => {
     const res = await getClassExam({ class_id: selectedClass.value });
     if (res.code === 200 && res.data) {
       examList.value = Array.isArray(res.data) ? res.data : (res.data.records || res.data.list || []);
-      // 进退步默认考试：对比=最新（examList[0]），基准=上一次（examList[1]）
-      const latest = examList.value[0];
-      const prev = examList.value[1];
-      if (updownCompareExamId.value === null && latest) {
-        updownCompareExamId.value = latest.id;
-      }
+      const latest = examList.value[1];
+      const prev = examList.value[0];
       if (updownBaseExamId.value === null) {
         updownBaseExamId.value = prev ? prev.id : (latest ? latest.id : null);
+      }
+      if (updownCompareExamId.value === null && latest) {
+        updownCompareExamId.value = latest.id;
       }
       // 考题得分率默认选中最新一场考试
       if (questionStatExamId.value == null && latest) {
@@ -966,7 +962,7 @@ const compareTableData = computed(() => {
     lineTypeOptions.filter(o => o.value !== '全部').forEach(opt => {
       const baseScore = findLineScore(passLineConfigBase.value, opt.value, subject);
       const compareScore = findLineScore(passLineConfigCompare.value, opt.value, subject);
-      const change = (baseScore != null && compareScore != null) ? (compareScore - baseScore) : null;
+      const change = (baseScore != null && compareScore != null) ? (baseScore - compareScore) : null;
       result.push({
         key: opt.value,
         name: opt.label,
@@ -984,7 +980,7 @@ const compareTableData = computed(() => {
     subjects.forEach(subject => {
       const baseScore = findLineScore(passLineConfigBase.value, lineType, subject);
       const compareScore = findLineScore(passLineConfigCompare.value, lineType, subject);
-      const change = (baseScore != null && compareScore != null) ? (compareScore - baseScore) : null;
+      const change = (baseScore != null && compareScore != null) ? (baseScore - compareScore) : null;
       result.push({
         key: subject,
         name: subject,

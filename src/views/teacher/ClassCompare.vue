@@ -646,7 +646,7 @@ const fetchComparisonData = async () => {
 // 重置筛选
 const resetFilters = () => {
   if (examList.value.length > 0) {
-    selectedExamId.value = examList.value[examList.value.length - 1].id;
+    selectedExamId.value = examList.value[0].id;
   }
   if (classList.value.length > 0) {
     selectedClass2.value = classList.value[0].id;
@@ -728,7 +728,8 @@ const init = async () => {
           name: exam.name
         }));
         if (examList.value.length > 0) {
-          selectedExamId.value = examList.value[examList.value.length - 1].id;
+          // selectedExamId.value = examList.value[examList.value.length - 1].id;
+          selectedExamId.value = examList.value[0].id;
         }
       } else {
         message.warning(examRes.msg || '获取考试列表失败');
