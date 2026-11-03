@@ -22,8 +22,8 @@ request.interceptors.request.use((url, options) => {
       options: {
         ...options,
         headers: {
-          ...options.headers,
           Authorization: `Bearer ${token}`,
+          ...options.headers,
         },
       },
     };
@@ -61,4 +61,4 @@ request.interceptors.response.use(async (response) => {
   return response;
 });
 
-export default request; 
+export default request;

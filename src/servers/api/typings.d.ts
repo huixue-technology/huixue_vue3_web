@@ -328,9 +328,9 @@ declare namespace API {
     id?: number;
     /** 考试名称 */
     name: string;
-    /** 考试年份 */
+    /** 学期所属年份；秋季下学期包含次年1月 */
     year: string;
-    /** 考试类型：1代表高三的文理科，2代表高一、高二的选科 */
+    /** 自然年学期：春季上学期、秋季下学期，如2027上学期、2026下学期 */
     exam_type?: string;
     /** 考试类型 */
     exam_category?: string;

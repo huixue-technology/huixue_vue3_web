@@ -42,15 +42,15 @@ const normalizeSemesterSuffix = (semester: string) => {
 
 const getSemesterOrder = (semester: string) => {
   const suffix = normalizeSemesterSuffix(semester);
-  if (suffix === "下") return 2;
-  if (suffix === "上") return 1;
+  if (suffix === "上") return 2;
+  if (suffix === "下") return 1;
   return 0;
 };
 
 const getAcademicYearStart = (year: string, semester: string) => {
   const paperYear = parseYear(year);
   if (!Number.isFinite(paperYear)) return Number.NaN;
-  return normalizeSemesterSuffix(semester) === "下" ? paperYear - 1 : paperYear;
+  return normalizeSemesterSuffix(semester) === "上" ? paperYear - 1 : paperYear;
 };
 
 const getGradeStageLabel = (selectedGrade: string, year: string, semester: string) => {
@@ -82,7 +82,8 @@ export const formatPaperSemesterLabel = (paper: PaperSemesterSource) => {
   const semester = getPaperSemester(paper);
   const semesterSuffix = normalizeSemesterSuffix(semester);
   if (!grade || !year || !semester || !semesterSuffix) return "";
-  return `${getGradeStageLabel(grade, year, semester)}${semesterSuffix}`;
+  const stageSuffix = semesterSuffix === "上" ? "下" : semesterSuffix === "下" ? "上" : semesterSuffix;
+  return `${getGradeStageLabel(grade, year, semester)}${stageSuffix}`;
 };
 
 export const getPaperSemesterQuery = (value?: string): SemesterQuery => {
@@ -117,7 +118,7 @@ export const buildPaperSemesterOptions = (
     if (optionMap.has(key)) continue;
 
     optionMap.set(key, {
-      label: `${getGradeStageLabel(grade, year, semester)}${semesterSuffix}`,
+      label: formatPaperSemesterLabel(paper),
       value: encodePaperSemesterValue(year, semester),
       year,
       semester,
