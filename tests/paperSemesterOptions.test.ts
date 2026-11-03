@@ -21,11 +21,11 @@ const assertEqual = (actual: unknown, expected: unknown) => {
 };
 
 const papers: PaperSemesterSource[] = [
-  { exam_student_grade: "2023级", year: "2023", semester: "上学期" },
-  { exam_student_grade: "2023级", year: "2024", semester: "下" },
+  { exam_student_grade: "2023级", year: "2023", semester: "下学期" },
   { exam_student_grade: "2023级", year: "2024", semester: "上" },
-  { exam_student_grade: "2024级", year: "2024", semester: "上" },
-  { exam_student_grade: "2024级", year: "2026", semester: "下" },
+  { exam_student_grade: "2023级", year: "2024", semester: "下" },
+  { exam_student_grade: "2024级", year: "2024", semester: "下" },
+  { exam_student_grade: "2024级", year: "2026", semester: "上" },
 ];
 
 const options = buildPaperSemesterOptions(papers, "2023级");
@@ -37,13 +37,13 @@ assertDeepEqual(
 
 assertDeepEqual(getPaperSemesterQuery(options[0].value), {
   year: "2024",
-  semester: "上",
+  semester: "下",
 });
 
 assertDeepEqual(buildPaperSemesterOptions(papers, undefined), []);
 
 const highGradeOptions = buildPaperSemesterOptions(
-  [{ exam_student_grade: "高二", year: "2024", semester: "上" }],
+  [{ exam_student_grade: "高二", year: "2024", semester: "下" }],
   "高二"
 );
 assertEqual(highGradeOptions[0].label, "高二上");
@@ -52,8 +52,16 @@ const cohort2024Options = buildPaperSemesterOptions(papers, "2024级");
 assertEqual(cohort2024Options[0].label, "高二下");
 
 assertEqual(
-  formatPaperSemesterLabel({ exam_student_grade: "2023级", year: "2024", semester: "下学期" }),
+  formatPaperSemesterLabel({ exam_student_grade: "2023级", year: "2024", semester: "上学期" }),
   "高一下"
 );
+
+assertEqual(formatPaperSemesterLabel({ grade: "2024级", year: "2026", semester: "2026下学期" }), "高三上");
+assertEqual(formatPaperSemesterLabel({ grade: "2024级", year: "2027", semester: "2027上学期" }), "高三下");
+assertDeepEqual(buildPaperSemesterOptions([
+  { grade: "2024级", year: "2026", semester: "上学期" },
+  { grade: "2024级", year: "2026", semester: "下学期" },
+  { grade: "2024级", year: "2027", semester: "上学期" },
+], "2024级").map(option => option.label), ["高三下", "高三上", "高二下"]);
 
 console.log("paperSemesterOptions ok");
