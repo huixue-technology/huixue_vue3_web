@@ -6,6 +6,7 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
+    "test:qr-login": "node --test tests/qr-login.test.cjs",
     "openapi": "ts-node openapi.config.ts"
   },
   "dependencies": {
