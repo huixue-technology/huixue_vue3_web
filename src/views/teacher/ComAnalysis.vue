@@ -114,7 +114,7 @@
         />
       </a-card>
 
-      <!-- 进退步学生（两次考试对比：基准=上一次，对比=最新） -->
+      <!-- 进退步学生（两次考试对比） -->
       <a-card class="updown-card">
         <template #title>
           <div class="section-title">进退步学生</div>
@@ -254,8 +254,8 @@
           :loading="questionStatLoading"
         >
           <template #bodyCell="{ column, record }">
-            <template v-if="column.dataIndex === 'question_key'">
-              <span>{{ record.question_key }}</span>
+            <template v-if="column.dataIndex === 'question_number'">
+              <span>{{ record.question_number }}</span>
             </template>
             <template v-else-if="column.dataIndex === 'question_type'">
               <span>{{ record.question_type || '-' }}</span>
@@ -751,14 +751,14 @@ const updownColumns = [
 const formatChange = (val: number | null | undefined): string => {
   if (val === null || val === undefined) return '-';
   if (val === 0) return '持平';
-  if (val > 0) return `↑${val}`;
-  return `↓${Math.abs(val)}`;
+  if (val > 0) return `↓${val}`;
+  return `↑${Math.abs(val)}`;
 };
 
 // 获取进退步样式类
 const getChangeClass = (val: number | null | undefined): string => {
   if (val === null || val === undefined || val === 0) return '';
-  return val > 0 ? 'change-up' : 'change-down';
+  return val < 0 ? 'change-up' : 'change-down';
 };
 
 // 格式化总分变化（分数变化：正数=分数增加，负数=分数减少）
@@ -782,15 +782,19 @@ const fetchExamList = async () => {
     const res = await getClassExam({ class_id: selectedClass.value });
     if (res.code === 200 && res.data) {
       examList.value = Array.isArray(res.data) ? res.data : (res.data.records || res.data.list || []);
-      const latest = examList.value[1];
-      const prev = examList.value[0];
+      // examList 是按时间倒序，0：最新，1：上一次
+      const latest = examList.value[0];
+      const prev = examList.value[1];
+
+      // ========== 进退步：基准=最新，对比=上一场（和分数线对比逻辑保持一致） ==========
       if (updownBaseExamId.value === null) {
-        updownBaseExamId.value = prev ? prev.id : (latest ? latest.id : null);
+        updownBaseExamId.value = latest ? latest.id : null;
       }
-      if (updownCompareExamId.value === null && latest) {
-        updownCompareExamId.value = latest.id;
+      if (updownCompareExamId.value === null) {
+        updownCompareExamId.value = prev ? prev.id : (latest ? latest.id : null);
       }
-      // 考题得分率默认选中最新一场考试
+
+      // ========== 考题得分率：默认最新 ==========
       if (questionStatExamId.value == null && latest) {
         questionStatExamId.value = latest.id;
       }
@@ -999,7 +1003,7 @@ const compareTableData = computed(() => {
 
 // 小题得分率表列
 const questionStatColumns = [
-  { title: '题号', dataIndex: 'question_key', width: 100, align: 'center' },
+  { title: '题号', dataIndex: 'question_number', width: 100, align: 'center' },
   { title: '题型', dataIndex: 'question_type', width: 100, align: 'center' },
   { title: '错误率', dataIndex: 'wrong_rate', width: 120, align: 'center' },
   { title: '错题人数', dataIndex: 'wrong_count', width: 100, align: 'center' },
@@ -1013,8 +1017,8 @@ const questionStatTableData = computed(() => {
       ? Math.round(item.wrong_rate * 10000) / 100
       : (item.wrong_rate ?? 0);
     return {
-      key: item.id || `${item.question_key || 'q'}_${index}`,
-      question_key: item.question_key ?? item.string_number ?? '-',
+      key: item.id || `${item.question_number || 'q'}_${index}`,
+      question_number: item.question_number ?? item.string_number ?? '-',
       question_type: item.question_type ?? item.type ?? '-',
       wrong_rate: wrongRate,
       wrong_count: item.wrong_count ?? 0,

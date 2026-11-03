@@ -26,7 +26,7 @@
                 :key="cls.id"
                 :value="cls.id"
               >
-                {{ cls.name }} ({{ cls.id }})
+                {{ cls.id }}
               </a-select-option>
             </a-select>
           </div>

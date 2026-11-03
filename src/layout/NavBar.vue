@@ -56,7 +56,6 @@ const items = computed<MenuProps["items"]>(() => {
 
   if (isTeacher) {
     menuItems.push(
-      { key: "teacher_info", icon: () => h(UserOutlined), label: "老师信息", title: "老师信息" },
       { key: "class_grade", icon: () => h(UsergroupAddOutlined), label: "班级成绩", title: "班级成绩" },
       { key: "class_analysis", icon: () => h(AppstoreOutlined), label: "班级分析", title: "班级分析" },
       { key: "class_compare", icon: () => h(MergeCellsOutlined), label: "班级对比", title: "班级对比" },
@@ -86,6 +85,7 @@ const items = computed<MenuProps["items"]>(() => {
 
   menuItems.push(
     { key: "feedback", icon: () => h(MessageOutlined), label: "意见反馈", title: "意见反馈" },
+    { key: "teacher_info", icon: () => h(UserOutlined), label: "个人中心", title: "个人中心" },
     { key: "logout", icon: () => h(LogoutOutlined), label: "退出登录", title: "退出登录" }
   );
   return menuItems;

@@ -142,12 +142,14 @@ const fetchStudentData = async (stuId: number) => {
 
 // 6. 生成图表数据
 const generateTable = async (examData: any[], types: Record<string, string>) => {
- 
+  // 复制数组反转，新考试在最左边，旧考试在右侧（不修改原始messageReturn）
+  const sortExamList = [...examData].reverse()
+
   const tempData: Record<string, any> = subject_selection.value.reduce((acc, subject) => {
     acc[subject] = { x_name: [], y_score: [] }
     return acc
   }, {})  
-  for (const item of examData) {
+  for (const item of sortExamList) {
     if (!item.exam?.length) continue
     
     const examName = item.exam[0].name
