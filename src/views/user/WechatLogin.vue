@@ -10,7 +10,7 @@
     />
     <a-spin v-else tip="正在获取登录码"><div class="placeholder" /></a-spin>
     <p>使用微信扫一扫，在小程序中确认登录。</p>
-    <p>首次使用需绑定教师或学生平台账号。</p>
+    <p>无需输入账号密码，首次登录在小程序中绑定学生和班级。</p>
     <a-button @click="refresh">刷新二维码</a-button>
   </div>
 </template>
