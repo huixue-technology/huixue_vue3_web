@@ -4,7 +4,6 @@ type teacher_info = {
     username:string,
     role:string,
     school_id:string,
-    phone:string,
     subject:string,
     name:string,
     class_id: string,

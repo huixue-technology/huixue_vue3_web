@@ -1,40 +1,14 @@
 <template>
 <div class="container">
-   <h2>教师账号注册</h2>
+   <h2>教师账号申请</h2>
+   <p class="tip">提交后需管理员在后台审核，通过后用微信扫码登录，无需设置密码。</p>
    <a-form
       :model="formparams"
-      name="teacher_register"
+      name="teacher_apply"
       class="register-form"
       @finish="onFinish"
       @finishFailed="onFinishFailed"
    >
-      <a-form-item
-         label="账号"
-         name="uid"
-         :rules="[
-            { required: true, message: '请输入7位数账号!' },
-            { pattern: /^\d{7}$/, message: '账号必须为7位数字' }
-         ]"
-      >
-         <a-input v-model:value="formparams.uid" placeholder="请输入7位数账号">
-         <template #prefix>
-            <UserOutlined class="site-form-item-icon" />
-         </template>
-         </a-input>
-      </a-form-item>
-      
-      <a-form-item
-         label="密码"
-         name="password"
-         :rules="[{ required: true, message: '请输入密码!' }]"
-      >
-         <a-input-password v-model:value="formparams.password" placeholder="请输入密码">
-         <template #prefix>
-            <LockOutlined class="site-form-item-icon" />
-         </template>
-         </a-input-password>
-      </a-form-item>
-
       <a-form-item
          label="教师姓名"
          name="name"
@@ -48,11 +22,14 @@
       </a-form-item>
 
       <a-form-item
-         label="联系方式"
+         label="手机号"
          name="phone"
-         :rules="[{ required: true, message: '请输入联系方式!' }]"
+         :rules="[
+            { required: true, message: '请输入手机号!' },
+            { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号' }
+         ]"
       >
-         <a-input v-model:value="formparams.phone" placeholder="请输入联系方式">
+         <a-input v-model:value="formparams.phone" placeholder="审核通过后凭此手机号认领账号">
          <template #prefix>
             <MobileOutlined class="site-form-item-icon" />
          </template>
@@ -66,7 +43,6 @@
       >
          <a-select
            v-model:value="formparams.schoolId"
-           @change="handleSchoolChange"
            style="width: 100%"
            placeholder="请选择学校"
            :loading="schoolList.length === 0"
@@ -76,26 +52,7 @@
            </a-select-option>
          </a-select>
       </a-form-item>
-       
-      <a-form-item
-         label="所在年级"
-         name="grade"
-         :rules="[{ required: true, message: '请选择年级!' }]"
-      >
-         <a-select
-           v-model:value="formparams.grade"
-           @change="handleGradeChange"
-           style="width: 100%"
-           placeholder="请选择年级"
-           :loading="gradeList.length === 0 && formparams.schoolId"
-           :disabled="!formparams.schoolId"
-         >
-           <a-select-option v-for="grade in gradeList" :key="grade" :value="grade">
-             {{ grade }}
-           </a-select-option>
-         </a-select>
-      </a-form-item>
-       
+
       <a-form-item
          label="任教学科"
          name="subject"
@@ -118,27 +75,9 @@
          </a-select>
       </a-form-item>
 
-      <a-form-item
-         label="绑定班级"
-         name="classId"
-         :rules="[{ required: true, message: '请选择班级!' }]"
-      >
-         <a-select
-           v-model:value="formparams.classId"
-           style="width: 100%"
-           placeholder="请选择班级"
-           :loading="classList.length === 0 && formparams.grade"
-           :disabled="!formparams.grade"
-         >
-           <a-select-option v-for="cls in classList" :key="cls.id" :value="cls.id">
-             {{ cls.name }}
-           </a-select-option>
-         </a-select>
-      </a-form-item>
-
       <a-form-item>
          <a-button :disabled="disabled" type="primary" html-type="submit" class="login-form-button">
-         注册
+         提交申请
          </a-button>
          或者
          <router-link to="/user/login">登录</router-link>
@@ -149,184 +88,55 @@
 </template>
 <script setup lang="ts">
 import { reactive, computed, onMounted } from 'vue'
-import { UserOutlined, LockOutlined, MobileOutlined } from '@ant-design/icons-vue';
-import { postTeacherApi } from '@/servers/api/teacher';
-import { postUserApi, postUserLogin } from '@/servers/api/user';
-import { putClassesDetailApi } from '@/servers/api/classes';
+import { UserOutlined, MobileOutlined } from '@ant-design/icons-vue';
+import { postTeacherApplyApi } from '@/servers/api/user';
 import router from '@/router';
-import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
 import { useSchoolSelection } from '@/composables/useSchoolSelection';
 
-// 使用共用的学校/年级/班级选择逻辑
-const {
-  schoolList,
-  gradeList,
-  classList,
-  fetchGradesBySchool,
-  fetchClassesByGrade,
-  loadSchoolData,
-} = useSchoolSelection();
+const { schoolList, loadSchoolData } = useSchoolSelection();
 
-// 表单参数
 interface FormParams {
-  uid: string
-  password: string
   name: string
   phone: string
-  schoolName: string
   schoolId: string
-  grade: string
   subject: string
-  classId: number | undefined
 }
-
-const disabled = computed(() => {
-  return !(formparams.uid && formparams.password && formparams.name && formparams.phone && formparams.schoolId && formparams.grade && formparams.subject && formparams.classId);
-});
 
 const formparams = reactive<FormParams>({
-  uid: '',
-  password: '',
   name: '',
   phone: '',
-  schoolName: '',
   schoolId: '',
-  schoolId: '',
-  grade: '',
-  subject: '',
-  classId: undefined
+  subject: ''
 })
 
-const userStore = useUserStore();
+const disabled = computed(() => {
+  return !(formparams.name && formparams.phone && formparams.schoolId && formparams.subject);
+});
 
-// 学校选择事件处理
-const handleSchoolChange = async (value: string) => {
-  formparams.schoolId = value;
-  // 同时保存学校名称
-  const selectedSchool = schoolList.value.find(s => s.school_id === value);
-  formparams.schoolName = selectedSchool ? selectedSchool.name : '';
-  formparams.grade = '';
-  formparams.classId = undefined;
-  await fetchGradesBySchool(value);
-};
-
-// 年级选择事件处理
-const handleGradeChange = async (value: string) => {
-  formparams.grade = value;
-  formparams.classId = undefined;
-  await fetchClassesByGrade(formparams.schoolId, value);
-  // 默认选中第一个班级
-  if (classList.value.length > 0) {
-    formparams.classId = classList.value[0].id;
-  }
-};
-
-// 提交表单
-const onFinish = async (values: any) => {
+const onFinish = async () => {
   try {
-    // 直接使用表单中的学校ID
-    const schoolId = formparams.schoolId;
-    
-    // 注册教师信息
-    const teacherData = {
-      uid: formparams.uid,
-      name: formparams.name,
-      subject: formparams.subject,
-      school_id: schoolId
-    };
-    
-    const teacherRes = await postTeacherApi(teacherData);
-    console.log('Teacher registration response:', teacherRes);
-    if (teacherRes.code !== 200) {
-      message.error('教师信息注册失败！');
-      return;
-    }
-
-    // 注册用户信息
-    const userData = {
-      email: formparams.uid, // 使用账号作为邮箱
-      password: formparams.password,
+    const res = await postTeacherApplyApi({
       name: formparams.name,
       phone: formparams.phone,
-      school_id: schoolId,
-      role: formparams.uid, // 使用账号作为角色标识
-      bind_state: true,
-    };
-    
-    const registerRes = await postUserApi(userData);
-    if (registerRes.code !== 200) {
-      message.error('用户注册失败！');
+      school_id: formparams.schoolId,
+      subject: formparams.subject,
+    });
+    if (res.code !== 200) {
+      message.error(res.msg || '提交申请失败');
       return;
     }
-    
-    message.success('注册成功！');
-    
-    // 自动登录
-    const loginRes = await postUserLogin({
-      email: formparams.uid,
-      password: formparams.password
-    });
-    
-    if (loginRes.code !== 200) {
-      message.error('自动登录失败，请手动登录');
-      router.push('/user/login');
-      return;
-    }
-    
-    // 存储用户信息和token
-    localStorage.setItem('user', JSON.stringify(loginRes.data));
-    localStorage.setItem('token', loginRes.data.token);
-    userStore.setUserInfo({
-      ...loginRes.data,
-      token: loginRes.data.token
-    });
-
-    // 登录成功后，更新班级的班主任信息（此时有token）
-    if (formparams.classId) {
-      try {
-        await putClassesDetailApi(
-          { class_id: formparams.classId },
-          { header: formparams.uid }
-        );
-        console.log('班级班主任绑定成功');
-      } catch (error) {
-        console.error('班级班主任绑定失败:', error);
-        message.error('班级班主任绑定失败！');
-        return;
-      }
-    }
-    
-    message.success('注册并登录成功！');
-    router.push('/teacher_info');
+    message.success('申请已提交，请等待管理员审核，通过后用微信扫码登录');
+    setTimeout(() => router.push('/user/login'), 1500);
   } catch (error: any) {
-    console.error('注册过程出错:', error);
-    const status = error?.response?.status;
-    const reqUrl = String(error?.response?.url || '');
-    if (status === 400) {
-      if (reqUrl.includes('/api/teacher')) {
-        message.error('该教师工号已注册，请直接登录或更换工号');
-      } else if (reqUrl.includes('/api/user')) {
-        message.error('该登录账号已存在，请直接登录或更换账号');
-      } else {
-        message.error('提交信息有误或账号已存在，请检查后重试');
-      }
-    } else if (status === 401) {
-      message.error('认证失败，请重试');
-    } else if (status >= 500) {
-      message.error('服务器繁忙，请稍后再试');
-    } else {
-      message.error('注册失败，请检查网络或联系管理员');
-    }
+    message.error(error?.message || '提交申请失败，请稍后重试');
   }
 }
 
-const onFinishFailed = (errorInfo: any) => {
-  console.log('Failed:', errorInfo)
-  message.error('注册失败！');
+const onFinishFailed = () => {
+  message.error('请完整填写申请信息');
 }
 
-// 组件挂载时加载学校数据
 onMounted(() => {
   loadSchoolData();
 });
@@ -339,6 +149,11 @@ onMounted(() => {
   width: 92vw;
   margin: 32px auto;
   padding: 24px;
+}
+
+.tip {
+  color: rgba(0, 0, 0, 0.45);
+  margin-bottom: 16px;
 }
 
 .register-form {

@@ -1246,8 +1246,6 @@ declare namespace API {
     account?: string;
     /** 用户密码 */
     password: string;
-    /** 是否仅允许管理员登录 */
-    admin_only?: boolean;
   };
 
   type PassLine = {

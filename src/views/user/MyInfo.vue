@@ -15,6 +15,9 @@
             <a-button type="primary" @click="showModifyModal">
               <EditOutlined /> 编辑信息
             </a-button>
+            <a-button danger @click="unbindWechat">
+              解除微信绑定
+            </a-button>
           </div>
           
           <a-row :gutter="[24, 24]">
@@ -27,15 +30,8 @@
             
             <a-col :span="24">
               <div class="info-item">
-                <span class="info-label">登录手机号：</span>
+                <span class="info-label">登录账号：</span>
                 <span class="info-value">{{ userData.email }}</span>
-              </div>
-            </a-col>
-            
-            <a-col :span="24" v-if="userData.phone">
-              <div class="info-item">
-                <span class="info-label">联系方式：</span>
-                <span class="info-value">{{ userData.phone }}</span>
               </div>
             </a-col>
           </a-row>
@@ -130,9 +126,6 @@
           <a-form-item label="个人邮箱">
             <a-input v-model:value="email" placeholder="请输入个人邮箱" />
           </a-form-item>
-          <a-form-item label="联系方式">
-            <a-input v-model:value="phone" placeholder="请输入联系方式" />
-          </a-form-item>
         </a-form>
       </a-modal>
     </div>
@@ -184,10 +177,10 @@
 
 <script lang="ts" setup>
 import { ref, watch } from 'vue';
-import { message } from 'ant-design-vue';
+import { Modal, message } from 'ant-design-vue';
 import { EditOutlined, SwapOutlined, UserAddOutlined } from '@ant-design/icons-vue';
 import { useUserStore } from '@/store';
-import { putUserBindStatus, putUserDetailApi } from '@/servers/api/user';
+import { postWechatUnbindApi, putUserBindStatus, putUserDetailApi } from '@/servers/api/user';
 import { getSchoolApi } from '@/servers/api/school';
 import { getClassesApi, getClassesDetailApi } from '@/servers/api/classes';
 import { getStudentApi } from '@/servers/api/student';
@@ -200,7 +193,6 @@ const studentList = ref<any[]>([]);
 const open = ref<boolean>(false);
 const bindOpen = ref<boolean>(false);
 const email = ref('');
-const phone = ref('');
 const name = ref('');
 const inputStuName = ref('');
 const classId = ref<number | undefined>(undefined);
@@ -215,7 +207,28 @@ const userData = userStore.userInfo;
 const showModifyModal = () => {
   open.value = true;
   email.value = userData.email ?? '';
-  phone.value = userData.phone ?? '';
+};
+
+const unbindWechat = () => {
+  Modal.confirm({
+    title: '解除微信绑定',
+    content: '解除后当前微信与平台账号断开，登录状态也会失效，之后可用其他微信重新扫码登录。',
+    okText: '确认解除',
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: async () => {
+      const { logout } = useLogout();
+      const res: any = await postWechatUnbindApi();
+      if (res.code === 200) {
+        message.success('已解除微信绑定，请重新登录');
+        setTimeout(() => {
+          logout();
+        }, 1200);
+      } else {
+        message.error(res.msg || '解除绑定失败');
+      }
+    },
+  });
 };
 
 const showBindModal = () => {
@@ -236,7 +249,6 @@ const handleOk1 = () => {
   confirmLoading.value = true;
   const params = { user_id: String(userData.id) };
   const userInfo = {
-    phone: phone.value,
     email: email.value,
     name: userData.name,
     password: userData.password
@@ -270,7 +282,8 @@ const handleOk2 = () => {
   bindConfirmLoading.value = true;
   const params = {
     id: String(userData.id),
-    school: String(selectedStudent.value.school_name || selectedStudent.value.school),
+    // 后端按 student.school 精确匹配，用学生行里的 school，不用展示用的校名。
+    school: String(selectedStudent.value.school),
     class_id: String(classId.value),
     stuName: String(selectedStudent.value.name)
   };

@@ -19,6 +19,35 @@ export const SUBJECTS: string[] = [
   '地理',
 ];
 
+// 拼音科目名 → 中文科目名（老数据/列式接口用拼音键，如统计画像 pass_rate / exam_analysis 等）
+export const SUBJECT_PINYIN_TO_CN: Record<string, string> = {
+  sum_: '总分',
+  sum: '总分',
+  yuwen: '语文',
+  shuxue: '数学',
+  yingyu: '英语',
+  wuli: '物理',
+  huaxue: '化学',
+  shengwu: '生物',
+  zhengzhi: '政治',
+  lishi: '历史',
+  dili: '地理',
+};
+
+// 中文科目名 → 拼音科目名（反向映射，便于需要时转换；去重避免 sum_/sum 冲突）
+export const SUBJECT_CN_TO_PINYIN: Record<string, string> = {};
+Object.entries(SUBJECT_PINYIN_TO_CN).forEach(([pinyin, cn]) => {
+  if (SUBJECT_CN_TO_PINYIN[cn] === undefined) {
+    SUBJECT_CN_TO_PINYIN[cn] = pinyin;
+  }
+});
+
+/** 把科目键统一转成中文名：兼容拼音键 / 中文键，无法识别时原样返回 */
+export const normalizeSubject = (subject?: string | null): string => {
+  if (!subject) return '';
+  return SUBJECT_PINYIN_TO_CN[subject] || subject;
+};
+
 // 各科满分（用于雷达图等）
 export const SUBJECT_MAX: Record<string, number> = {
   '总分': 750,

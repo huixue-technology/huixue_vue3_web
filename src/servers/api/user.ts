@@ -102,25 +102,37 @@ export async function getCurrentUser(options?: { [key: string]: any }) {
   });
 }
 
-/** 用户登录 POST /api/user/login */
-export async function postUserLogin(
-  body: API.Login,
+/** 用户登出 POST /api/user/logout */
+export async function postUserLogout(options?: { [key: string]: any }) {
+  return request<any>("/api/user/logout", {
+    method: "POST",
+    ...(options || {}),
+  });
+}
+
+/** 解除当前登录用户的微信绑定 POST /api/auth/wechat/unbind */
+export async function postWechatUnbindApi(options?: { [key: string]: any }) {
+  return request<any>("/api/auth/wechat/unbind", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: {},
+    ...(options || {}),
+  });
+}
+
+/** 提交教师账号申请 POST /api/auth/teacher-apply */
+export async function postTeacherApplyApi(
+  body: { name: string; phone: string; school_id: string; subject: string },
   options?: { [key: string]: any }
 ) {
-  return request<any>("/api/user/login", {
+  return request<any>("/api/auth/teacher-apply", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     data: body,
-    ...(options || {}),
-  });
-}
-
-/** 用户登出 POST /api/user/logout */
-export async function postUserLogout(options?: { [key: string]: any }) {
-  return request<any>("/api/user/logout", {
-    method: "POST",
     ...(options || {}),
   });
 }

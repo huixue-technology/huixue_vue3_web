@@ -32,7 +32,7 @@ import router from "@/router";
 import { useLogout } from "@/composables/useLogout";
 import { useUserStore } from "@/store";
 
-const current = ref<string[]>(["grade"]);
+const current = ref<string[]>([window.location.hash.slice(1).replace(/^\//, "") || "grade"]);
 const userStore = useUserStore();
 const { logout } = useLogout();
 
@@ -85,7 +85,13 @@ const items = computed<MenuProps["items"]>(() => {
 
   menuItems.push(
     { key: "feedback", icon: () => h(MessageOutlined), label: "意见反馈", title: "意见反馈" },
-    { key: "teacher_info", icon: () => h(UserOutlined), label: "个人中心", title: "个人中心" },
+    {
+      // 教师看教师信息页，学生看通用个人中心；学生访问 /teacher_info 会被路由守卫弹回首页。
+      key: isTeacher ? "teacher_info" : "user/my-info",
+      icon: () => h(UserOutlined),
+      label: "个人中心",
+      title: "个人中心",
+    },
     { key: "logout", icon: () => h(LogoutOutlined), label: "退出登录", title: "退出登录" }
   );
   return menuItems;

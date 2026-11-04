@@ -18,7 +18,6 @@
           <a-descriptions-item label="学校">{{ show.school_id }}</a-descriptions-item>
           <a-descriptions-item label="任教学科">{{ show.subject }}</a-descriptions-item>
           <a-descriptions-item label="用户账号">{{ show.email }}</a-descriptions-item>
-          <a-descriptions-item label="联系方式">{{ show.phone }}</a-descriptions-item>
           <a-descriptions-item label="工号">{{ show.role }}</a-descriptions-item>
           <a-descriptions-item label="绑定状态">
             <span :class="show.bindState ? 'status-bound' : 'status-unbound'">
@@ -40,9 +39,6 @@
           <a-select v-model:value="show.class_id" placeholder="请选择班级">
             <a-select-option v-for="value in class_list" :value="value.value">{{ value.name }}</a-select-option>
           </a-select>
-        </a-form-item>
-        <a-form-item label="联系方式">
-          <a-input v-model:value="show.phone" placeholder="请输入联系方式" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -66,7 +62,6 @@ const show = ref<teacher_info>({
   username: '暂无',
   class_id: '未绑定',
   school_id: '暂无',
-  phone: '暂无',
   subject: '暂无',
   name: '暂无'
 });
@@ -88,7 +83,6 @@ onMounted(async () => {
       role: teacher_info.role || '未绑定',
       username: teacher_info.name || '暂无',
       school_id: teacher_info.teacher.school_id || '暂无',
-      phone: teacher_info.phone || '暂无' ,
       subject: teacher_info.teacher.subject || '暂无',
       name: teacher_info.teacher.name || '暂无',
       class_id: '未绑定',
@@ -97,7 +91,6 @@ onMounted(async () => {
     show.value.bindState = teacher_info.bind_state;
     show.value.email = teacher_info.email || '暂无';
     show.value.username = teacher_info.name || '暂无';
-    show.value.phone = teacher_info.phone || '暂无'
   }
   const re = await getClassesApi({ header: teacher_info.role });
   console.log("re", re)
@@ -118,7 +111,6 @@ const handleOk = async () => {
     const info = user.getUserInfo();
     const res = await putUserDetailApi({ user_id: String(info.id) }, {
       email: show.value.email,
-      phone: show.value.phone,
       name: show.value.username,
       bind_state: true
     });
@@ -171,7 +163,6 @@ const unbind = async () => {
       try {
         const res = await putUserDetailApi({ user_id: String(info.id) }, {
           email: show.value.email,
-          phone: show.value.phone,
           name: show.value.username,
           role: '',
           bind_state: false
