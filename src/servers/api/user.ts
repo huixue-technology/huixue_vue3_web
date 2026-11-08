@@ -122,12 +122,12 @@ export async function postWechatUnbindApi(options?: { [key: string]: any }) {
   });
 }
 
-/** 提交教师账号申请 POST /api/auth/teacher-apply */
-export async function postTeacherApplyApi(
-  body: { name: string; phone: string; school_id: string; subject: string },
+/** 教师注册：手机号 + 邀请码开通账号 POST /api/auth/teacher-register */
+export async function postTeacherRegisterApi(
+  body: { phone: string; invite_code: string },
   options?: { [key: string]: any }
 ) {
-  return request<any>("/api/auth/teacher-apply", {
+  return request<any>("/api/auth/teacher-register", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -6,7 +6,7 @@
     <div class="links">
       <router-link to="/user/register">学生注册</router-link>
       <span class="divider">|</span>
-      <router-link to="/user/teacher-register">教师账号申请</router-link>
+      <router-link to="/user/teacher-register">教师注册（需邀请码）</router-link>
     </div>
   </div>
 </template>

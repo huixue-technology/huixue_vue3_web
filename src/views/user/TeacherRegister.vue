@@ -1,146 +1,121 @@
 <template>
-<div class="container">
-   <h2>教师账号申请</h2>
-   <p class="tip">提交后需管理员在后台审核，通过后用微信扫码登录，无需设置密码。</p>
-   <a-form
+  <div class="container">
+    <h2>教师注册</h2>
+    <p class="tip">
+      填写学校下发的邀请码即可开通账号，不需要审核。开通后用微信扫码登录，无需设置密码。
+    </p>
+
+    <a-form
       :model="formparams"
-      name="teacher_apply"
+      name="teacher_register"
       class="register-form"
       @finish="onFinish"
       @finishFailed="onFinishFailed"
-   >
+    >
       <a-form-item
-         label="教师姓名"
-         name="name"
-         :rules="[{ required: true, message: '请输入真实姓名!' }]"
+        label="手机号"
+        name="phone"
+        :rules="[
+          { required: true, message: '请输入手机号' },
+          { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确' },
+        ]"
       >
-         <a-input v-model:value="formparams.name" placeholder="请输入教师姓名">
-         <template #prefix>
-            <UserOutlined class="site-form-item-icon" />
-         </template>
-         </a-input>
-      </a-form-item>
-
-      <a-form-item
-         label="手机号"
-         name="phone"
-         :rules="[
-            { required: true, message: '请输入手机号!' },
-            { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号' }
-         ]"
-      >
-         <a-input v-model:value="formparams.phone" placeholder="审核通过后凭此手机号认领账号">
-         <template #prefix>
+        <a-input v-model:value="formparams.phone" placeholder="接收通知的手机号">
+          <template #prefix>
             <MobileOutlined class="site-form-item-icon" />
-         </template>
-         </a-input>
+          </template>
+        </a-input>
       </a-form-item>
 
       <a-form-item
-         label="所在学校"
-         name="schoolId"
-         :rules="[{ required: true, message: '请选择学校!' }]"
+        label="邀请码"
+        name="inviteCode"
+        :rules="[{ required: true, message: '请输入邀请码' }]"
       >
-         <a-select
-           v-model:value="formparams.schoolId"
-           style="width: 100%"
-           placeholder="请选择学校"
-           :loading="schoolList.length === 0"
-         >
-           <a-select-option v-for="school in schoolList" :key="school.school_id" :value="school.school_id">
-             {{ school.name }}
-           </a-select-option>
-         </a-select>
-      </a-form-item>
-
-      <a-form-item
-         label="任教学科"
-         name="subject"
-         :rules="[{ required: true, message: '请选择任教学科!' }]"
-      >
-         <a-select
-           v-model:value="formparams.subject"
-           style="width: 100%"
-           placeholder="请选择任教学科"
-         >
-           <a-select-option value="语文">语文</a-select-option>
-           <a-select-option value="数学">数学</a-select-option>
-           <a-select-option value="英语">英语</a-select-option>
-           <a-select-option value="物理">物理</a-select-option>
-           <a-select-option value="化学">化学</a-select-option>
-           <a-select-option value="生物">生物</a-select-option>
-           <a-select-option value="政治">政治</a-select-option>
-           <a-select-option value="历史">历史</a-select-option>
-           <a-select-option value="地理">地理</a-select-option>
-         </a-select>
+        <a-input
+          v-model:value="formparams.inviteCode"
+          placeholder="例如 ABCD234567"
+          :maxlength="32"
+        >
+          <template #prefix>
+            <KeyOutlined class="site-form-item-icon" />
+          </template>
+        </a-input>
       </a-form-item>
 
       <a-form-item>
-         <a-button :disabled="disabled" type="primary" html-type="submit" class="login-form-button">
-         提交申请
-         </a-button>
-         或者
-         <router-link to="/user/login">登录</router-link>
+        <a-button
+          type="primary"
+          html-type="submit"
+          class="login-form-button"
+          :loading="loading"
+          :disabled="disabled"
+        >
+          开通账号
+        </a-button>
       </a-form-item>
-   </a-form>
-</div>
+    </a-form>
 
+    <a-alert
+      v-if="opened"
+      type="success"
+      show-icon
+      message="账号已开通"
+      description="请返回登录页，用微信扫码登录；第一次扫码会直接进入后台。"
+    />
+
+    <div class="links">
+      <router-link to="/user/login">返回登录</router-link>
+    </div>
+  </div>
 </template>
+
 <script setup lang="ts">
-import { reactive, computed, onMounted } from 'vue'
-import { UserOutlined, MobileOutlined } from '@ant-design/icons-vue';
-import { postTeacherApplyApi } from '@/servers/api/user';
+import { computed, reactive, ref } from 'vue';
+import { KeyOutlined, MobileOutlined } from '@ant-design/icons-vue';
+import { postTeacherRegisterApi } from '@/servers/api/user';
 import router from '@/router';
 import { message } from 'ant-design-vue';
-import { useSchoolSelection } from '@/composables/useSchoolSelection';
-
-const { schoolList, loadSchoolData } = useSchoolSelection();
 
 interface FormParams {
-  name: string
-  phone: string
-  schoolId: string
-  subject: string
+  phone: string;
+  inviteCode: string;
 }
 
 const formparams = reactive<FormParams>({
-  name: '',
   phone: '',
-  schoolId: '',
-  subject: ''
-})
-
-const disabled = computed(() => {
-  return !(formparams.name && formparams.phone && formparams.schoolId && formparams.subject);
+  inviteCode: '',
 });
+
+const loading = ref(false);
+const opened = ref(false);
+
+const disabled = computed(() => !(formparams.phone && formparams.inviteCode));
 
 const onFinish = async () => {
+  loading.value = true;
   try {
-    const res = await postTeacherApplyApi({
-      name: formparams.name,
+    const res = await postTeacherRegisterApi({
       phone: formparams.phone,
-      school_id: formparams.schoolId,
-      subject: formparams.subject,
+      invite_code: formparams.inviteCode.trim().toUpperCase(),
     });
     if (res.code !== 200) {
-      message.error(res.msg || '提交申请失败');
+      message.error(res.msg || '开通失败，请核对邀请码');
       return;
     }
-    message.success('申请已提交，请等待管理员审核，通过后用微信扫码登录');
-    setTimeout(() => router.push('/user/login'), 1500);
+    opened.value = true;
+    message.success('账号已开通，请用微信扫码登录');
+    setTimeout(() => router.push('/user/login'), 2000);
   } catch (error: any) {
-    message.error(error?.message || '提交申请失败，请稍后重试');
+    message.error(error?.message || '开通失败，请稍后重试');
+  } finally {
+    loading.value = false;
   }
-}
+};
 
 const onFinishFailed = () => {
-  message.error('请完整填写申请信息');
-}
-
-onMounted(() => {
-  loadSchoolData();
-});
-
+  message.error('请填写手机号和邀请码');
+};
 </script>
 
 <style scoped lang="less">
@@ -154,10 +129,11 @@ onMounted(() => {
 .tip {
   color: rgba(0, 0, 0, 0.45);
   margin-bottom: 16px;
+  line-height: 1.8;
 }
 
 .register-form {
-  max-width: 300px;
+  max-width: 320px;
 }
 
 .login-form-button {
@@ -166,5 +142,10 @@ onMounted(() => {
 
 .site-form-item-icon {
   color: rgba(0, 0, 0, 0.25);
+}
+
+.links {
+  margin-top: 16px;
+  font-size: 13px;
 }
 </style>
