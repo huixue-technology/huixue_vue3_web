@@ -212,7 +212,7 @@ const showModifyModal = () => {
 const unbindWechat = () => {
   Modal.confirm({
     title: '解除微信绑定',
-    content: '解除后当前微信与平台账号断开，登录状态也会失效，之后可用其他微信重新扫码登录。',
+    content: '解除后当前微信与账号断开，登录状态也会失效，账号上的手机号会一并解除。老师需用邀请码重新注册，学生请重新扫码绑定。',
     okText: '确认解除',
     okType: 'danger',
     cancelText: '取消',
