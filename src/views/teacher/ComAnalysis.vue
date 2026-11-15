@@ -521,9 +521,10 @@ const getClassList = async (userInfo: any) => {
     }
   }
 
-  // 兼容未绑定班主任的老师账号：回退全班级（可按学校过滤）
+  // 兼容未绑定班主任的老师账号：回退为本校班级（必须按学校过滤，跨校班级没有本校成绩）
   if (classes.length === 0) {
-    const allClassRes = await getClassesApi({});
+    const schoolId = String(userInfo?.school_id || userInfo?.teacher?.school_id || '');
+    const allClassRes = await getClassesApi({ school_id: schoolId });
     if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
       classes = allClassRes.data;
     }

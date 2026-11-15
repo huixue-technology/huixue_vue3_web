@@ -60,6 +60,12 @@ const getTeacherId = () => {
   return String(userInfo?.role || userInfo?.teacher?.uid || '').trim();
 };
 
+// 获取登录账号所属学校ID，班级列表一律在本校范围内查询
+const getSchoolId = () => {
+  const userInfo = userStore.getUserInfo();
+  return String(userInfo?.school_id || (userInfo?.teacher as any)?.school_id || '');
+};
+
 // 初始化班级信息
 const initClassInfo = async () => {
   try {
@@ -76,14 +82,15 @@ const initClassInfo = async () => {
       classData = classRes.data;
     }
 
-    // 兼容非班主任教师：回退全班级（可按学校过滤）
+    // 兼容非班主任教师：回退为本校班级（必须按学校过滤，跨校班级没有本校成绩）
     if (classData.length === 0) {
-      const allClassRes = await getClassesApi({});
+      const allClassRes = await getClassesApi({ school_id: getSchoolId() });
       if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
         classData = allClassRes.data;
       }
       if (classData.length > 0) {
-        message.warning("未找到班主任绑定班级，已切换为全班级");
+        // 未绑定班主任的普通教师直接默认第一个班，不弹提示
+        console.warn("未找到班主任绑定班级，已切换为本校第一个班级");
       }
     }
 

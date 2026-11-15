@@ -40,17 +40,19 @@ const normalizeSemesterSuffix = (semester: string) => {
   return text;
 };
 
+// 同一学年内：春季下学期（3-8月）晚于秋季上学期（9月至次年2月），降序排序时排在前面。
 const getSemesterOrder = (semester: string) => {
   const suffix = normalizeSemesterSuffix(semester);
-  if (suffix === "上") return 2;
-  if (suffix === "下") return 1;
+  if (suffix === "下") return 2;
+  if (suffix === "上") return 1;
   return 0;
 };
 
+// 学期所属学年的开始年份：秋季上学期从当年 9 月开始，春季下学期属于上一年 9 月开始的学年。
 const getAcademicYearStart = (year: string, semester: string) => {
   const paperYear = parseYear(year);
   if (!Number.isFinite(paperYear)) return Number.NaN;
-  return normalizeSemesterSuffix(semester) === "上" ? paperYear - 1 : paperYear;
+  return normalizeSemesterSuffix(semester) === "上" ? paperYear : paperYear - 1;
 };
 
 const getGradeStageLabel = (selectedGrade: string, year: string, semester: string) => {
@@ -82,8 +84,8 @@ export const formatPaperSemesterLabel = (paper: PaperSemesterSource) => {
   const semester = getPaperSemester(paper);
   const semesterSuffix = normalizeSemesterSuffix(semester);
   if (!grade || !year || !semester || !semesterSuffix) return "";
-  const stageSuffix = semesterSuffix === "上" ? "下" : semesterSuffix === "下" ? "上" : semesterSuffix;
-  return `${getGradeStageLabel(grade, year, semester)}${stageSuffix}`;
+  // 秋季上学期就是年级的“上”，春季下学期就是“下”，直接沿用，不再翻转。
+  return `${getGradeStageLabel(grade, year, semester)}${semesterSuffix}`;
 };
 
 export const getPaperSemesterQuery = (value?: string): SemesterQuery => {

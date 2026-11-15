@@ -25,7 +25,7 @@ app.component('e-charts', Echarts)
 // 检查当前路由是否为登录或注册页面
 const isAuthPage = () => {
   const path = window.location.hash.slice(1); // 获取hash路由路径
-  return path.startsWith('/user/login') || path.startsWith('/user/register') || path.startsWith('/user/teacher-register');
+  return path.startsWith('/user/login') || path.startsWith('/user/admin-login') || path.startsWith('/user/register') || path.startsWith('/user/teacher-register');
 };
 
 // 只有在非登录/注册页面才初始化store

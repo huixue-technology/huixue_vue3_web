@@ -7,6 +7,8 @@
       <router-link to="/user/register">学生注册</router-link>
       <span class="divider">|</span>
       <router-link to="/user/teacher-register">教师注册（需邀请码）</router-link>
+      <span class="divider">|</span>
+      <router-link to="/user/admin-login">管理员登录</router-link>
     </div>
   </div>
 </template>

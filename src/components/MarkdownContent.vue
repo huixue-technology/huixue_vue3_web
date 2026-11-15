@@ -111,5 +111,23 @@ const html = computed(() => renderRichText(props.content));
   :deep(img) {
     max-width: 100%;
   }
+
+  // 语文标注：Word 的波浪线/双线/点线/虚线要按原样画出来
+  :deep(u.wavy) {
+    text-decoration: underline wavy;
+    text-decoration-skip-ink: none;
+  }
+
+  :deep(u.double) {
+    text-decoration: underline double;
+  }
+
+  :deep(u.dotted) {
+    text-decoration: underline dotted;
+  }
+
+  :deep(u.dashed) {
+    text-decoration: underline dashed;
+  }
 }
 </style>

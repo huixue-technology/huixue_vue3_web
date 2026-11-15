@@ -688,14 +688,16 @@ const init = async () => {
       classes = classRes.data;
     }
 
-    // 兼容非班主任教师：回退全班级（可按学校过滤）
+    // 兼容非班主任教师：回退为本校班级（必须按学校过滤，跨校班级没有本校成绩）
     if (classes.length === 0) {
-      const allClassRes = await getClassesApi({});
+      const schoolId = String(userInfo?.school_id || (userInfo?.teacher as any)?.school_id || '');
+      const allClassRes = await getClassesApi({ school_id: schoolId });
       if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
         classes = allClassRes.data;
       }
       if (classes.length > 0) {
-        message.warning('未找到班主任绑定班级，已切换为全班级');
+        // 未绑定班主任的普通教师直接默认第一个班，不弹提示
+        console.warn('未找到班主任绑定班级，已切换为本校第一个班级');
       }
     }
 

@@ -19,7 +19,7 @@ import { useRoute } from 'vue-router';
 const route = useRoute();
 
 const showNavBar = computed(() => {
-  const hideNavRoutes = ['/user/login', '/user/register', '/user/teacher-register'];
+  const hideNavRoutes = ['/user/login', '/user/admin-login', '/user/register', '/user/teacher-register'];
   return !hideNavRoutes.includes(route.path);
 });
 </script>

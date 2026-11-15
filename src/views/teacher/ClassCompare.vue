@@ -678,7 +678,9 @@ const init = async () => {
     }
     
     loading.value = true;
-    const classRes = await getClassesApi({});
+    const schoolId = String(userInfo?.school_id || (userInfo?.teacher as any)?.school_id || '');
+    // 班级必须按本校获取，跨校班级没有本校成绩
+    const classRes = await getClassesApi({ school_id: schoolId });
     
     if (classRes.code === 200 && classRes.data.length > 0) {
       allClassList.value = classRes.data;
@@ -689,7 +691,13 @@ const init = async () => {
         return;
       }
 
-      const myClass = allClassList.value.find(cls => String(cls.header || '').trim() === teacherId);
+      // header 可能是逗号分隔的多个班主任，必须拆开后匹配
+      const myClass = allClassList.value.find(cls =>
+        String(cls.header || '')
+          .split(',')
+          .map(item => item.trim())
+          .includes(teacherId)
+      );
       if (!myClass) {
         // 兼容非班主任教师：回退到全班级模式
         currentClass.value = allClassList.value[0];

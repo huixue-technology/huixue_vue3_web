@@ -10,6 +10,10 @@ export default [
             }
             try {
                 const user = JSON.parse(userStr)
+                // 管理员先进身份选择页，选定学生/班级后再落地到对应端
+                if (user.role_type === 'admin') {
+                    return '/admin/entry'
+                }
                 // 如果有teacher字段，说明是老师，跳转到教师端首页
                 if (user.teacher !== undefined) {
                     return '/class_grade'

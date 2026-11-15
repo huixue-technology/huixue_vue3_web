@@ -26,7 +26,7 @@
                 :key="cls.id"
                 :value="cls.id"
               >
-                {{ cls.id }}
+                {{ cls.name || cls.id }}
               </a-select-option>
             </a-select>
           </div>
@@ -1079,25 +1079,26 @@ const handleStudentChange = (studentId: string) => {
   filteredStudents.value = [...studentList.value];
 };
 
-// 获取所有班级列表（不传入header参数）
-const fetchAllClasses = async () => {
+// 获取本校班级列表：必须按登录账号的学校过滤，否则会拿到别校班级
+const fetchAllClasses = async (schoolId: string) => {
   try {
-    // 不传入header参数获取全部班级
-    const res = await getClassesApi({});
+    const res = await getClassesApi({ school_id: schoolId });
     if (res.code === 200 && res.data.length > 0) {
-      allClassList.value = res.data;
-      filteredClassList.value = [...allClassList.value];
-      return res.data;
+      // 服务端已按学校过滤，这里再挡一层，避免历史接口行为回归时再串校
+      const ownClasses = res.data.filter((cls: any) => String(cls.school_id) === schoolId);
+      allClassList.value = ownClasses;
+      filteredClassList.value = [...ownClasses];
+      return ownClasses;
     }
   } catch (err) {
-    console.error('获取所有班级列表失败:', err);
+    console.error('获取本校班级列表失败:', err);
     message.error('获取班级列表失败');
   }
   return [];
 };
 
 // 获取教师自己的班级
-const fetchTeacherClasses = async (teacherId: number) => {
+const fetchTeacherClasses = async (teacherId: string) => {
   try {
     const res = await getClassesApi({ header: teacherId });
     if (res.code === 200 && res.data.length > 0) {
@@ -1110,13 +1111,20 @@ const fetchTeacherClasses = async (teacherId: number) => {
 };
 
 onMounted(async () => {
-  teacherId.value = user.getUserInfo().role;
-  
+  const userInfo = user.getUserInfo();
+  teacherId.value = userInfo.role;
+  const schoolId = String(userInfo.school_id || (userInfo.teacher as any)?.school_id || '');
+  if (!schoolId) {
+    message.error('登录信息缺少学校，请重新扫码登录');
+    loadingPassLine.value = false;
+    return;
+  }
+
   try {
-    // 先获取所有班级
-    const allClasses = await fetchAllClasses();
+    // 先获取本校班级（跨校班级里没有本校成绩，会表现为整页空白）
+    const allClasses = await fetchAllClasses(schoolId);
     if (allClasses.length === 0) {
-      message.error('未查询到任何班级信息');
+      message.error('本校还没有班级数据，请先在后台导入班级');
       loadingPassLine.value = false;
       return;
     }
@@ -1124,7 +1132,7 @@ onMounted(async () => {
     // 获取教师自己的班级
     let teacherClasses = [];
     if (teacherId.value) {
-      teacherClasses = await fetchTeacherClasses(teacherId.value);
+      teacherClasses = await fetchTeacherClasses(String(teacherId.value));
     }
 
     // 默认选择教师的第一个班级，如果没有则选择所有班级中的第一个
@@ -1170,7 +1178,7 @@ onMounted(async () => {
         await applyFilters();
         console.log('[onMounted] applyFilters 完成');
       } else {
-        message.warning(examRes.msg || '获取考试列表失败');
+        message.warning('该班级暂无可查询的考试成绩');
         loadingPassLine.value = false;
       }
 

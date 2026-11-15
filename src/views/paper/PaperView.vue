@@ -132,10 +132,6 @@ type PaperItem = {
   name: string;
   subject?: string;
   file_path?: string;
-  pdf_file_path?: string;
-  word_file_path?: string;
-  doc_file_path?: string;
-  document_file_path?: string;
   create_time?: string;
   [key: string]: any;
 };
@@ -267,15 +263,8 @@ const pagination = reactive({
   total: 0,
 });
 const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
-const getPaperFilePath = (paper: PaperItem) =>
-  String(
-    paper.pdf_file_path ||
-      paper.word_file_path ||
-      paper.doc_file_path ||
-      paper.document_file_path ||
-      paper.file_path ||
-      ""
-  ).trim();
+// 只下载平台整理好的 xlsx 试卷表；上传的 PDF/Word 原卷仅供解析，不对外提供。
+const getPaperFilePath = (paper: PaperItem) => String(paper.file_path || "").trim();
 const getPaperDownloadName = (paper: PaperItem, path: string) => {
   const rawName = (path.split(/[\\/]/).pop() || "").split("?")[0].trim();
   let fileName = rawName;

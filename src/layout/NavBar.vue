@@ -24,10 +24,12 @@ import {
   ReadOutlined,
   MessageOutlined,
   SecurityScanOutlined,
+  SwapOutlined,
   ThunderboltOutlined,
   UsergroupAddOutlined,
   UserOutlined,
 } from "@ant-design/icons-vue";
+import { message } from "ant-design-vue";
 import router from "@/router";
 import { useLogout } from "@/composables/useLogout";
 import { useUserStore } from "@/store";
@@ -45,8 +47,8 @@ const items = computed<MenuProps["items"]>(() => {
   if (isAuthPage) return [];
 
   const user = userStore.getUserInfo();
-  // 检查是否有有效的用户身份（student 或 teacher 字段）
-  if (!user || (!user.student && !user.teacher)) {
+  // 检查是否有有效的用户身份（student / teacher / 管理员）
+  if (!user || (!user.student && !user.teacher && user.role_type !== "admin")) {
     router.push("/user/login");
     return [];
   }
@@ -83,6 +85,16 @@ const items = computed<MenuProps["items"]>(() => {
     );
   }
 
+  // 管理员（含以学生/老师身份进入的会话）可随时回到身份选择页
+  if (localStorage.getItem("admin_token")) {
+    menuItems.push({
+      key: "admin_switch",
+      icon: () => h(SwapOutlined),
+      label: "切换身份",
+      title: "切换身份",
+    });
+  }
+
   menuItems.push(
     { key: "feedback", icon: () => h(MessageOutlined), label: "意见反馈", title: "意见反馈" },
     {
@@ -100,6 +112,25 @@ const items = computed<MenuProps["items"]>(() => {
 const handleClick = (event: any) => {
   if (event.key === "logout") {
     logout();
+    return;
+  }
+  if (event.key === "admin_switch") {
+    const adminToken = localStorage.getItem("admin_token");
+    const adminUser = localStorage.getItem("admin_user");
+    if (!adminToken || !adminUser) {
+      message.error("管理员身份已失效，请重新登录");
+      router.replace("/user/admin-login");
+      return;
+    }
+    localStorage.setItem("token", adminToken);
+    try {
+      userStore.setUserInfo(JSON.parse(adminUser));
+    } catch (_error) {
+      router.replace("/user/admin-login");
+      return;
+    }
+    router.replace("/admin/entry");
+    current.value = ["admin_switch"];
     return;
   }
   router.replace("/" + event.key);

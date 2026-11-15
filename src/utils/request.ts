@@ -48,9 +48,16 @@ request.interceptors.response.use(async (response) => {
         message.error('认证失败，重新登录');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        // 管理员相关会话失效时回管理员登录页，不要落到学生/老师的扫码登录。
+        const isAdminSession =
+          currentPath.startsWith('/admin') || Boolean(localStorage.getItem('admin_token'));
+        if (isAdminSession) {
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin_user');
+        }
         message.info('正在跳转到登录页面...');
         setTimeout(() => {
-          router.push('/user/login');
+          router.push(isAdminSession ? '/user/admin-login' : '/user/login');
         }, 1000);
       }
       break;
