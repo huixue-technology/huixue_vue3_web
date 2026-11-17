@@ -112,6 +112,14 @@ const html = computed(() => renderRichText(props.content));
     max-width: 100%;
   }
 
+  // 历史落库的公式图缺 width/height：PNG 是 Word 显示尺寸的数倍渲染图，
+  // 不兜底会按自然尺寸撑爆行高；按正文字号约束成行内公式高度
+  :deep(img[alt="公式"]:not([width]):not([height])) {
+    height: 2em;
+    width: auto;
+    vertical-align: -0.45em;
+  }
+
   // 语文标注：Word 的波浪线/双线/点线/虚线要按原样画出来
   :deep(u.wavy) {
     text-decoration: underline wavy;

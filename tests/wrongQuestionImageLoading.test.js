@@ -33,4 +33,6 @@ for (const filePath of componentPaths) {
 const renderer = readFileSync(join(rootDir, "src/components/MarkdownContent.vue"), "utf8");
 assertIncludes(renderer, 'image.setAttribute("loading", "lazy")', "MarkdownContent.vue");
 assertIncludes(renderer, 'image.setAttribute("decoding", "async")', "MarkdownContent.vue");
+// 无尺寸公式图兜底高度（历史落库数据缺 width/height）
+assertIncludes(renderer, ':deep(img[alt="公式"]:not([width]):not([height]))', "MarkdownContent.vue");
 console.log("wrongQuestionImageLoading ok");
