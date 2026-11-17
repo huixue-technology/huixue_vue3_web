@@ -32,6 +32,7 @@ import {
 import { message } from "ant-design-vue";
 import router from "@/router";
 import { useLogout } from "@/composables/useLogout";
+import { menuAllowed } from "@/utils/school";
 import { useUserStore } from "@/store";
 
 const current = ref<string[]>([window.location.hash.slice(1).replace(/^\//, "") || "grade"]);
@@ -106,7 +107,8 @@ const items = computed<MenuProps["items"]>(() => {
     },
     { key: "logout", icon: () => h(LogoutOutlined), label: "退出登录", title: "退出登录" }
   );
-  return menuItems;
+  // 多校：学校未启用的模块不出现在菜单里（含 "*" 或未配置时全放行）
+  return menuItems.filter((item) => !item?.key || menuAllowed(String(item.key)));
 });
 
 const handleClick = (event: any) => {

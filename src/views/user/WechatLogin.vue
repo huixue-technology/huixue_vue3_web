@@ -16,11 +16,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref } from "vue";
+import { onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { startQrLogin, QrLoginUser } from "@/utils/qrLogin";
 
 const props = defineProps<{
   onSuccess: (user: QrLoginUser, signal: AbortSignal) => Promise<void>;
+  /** 多校模式：登录码绑定到哪所学校（单校部署不传） */
+  school?: string;
 }>();
 const image = ref("");
 const error = ref("");
@@ -30,6 +32,7 @@ const refresh = () => {
   image.value = "";
   error.value = "";
   stop = startQrLogin("portal", {
+    school: props.school,
     onReady: (code) => {
       image.value = code.qr_image;
     },
@@ -41,6 +44,8 @@ const refresh = () => {
   });
 };
 onMounted(refresh);
+// 换学校后二维码要重新绑定到新学校
+watch(() => props.school, refresh);
 onBeforeUnmount(() => stop?.());
 </script>
 

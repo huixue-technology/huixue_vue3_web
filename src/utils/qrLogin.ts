@@ -24,6 +24,8 @@ interface Handlers {
   onReady: (code: { qr_image: string; expires_at: number }) => void;
   onSuccess: (user: QrLoginUser, signal: AbortSignal) => Promise<void>;
   onError: (message: string) => void;
+  /** 多校模式：登录码绑定到哪所学校（单校部署不传） */
+  school?: string;
 }
 
 // 浏览器 secret 只保存在本次扫码闭包内，不进入二维码、URL 或本地存储。
@@ -77,7 +79,10 @@ export function startQrLogin(
 
   const run = async () => {
     try {
-      const code = await post<QrCode>("/qr", { client });
+      const code = await post<QrCode>("/qr", {
+        client,
+        ...(handlers.school ? { school: handlers.school } : {}),
+      });
       if (stopped) return;
       if (
         !/^[A-Za-z0-9_-]{22,32}$/.test(code.ticket) ||

@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from "vue-router";
+import { routeAllowed } from "@/utils/school";
 import common from "./common";
 import modules from "./modules";
 
@@ -59,6 +60,12 @@ router.beforeEach((to, _from, next) => {
 
     if (studentOnlyRoutes.includes(to.path) && isTeacher) {
       next("/wrong_question");
+      return;
+    }
+
+    // 多校：学校未启用的模块路由不可直接进入（个人中心等常驻路由不在闸门内）
+    if (!routeAllowed(to.path)) {
+      next("/user/my-info");
       return;
     }
 

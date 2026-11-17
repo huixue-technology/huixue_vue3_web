@@ -64,6 +64,7 @@ import { getSchoolApi } from '@/servers/api/school';
 import { getClassesApi } from '@/servers/api/classes';
 import { getStudentApi } from '@/servers/api/student';
 import { postAdminImpersonate } from '@/servers/api/adminAuth';
+import { loadSchoolConfig } from '@/utils/school';
 
 const userStore = useUserStore();
 
@@ -182,6 +183,8 @@ const enter = async () => {
     const user = { ...res.data, token: res.data.token };
     localStorage.setItem('token', user.token);
     userStore.setUserInfo(user);
+    // 多校：被代进入的会话同样按学校模块收口
+    await loadSchoolConfig(user.token);
     await router.replace(target.value === 'student' ? '/grade' : '/class_grade');
   } catch (error) {
     message.error(error instanceof Error ? error.message : '进入失败，请稍后重试');
