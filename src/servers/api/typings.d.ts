@@ -1664,9 +1664,7 @@ declare namespace API {
     grade?: string;
     /** 题干（Markdown + LaTeX），配图使用 /api/tp/file?path=... 图片引用 */
     content?: string;
-    /** 题目答案，支持 Markdown */
-    quick_answer?: string;
-    /** 题目解析，支持 Markdown */
+    /** 题目解析（含答案），支持 Markdown */
     answer?: string;
     /** 正确率 */
     correct_rate?: number;
@@ -1715,8 +1713,6 @@ declare namespace API {
     question_ids: number[];
     /** 学生 student_id */
     student_id?: string;
-    /** 是否包含答案 */
-    is_need_answer?: boolean;
     /** 是否包含解析 */
     is_need_analysis?: boolean;
   };

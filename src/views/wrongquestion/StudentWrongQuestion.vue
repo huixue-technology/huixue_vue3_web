@@ -141,16 +141,6 @@
                 <a-empty v-else description="暂无解析" />
               </div>
             </div>
-            <div v-if="!record.sub_questions?.length" class="answer-row">
-              <div class="box-title">答案</div>
-              <MarkdownContent
-                v-if="record.quick_answer"
-                :content="record.quick_answer"
-                :resolve-image-url="displayImageUrl"
-                preview
-              />
-              <a-empty v-else description="暂无答案" />
-            </div>
           </article>
         </div>
       </a-spin>
@@ -199,7 +189,6 @@ type WrongQuestionRecord = {
   question_number?: string;
   is_context?: boolean;
   sub_questions?: WrongQuestionRecord[];
-  quick_answer?: string;
   subject?: string;
   question_type?: string;
   keywords?: string[] | string;
@@ -650,8 +639,6 @@ onMounted(async () => {
 }
 
 .media-box,
-.analysis-box,
-.answer-row,
 .analysis-box {
   min-width: 0;
   border: 1px solid #e4ebf3;

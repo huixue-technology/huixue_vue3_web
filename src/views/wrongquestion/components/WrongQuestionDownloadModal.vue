@@ -14,8 +14,7 @@
         <a-checkbox-group v-model:value="form.includes">
           <a-row :gutter="[0, 8]">
             <a-col :span="8"><a-checkbox value="questionsId">题目</a-checkbox></a-col>
-            <a-col :span="8"><a-checkbox value="answer">答案</a-checkbox></a-col>
-            <a-col :span="8"><a-checkbox value="analysis">解析</a-checkbox></a-col>
+            <a-col :span="16"><a-checkbox value="analysis">解析（含答案）</a-checkbox></a-col>
           </a-row>
         </a-checkbox-group>
       </a-form-item>
@@ -53,7 +52,7 @@ const emit = defineEmits<{
 const downloading = ref(false);
 
 const form = reactive({
-  includes: ["questionsId", "answer", "analysis"] as string[],
+  includes: ["questionsId", "analysis"] as string[],
 });
 
 function numberId(value: unknown): number | undefined {
@@ -167,7 +166,6 @@ async function handleDownload() {
     const studentId = String(props.studentId ?? "").trim();
     const payload: API.WrongQuestionDownload = {
       question_ids: questionIds,
-      is_need_answer: form.includes.includes("answer"),
       is_need_analysis: form.includes.includes("analysis"),
     };
     if (studentId) payload.student_id = studentId;
