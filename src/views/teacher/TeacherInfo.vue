@@ -32,7 +32,7 @@ const loadFailed = ref(false);
 
 onMounted(async () => {
   try {
-    classes.value = await loadTeacherClasses(info);
+    classes.value = await loadTeacherClasses();
   } catch {
     loadFailed.value = true;
   } finally {

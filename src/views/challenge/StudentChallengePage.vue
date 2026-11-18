@@ -320,14 +320,12 @@ const init = async () => {
   try {
     loading.value = true;
     // 1. 获取当前学生班级列表（默认选中当前班级，不可改）
-    const classRes = await getClassesApi({ header: userInfo?.teacher?.uid });
-    if (classRes.code === 200 && classRes.data.length > 0) {
-      classList.value = classRes.data;
-      // 若未自动选中，默认选第一个
-      if (!selectedClassId.value && classList.value.length > 0) {
-        selectedClassId.value = classList.value[0].id;
-      }
-    }
+    const classId = Number(userInfo?.student?.class_id);
+    if (!classId) return;
+    const classRes = await getClassesApi({ id: classId });
+    if (classRes.code !== 200 || !classRes.data.length) return;
+    classList.value = classRes.data;
+    selectedClassId.value = classId;
 
     // 2. 获取考试列表（默认选中最新考试）
     const examRes = await getClassExam({ class_id: selectedClassId.value });

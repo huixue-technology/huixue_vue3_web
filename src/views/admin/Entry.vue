@@ -3,7 +3,7 @@
     <a-card class="entry-card" :bordered="false">
       <template #title>选择要进入的身份</template>
       <p class="tip">
-        管理员每次进入前台都需要选择一次：选学生则按该学生身份进入学生端，选班级则按该班老师身份进入老师端。
+        选择学生可进入学生端，选择班级可查看本校班级成绩。
       </p>
 
       <a-radio-group v-model:value="target" button-style="solid" class="target-switch">
@@ -65,6 +65,7 @@ import { getClassesApi } from '@/servers/api/classes';
 import { getStudentApi } from '@/servers/api/student';
 import { postAdminImpersonate } from '@/servers/api/adminAuth';
 import { loadSchoolConfig } from '@/utils/school';
+import { rememberTeacherClass } from '@/utils/teacherClasses';
 
 const userStore = useUserStore();
 
@@ -183,6 +184,7 @@ const enter = async () => {
     const user = { ...res.data, token: res.data.token };
     localStorage.setItem('token', user.token);
     userStore.setUserInfo(user);
+    if (target.value === 'teacher') rememberTeacherClass(user, classId.value);
     // 多校：被代进入的会话同样按学校模块收口
     await loadSchoolConfig(user.token);
     await router.replace(target.value === 'student' ? '/grade' : '/class_grade');

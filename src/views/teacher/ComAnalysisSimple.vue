@@ -71,7 +71,7 @@ const selectClass = async (id: number) => {
 const initClassInfo = async () => {
   try {
     const userInfo = userStore.getUserInfo();
-    classes.value = await loadTeacherClasses(userInfo);
+    classes.value = await loadTeacherClasses();
     const selected = preferredTeacherClass(userInfo, classes.value);
     if (selected) await selectClass(selected.id);
     else errorMessage.value = "暂无已绑定的班级，请联系管理员";

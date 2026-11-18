@@ -18,7 +18,7 @@
               show-search
               :filter-option="false"
               @search="handleClassSearch"
-              :disabled="isFiltering"
+              :disabled="loading || isFiltering"
               @change="handleClassChange"
             >
               <a-select-option
@@ -38,7 +38,7 @@
               v-model:value="selectedExamId" 
               placeholder="选择考试" 
               style="width: 100%"
-              :disabled="isFiltering || !selectedClassId"
+              :disabled="loading || isFiltering || !selectedClassId"
               @change="handleExamChange"
             >
               <a-select-option 
@@ -259,8 +259,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
-import { getClassesApi } from "@/servers/api/classes";
-import { preferredTeacherClass, rememberTeacherClass } from '@/utils/teacherClasses';
+import { loadTeacherClasses, preferredTeacherClass, rememberTeacherClass } from '@/utils/teacherClasses';
 import { useUserStore } from "@/store";
 import { getStudentApi } from "@/servers/api/student";
 import { class_info } from "@/views/teacher/types";
@@ -819,26 +818,25 @@ const handleClassChange = async (classId: number) => {
     };
   }
   
-  // 获取该班级的考试列表，但不自动加载数据
+  loading.value = true;
   try {
     const examRes = await getClassExam({ class_id: classId });
     if (examRes.code === 200 && examRes.data.length > 0) {
       // 考试列表按ID降序排序，最新考试（ID最大）排在前面
       classExamList.value = examRes.data.sort((a: any, b: any) => b.id - a.id);
       selectedExamId.value = classExamList.value[0].id;
+      await handleExamChange(selectedExamId.value);
     } else {
-      message.warning(examRes.msg || '该班级暂无考试数据');
+      message.warning(examRes.code === 200 ? '该班级暂无考试数据' : (examRes.msg || '获取班级考试信息失败'));
     }
-    
-    // 加载学生列表但不加载成绩数据
-    await fetchClassStudents();
-    // 加载年级考试列表
-    await fetchGradeExams(classId);
-	await fetchPassLine(selectedExamId.value)
-	await fetchPassLineList(selectedExamId.value)
+
+    await Promise.all([fetchClassStudents(), fetchGradeExams(classId)]);
   } catch (err) {
     console.error('获取班级考试列表失败:', err);
     message.error('获取班级考试信息失败');
+  } finally {
+    loading.value = false;
+    loadingPassLine.value = false;
   }
 };
 
@@ -1080,80 +1078,20 @@ const handleStudentChange = (studentId: string) => {
   filteredStudents.value = [...studentList.value];
 };
 
-// 获取本校班级列表：必须按登录账号的学校过滤，否则会拿到别校班级
-const fetchAllClasses = async (schoolId: string) => {
-  try {
-    const res = await getClassesApi({ school_id: schoolId });
-    if (res.code === 200 && res.data.length > 0) {
-      // 服务端已按学校过滤，这里再挡一层，避免历史接口行为回归时再串校
-      const ownClasses = res.data.filter((cls: any) => String(cls.school_id) === schoolId);
-      allClassList.value = ownClasses;
-      filteredClassList.value = [...ownClasses];
-      return ownClasses;
-    }
-  } catch (err) {
-    console.error('获取本校班级列表失败:', err);
-    message.error('获取班级列表失败');
-  }
-  return [];
-};
-
-// 获取教师自己的班级
 onMounted(async () => {
   const userInfo = user.getUserInfo();
-  const schoolId = String(userInfo.school_id || (userInfo.teacher as any)?.school_id || '');
-  if (!schoolId) {
-    message.error('登录信息缺少学校，请重新扫码登录');
-    loadingPassLine.value = false;
-    return;
-  }
-
   try {
-    // 先获取本校班级（跨校班级里没有本校成绩，会表现为整页空白）
-    const allClasses = await fetchAllClasses(schoolId);
-    if (allClasses.length === 0) {
-      message.warning('暂无已绑定的班级，请联系管理员');
+    allClassList.value = await loadTeacherClasses<ClassItem>();
+    filteredClassList.value = [...allClassList.value];
+    if (allClassList.value.length === 0) {
+      message.warning('暂无可查看的班级，请在后台个人设置选择班级');
       loadingPassLine.value = false;
       return;
     }
 
-    const defaultClass = preferredTeacherClass<ClassItem>(userInfo, allClasses);
+    const defaultClass = preferredTeacherClass(userInfo, allClassList.value);
     selectedClassId.value = defaultClass.id;
-    classInfo.value = { ...defaultClass, class_id: defaultClass.id };
-
-    // 加载班级考试列表
-    if (selectedClassId.value) {
-      console.log('[onMounted] 开始加载考试列表, classId:', selectedClassId.value);
-      const examRes = await getClassExam({ class_id: selectedClassId.value });
-      if (examRes.code === 200 && examRes.data.length > 0) {
-        // 考试列表按ID降序排序,最新考试(ID最大)排在前面
-        classExamList.value = examRes.data.sort((a: any, b: any) => b.id - a.id);
-        console.log('[onMounted] 考试列表加载成功:', classExamList.value.map(e => ({ id: e.id, name: e.name })));
-        
-        // 默认选择第一个考试(最新的考试)
-        selectedExamId.value = classExamList.value[0].id;
-        console.log('[onMounted] 设置 selectedExamId =', selectedExamId.value);
-        
-        // 等待下一个tick确保selectedExamId已更新
-        await new Promise(resolve => setTimeout(resolve, 0));
-        console.log('[onMounted] tick后 selectedExamId =', selectedExamId.value);
-        
-        // 初始加载时自动加载数据
-        console.log('[onMounted] 准备调用 applyFilters');
-        await applyFilters();
-        console.log('[onMounted] applyFilters 完成');
-      } else {
-        message.warning('该班级暂无可查询的考试成绩');
-        loadingPassLine.value = false;
-      }
-
-
-      // 加载年级考试列表
-      await fetchGradeExams(selectedClassId.value);
-    }
-
-    // 加载班级学生列表
-    await fetchClassStudents();
+    await handleClassChange(defaultClass.id);
     
   } catch (err) {
     message.error('初始化失败，请重试');

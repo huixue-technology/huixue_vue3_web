@@ -705,7 +705,7 @@ const init = async () => {
     }
     
     loading.value = true;
-    allClassList.value = await loadTeacherClasses<ClassInfo>(userInfo);
+    allClassList.value = await loadTeacherClasses<ClassInfo>();
     const selected = preferredTeacherClass(userInfo, allClassList.value);
     if (!selected) {
       message.warning('暂无已绑定的班级，请联系管理员');

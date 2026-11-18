@@ -511,7 +511,7 @@ const fetchClassList = async () => {
   loadingClasses.value = true;
   try {
     const userInfo = userStore.getUserInfo();
-    const classes = await loadTeacherClasses<{ id: number; name: string }>(userInfo);
+    const classes = await loadTeacherClasses<{ id: number; name: string }>();
     classOptions.value = classes.map(({ id, name }) => ({ label: name || `班级${id}`, value: id }));
     const selected = preferredTeacherClass(userInfo, classes);
     if (selected) {

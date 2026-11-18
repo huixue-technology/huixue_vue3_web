@@ -2,6 +2,10 @@
 /* eslint-disable */
 import request from "@/utils/request";
 
+export function getVisibleClassesApi() {
+  return request<any>("/api/classes/visible", { method: "GET" });
+}
+
 /** 查询班级列表，支持分页和条件过滤。 GET /api/classes/ */
 export async function getClassesApi(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

@@ -511,7 +511,7 @@ const batchComputeData = async () => {
 };
 
 const getClassList = async (userInfo: any) => {
-  const classes = await loadTeacherClasses<ClassInfo>(userInfo);
+  const classes = await loadTeacherClasses<ClassInfo>();
 
   if (classes.length > 0) {
     selectedClass.value = preferredTeacherClass(userInfo, classes).id;

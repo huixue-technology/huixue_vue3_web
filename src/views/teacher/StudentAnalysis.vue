@@ -1119,7 +1119,7 @@ const selectClass = async (id: number) => {
 onMounted(async () => {
   try {
     const userInfo = userStore.getUserInfo();
-    const classes = await loadTeacherClasses<ClassInfo>(userInfo);
+    const classes = await loadTeacherClasses<ClassInfo>();
     classOptions.value = classes.map(({ id, name }) => ({ value: id, label: name }));
     const selected = preferredTeacherClass(userInfo, classes);
     if (selected) await selectClass(selected.id);

@@ -683,7 +683,7 @@ const init = async () => {
     }
     loading.value = true;
 
-    const classes = await loadTeacherClasses<ClassInfo>(userInfo);
+    const classes = await loadTeacherClasses<ClassInfo>();
 
     if (classes.length > 0) {
       classList.value = classes;

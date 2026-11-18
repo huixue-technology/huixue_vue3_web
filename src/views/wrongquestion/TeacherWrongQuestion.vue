@@ -287,7 +287,6 @@
 import MarkdownContent from "@/components/MarkdownContent.vue";
 import { computed, onMounted, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
-import { getClassesApi } from "@/servers/api/classes";
 import { getSchoolApi, getWrongQuestionStatConfigApi, putWrongQuestionStatConfigApi } from "@/servers/api/school";
 import { getStudentApi } from "@/servers/api/student";
 import { getTestPaper as getTestPaperApi } from "@/servers/api/tp";
@@ -300,7 +299,7 @@ import { useWrongQuestionCart } from "@/composables/useWrongQuestionCart";
 import { apiErrorMessage } from "@/utils/apiError";
 import { flattenQuestionGroups } from "@/utils/wrongQuestion";
 import { useUserStore } from "@/store";
-import { preferredTeacherClass, rememberTeacherClass } from "@/utils/teacherClasses";
+import { loadTeacherClasses, preferredTeacherClass, rememberTeacherClass } from "@/utils/teacherClasses";
 import WrongQuestionCartDrawer from "./components/WrongQuestionCartDrawer.vue";
 
 type Option = { label: string; value: string | number };
@@ -546,11 +545,10 @@ const loadClasses = async () => {
   if (!text(filters.school_id)) return;
   optionLoading.value = true;
   try {
-    const res = await getClassesApi({ school_id: filters.school_id, page: 1, size: 1000 } as any);
-    const data = Array.isArray(res?.data) ? res.data : [];
+    const data = await loadTeacherClasses<{ id: number; name: string; grade: string }>();
     allClasses.value = data
-      .map((item: any) => {
-        const value = text(item.id || item.class_id);
+      .map((item) => {
+        const value = text(item.id);
         return {
           label: text(item.name) || `班级 ${value}`,
           value,
