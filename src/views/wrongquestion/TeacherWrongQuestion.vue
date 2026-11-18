@@ -300,6 +300,7 @@ import { useWrongQuestionCart } from "@/composables/useWrongQuestionCart";
 import { apiErrorMessage } from "@/utils/apiError";
 import { flattenQuestionGroups } from "@/utils/wrongQuestion";
 import { useUserStore } from "@/store";
+import { preferredTeacherClass, rememberTeacherClass } from "@/utils/teacherClasses";
 import WrongQuestionCartDrawer from "./components/WrongQuestionCartDrawer.vue";
 
 type Option = { label: string; value: string | number };
@@ -775,6 +776,7 @@ const handlePaperChange = async () => {
   await search(true);
 };
 const handleClassChange = async () => {
+  rememberTeacherClass(userStore.getUserInfo(), filters.class_id);
   filters.test_paper_id = undefined;
   filters.student_id = undefined;
   studentOptions.value = [];
@@ -958,6 +960,13 @@ onMounted(async () => {
   filters.school_id = getLocalSchoolId();
   if (filters.school_id) {
     await loadClasses();
+    const selected = preferredTeacherClass(userStore.getUserInfo(), classOptions.value.map(({ value }) => ({ id: value })));
+    if (selected) {
+      filters.class_id = selected.id;
+      await handleClassChange();
+    } else {
+      message.warning("暂无已绑定的班级，请联系管理员");
+    }
     await loadSchoolStatConfig(filters.school_id);
   }
   fetchCartCount();

@@ -67,7 +67,7 @@
             <a-col :span="12">
               <div class="info-item">
                 <span class="info-label">学校：</span>
-                <span class="info-value">{{ userData?.student?.school }}</span>
+                <span class="info-value">{{ schoolName || '—' }}</span>
               </div>
             </a-col>
             
@@ -155,7 +155,7 @@
               v-model:value="classId"
               style="width: 100%"
               placeholder="请选择班级"
-              :options="classList.map(cls => ({ label: `${cls.name} (${cls.school_name})`, value: cls.id }))"
+              :options="classList.map(cls => ({ label: cls.name, value: cls.id }))"
             >
             </a-select>
           </a-form-item>
@@ -165,7 +165,7 @@
             <a-descriptions size="small" :column="1">
               <a-descriptions-item label="学生姓名">{{ selectedStudent.name }}</a-descriptions-item>
               <!-- <a-descriptions-item label="考号">{{ selectedStudent.uid }}</a-descriptions-item> -->
-              <a-descriptions-item label="学校">{{ selectedStudent.school_name || selectedStudent.school }}</a-descriptions-item>
+              <a-descriptions-item label="学校">{{ selectedSchoolName || '—' }}</a-descriptions-item>
               <a-descriptions-item label="年级">{{ selectedStudent.grade }}</a-descriptions-item>
             </a-descriptions>
           </a-form-item>
@@ -181,13 +181,12 @@ import { Modal, message } from 'ant-design-vue';
 import { EditOutlined, SwapOutlined, UserAddOutlined } from '@ant-design/icons-vue';
 import { useUserStore } from '@/store';
 import { postWechatUnbindApi, putUserBindStatus, putUserDetailApi } from '@/servers/api/user';
-import { getSchoolApi } from '@/servers/api/school';
+import { useBusinessSchoolName } from '@/composables/useBusinessSchoolName';
 import { getClassesApi, getClassesDetailApi } from '@/servers/api/classes';
 import { getStudentApi } from '@/servers/api/student';
 import { useLogout } from '@/composables/useLogout';
 
 // 定义响应式变量
-const schoolList = ref<any[]>([]);
 const classList = ref<any[]>([]);
 const studentList = ref<any[]>([]);
 const open = ref<boolean>(false);
@@ -197,12 +196,14 @@ const name = ref('');
 const inputStuName = ref('');
 const classId = ref<number | undefined>(undefined);
 const selectedStudent = ref<any>(null);
+const selectedSchoolName = useBusinessSchoolName(() => selectedStudent.value?.school);
 const confirmLoading = ref<boolean>(false);
 const bindConfirmLoading = ref<boolean>(false);
 
 // 获取用户信息
 const userStore = useUserStore();
 const userData = userStore.userInfo;
+const schoolName = useBusinessSchoolName(() => userData?.student?.school);
 
 const showModifyModal = () => {
   open.value = true;
@@ -364,8 +365,7 @@ const getClassListByStudents = async (students: any[]) => {
       if (classInfo) {
         finalClassList.push({
           id: student.class_id,
-          name: classInfo.name,
-          school_name: student.school_name || student.school
+          name: classInfo.name
         });
       }
     });

@@ -302,6 +302,7 @@ import { postSimulateGrade } from '@/servers/api/analysis';
 import { getGradeApi } from '@/servers/api/grade';
 import { getStudentExamApi, getStudentApi } from '@/servers/api/student';
 import { getClassesApi } from '@/servers/api/classes';
+import { loadTeacherClasses, preferredTeacherClass, rememberTeacherClass } from '@/utils/teacherClasses';
 import { getTotalScore, getTotalClassRank, getTotalSchoolRank, getSubjectScore, getSubjectClassRank, getSubjectSchoolRank } from '@/utils/subjects';
 import { useUserStore } from '@/store/modules/user';
 import type { ColumnType } from 'ant-design-vue/es/table';
@@ -510,76 +511,14 @@ const fetchClassList = async () => {
   loadingClasses.value = true;
   try {
     const userInfo = userStore.getUserInfo();
-    console.log('开始查询老师班级, role:', userInfo.role);
-    
-    // 首先根据老师的工号(role)获取老师所在的班级
-    const teacherClassRes = await getClassesApi({ 
-      header: userInfo.role // 使用老师工号查询班级
-    });
-    
-    console.log('老师班级查询结果:', teacherClassRes);
-    
-    if (teacherClassRes.code === 200 && teacherClassRes.data && teacherClassRes.data.length > 0) {
-      const teacherClass = teacherClassRes.data[0];
-      const teacherClassId = teacherClass.id;
-      
-      // 获取班级ID的前两位作为年级标识
-      const gradePrefix = String(teacherClassId).slice(0, 2);
-      
-      console.log('老师班级ID:', teacherClassId, '年级前缀:', gradePrefix);
-      
-      // 根据年级前缀和学校ID获取同年级的所有班级
-      const allClassRes = await getClassesApi({ 
-        school_id: schoolId.value,
-        size: 1000 // 获取所有班级
-      });
-      
-      console.log('所有班级查询结果:', allClassRes);
-      
-      if (allClassRes.code === 200 && allClassRes.data) {
-        // 过滤出同年级的班级(班级ID前两位相同)
-        classOptions.value = allClassRes.data
-          .filter((item: any) => String(item.id).slice(0, 2) === gradePrefix)
-          .map((item: any) => ({
-            label: item.name || `班级${item.id}`,
-            value: item.id
-          }));
-
-        console.log('过滤后的班级列表:', classOptions.value);
-
-        if (classOptions.value.length === 0) {
-          message.warning('未找到同年级的班级');
-        } else {
-          // message.success(`成功加载 ${classOptions.value.length} 个班级`);
-          // 默认选中老师所在的班级（班主任班），并尝试加载该班学生
-          selectedClassId.value = Number(teacherClassId);
-          currentClassId.value = String(teacherClassId);
-          try {
-            await fetchStudentList(Number(teacherClassId));
-          } catch (e) {
-            console.error('加载班级学生列表失败:', e);
-          }
-        }
-      }
+    const classes = await loadTeacherClasses<{ id: number; name: string }>(userInfo);
+    classOptions.value = classes.map(({ id, name }) => ({ label: name || `班级${id}`, value: id }));
+    const selected = preferredTeacherClass(userInfo, classes);
+    if (selected) {
+      selectedClassId.value = selected.id;
+      await handleClassChange(selected.id);
     } else {
-      console.warn('未找到老师所属班级，尝试获取所有班级');
-      // 如果没有找到老师班级，则显示该学校所有班级
-      const res = await getClassesApi({ 
-        school_id: schoolId.value,
-        size: 1000
-      });
-      
-      console.log('所有班级查询结果(后备方案):', res);
-      
-      if (res.code === 200 && res.data) {
-        classOptions.value = res.data.map((item: any) => ({
-          label: item.name || `班级${item.id}`,
-          value: item.id
-        }));
-        console.log('班级列表(后备方案):', classOptions.value);
-      } else {
-        message.error('获取班级列表失败: ' + (res.msg || '未知错误'));
-      }
+      message.warning('暂无已绑定的班级，请联系管理员');
     }
   } catch (err) {
     message.error('获取班级列表失败');
@@ -660,6 +599,9 @@ const fetchExamList = async () => {
 
 // 处理班级选择变化
 const handleClassChange = async (classId: number) => {
+  rememberTeacherClass(userStore.getUserInfo(), classId);
+  currentClassId.value = String(classId);
+  subjectSelection.value = '';
   studentId.value = '';
   selectedExamId.value = undefined;
   examOptions.value = [];

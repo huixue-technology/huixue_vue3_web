@@ -112,6 +112,7 @@ import {
   getTeacherWrongQuestionSearch as searchTeacherWrongQuestionApi,
 } from "@/servers/api/wrongQuestion";
 import { useUserStore } from "@/store";
+import { preferredTeacherClass, rememberTeacherClass } from "@/utils/teacherClasses";
 import GaokaoDrawer from "@/views/gaokao/GaokaoDrawer.vue";
 import {
   buildPaperSemesterOptions,
@@ -919,17 +920,22 @@ watch(
     }
 
     const currentClass = String(teacherSelectedClassId.value ?? "");
+    const defaultClass = preferredTeacherClass(userInfo.value || {}, options.map(({ value }) => ({ id: value })));
     if (!options.some((item) => item.value === currentClass)) {
-      teacherSelectedClassId.value = options[0].value;
+      teacherSelectedClassId.value = defaultClass.id;
     }
     const searchClass = String(wrongQuestionSearchFilters.class_id ?? "");
     if (!options.some((item) => item.value === searchClass)) {
-      wrongQuestionSearchFilters.class_id = options[0].value;
+      wrongQuestionSearchFilters.class_id = defaultClass.id;
       wrongQuestionSearchFilters.student_id = undefined;
     }
   },
   { immediate: true }
 );
+
+watch(teacherSelectedClassId, (id) => {
+  if (isTeacher.value) rememberTeacherClass(userInfo.value || {}, id);
+});
 
 watch(
   teacherStudentOptions,

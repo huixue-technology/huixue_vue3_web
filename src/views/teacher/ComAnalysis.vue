@@ -318,7 +318,7 @@ import { getPassLine, getUpDownDetailAnalysis, getClassAnalysis } from '@/server
 import { getClassExam } from '@/servers/api/grade';
 import { getStudentApi } from '@/servers/api/student';
 import { useUserStore } from '@/store';
-import { getClassesApi } from '@/servers/api/classes';
+import { loadTeacherClasses, preferredTeacherClass, rememberTeacherClass } from '@/utils/teacherClasses';
 import { getClassQuestionStat } from '@/servers/api/wrongQuestion';
 import { getTestPaper } from '@/servers/api/tp';
 // 导入子组件
@@ -439,6 +439,7 @@ onMounted(async()=>{
 })
 
 watch(selectedClass, async () => {
+  rememberTeacherClass(userStore.getUserInfo(), selectedClass.value);
   if (selectedClass.value > 0) {
     // 切换班级时重置考试选择，让 fetchPassLineConfig / fetchExamList 重新设置默认值
     baseExamId.value = null;
@@ -510,31 +511,13 @@ const batchComputeData = async () => {
 };
 
 const getClassList = async (userInfo: any) => {
-  const teacherHeader = String(userInfo?.role || userInfo?.teacher?.uid || '').trim();
-
-  let classes: ClassInfo[] = [];
-
-  if (teacherHeader) {
-    const classRes = await getClassesApi({ header: teacherHeader });
-    if (classRes.code === 200 && classRes.data.length > 0) {
-      classes = classRes.data;
-    }
-  }
-
-  // 兼容未绑定班主任的老师账号：回退为本校班级（必须按学校过滤，跨校班级没有本校成绩）
-  if (classes.length === 0) {
-    const schoolId = String(userInfo?.school_id || userInfo?.teacher?.school_id || '');
-    const allClassRes = await getClassesApi({ school_id: schoolId });
-    if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
-      classes = allClassRes.data;
-    }
-  }
+  const classes = await loadTeacherClasses<ClassInfo>(userInfo);
 
   if (classes.length > 0) {
-    selectedClass.value = classes[0].id;
+    selectedClass.value = preferredTeacherClass(userInfo, classes).id;
     classList.value = classes;
   } else {
-    message.error('获取班级列表失败');
+    message.warning('暂无已绑定的班级，请联系管理员');
     selectedClass.value = 0;
     classList.value = [];
   }

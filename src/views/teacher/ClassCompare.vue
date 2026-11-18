@@ -45,6 +45,7 @@
               <span class="label">我的班级：</span>
               <a-select
                 v-model:value="selectedClass1"
+                @change="selectBaseClass"
                 placeholder="选择班级"
                 style="flex: 1;"
                 :disabled="loading"
@@ -258,7 +259,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import VChart from 'vue-echarts';
-import { getClassesApi } from '@/servers/api/classes';
+import { loadTeacherClasses, preferredTeacherClass, rememberTeacherClass } from '@/utils/teacherClasses';
 import { getClassExam } from '@/servers/api/grade';
 import { getClassCompare } from '@/servers/api/grade';
 import { useUserStore } from '@/store';
@@ -666,7 +667,33 @@ const isCompareBtnDisabled = computed(() => {
   );
 });
 
-// 初始化数据
+const selectBaseClass = async (id: number) => {
+  const row = allClassList.value.find((item) => item.id === id);
+  if (!row) return;
+  currentClass.value = row;
+  selectedClass1.value = id;
+  rememberTeacherClass(userStore.getUserInfo(), id);
+  const prefix = String(id).slice(0, 2);
+  classList.value = allClassList.value.filter((item) =>
+    item.id !== id && String(item.id).slice(0, 2) === prefix &&
+    (item.subject_selection || '') === (row.subject_selection || ''));
+  selectedClass2.value = classList.value[0]?.id;
+  comparisonData.value = null;
+  hasSearched.value = false;
+  selectedExamId.value = 0;
+  examList.value = [];
+  loading.value = true;
+  try {
+    const response = await getClassExam({ class_id: id });
+    examList.value = response.code === 200 && Array.isArray(response.data) ? response.data : [];
+    selectedExamId.value = examList.value[0]?.id || 0;
+  } catch {
+    message.error('获取考试列表失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
 const init = async () => {
   try {
     const userInfo = userStore.getUserInfo();
@@ -678,72 +705,14 @@ const init = async () => {
     }
     
     loading.value = true;
-    const schoolId = String(userInfo?.school_id || (userInfo?.teacher as any)?.school_id || '');
-    // 班级必须按本校获取，跨校班级没有本校成绩
-    const classRes = await getClassesApi({ school_id: schoolId });
-    
-    if (classRes.code === 200 && classRes.data.length > 0) {
-      allClassList.value = classRes.data;
-
-      if (allClassList.value.length === 0) {
-        message.warning('未找到可用班级');
-        loading.value = false;
-        return;
-      }
-
-      // header 可能是逗号分隔的多个班主任，必须拆开后匹配
-      const myClass = allClassList.value.find(cls =>
-        String(cls.header || '')
-          .split(',')
-          .map(item => item.trim())
-          .includes(teacherId)
-      );
-      if (!myClass) {
-        // 兼容非班主任教师：回退到全班级模式
-        currentClass.value = allClassList.value[0];
-        selectedClass1.value = currentClass.value.id;
-        classList.value = allClassList.value.filter(cls => cls.id !== currentClass.value.id);
-        if (classList.value.length > 0) {
-          selectedClass2.value = classList.value[0].id;
-        }
-        message.warning('未找到班主任绑定班级，已切换为全班级对比');
-      } else {
-        currentClass.value = myClass;
-        selectedClass1.value = myClass.id;
-        const myClassIdPrefix = myClass.id.toString().slice(0, 2); 
-        const myClassSubject = myClass.subject_selection || ''; 
-        classList.value = allClassList.value.filter(cls => {
-          const isNotMyClass = cls.id !== myClass.id;
-          const isSameIdPrefix = cls.id.toString().slice(0, 2) === myClassIdPrefix;
-          const isSameSubject = (cls.subject_selection || '') === myClassSubject;
-          return isNotMyClass && isSameIdPrefix && isSameSubject;
-        });
-        if (classList.value.length > 0) {
-          selectedClass2.value = classList.value[0].id;
-        } else {
-          selectedClass2.value = undefined;
-          message.warning(`暂无符合条件的挑战班级（需满足：ID前两位为"${myClassIdPrefix}"且科目选择为"${myClassSubject}"）`);
-        }
-      }
-    } else {
-      message.error(classRes.msg || '获取班级列表失败');
+    allClassList.value = await loadTeacherClasses<ClassInfo>(userInfo);
+    const selected = preferredTeacherClass(userInfo, allClassList.value);
+    if (!selected) {
+      message.warning('暂无已绑定的班级，请联系管理员');
+      return;
     }
-    if (currentClass.value.id) {
-      const examRes = await getClassExam({ class_id: currentClass.value.id });
-      if (examRes.code === 200 && examRes.data.length > 0) {
-        examList.value = examRes.data.map((exam: any) => ({
-          id: exam.id,
-          name: exam.name
-        }));
-        if (examList.value.length > 0) {
-          // selectedExamId.value = examList.value[examList.value.length - 1].id;
-          selectedExamId.value = examList.value[0].id;
-        }
-      } else {
-        message.warning(examRes.msg || '获取考试列表失败');
-      }
-    }
-    fetchComparisonData();
+    await selectBaseClass(selected.id);
+    if (!isCompareBtnDisabled.value) await fetchComparisonData();
   } catch (err) {
     message.error('初始化失败');
     console.error(err);

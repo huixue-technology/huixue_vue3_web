@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, onUnmounted } from "vue";
 import { class_info } from "@/views/teacher/types";
-import { getClassesApi } from "@/servers/api/classes";
+import { loadTeacherClasses, preferredTeacherClass, rememberTeacherClass } from '@/utils/teacherClasses';
 import { 
   message, 
   Card, 
@@ -33,6 +33,7 @@ import {
 // 状态管理
 const userStore = useUserStore();
 const classInfo = ref<class_info>();
+const classes = ref<(Omit<class_info, 'class_id'> & { id: number })[]>([]);
 const loading = ref(false);
 const computing = ref(false);
 const pollTimer = ref<number | null>(null);
@@ -54,61 +55,26 @@ const hasData = computed(() => {
   );
 });
 
-// 获取教师ID
-const getTeacherId = () => {
-  const userInfo = userStore.getUserInfo();
-  return String(userInfo?.role || userInfo?.teacher?.uid || '').trim();
-};
-
-// 获取登录账号所属学校ID，班级列表一律在本校范围内查询
-const getSchoolId = () => {
-  const userInfo = userStore.getUserInfo();
-  return String(userInfo?.school_id || (userInfo?.teacher as any)?.school_id || '');
+const selectClass = async (id: number) => {
+  const row = classes.value.find((item) => item.id === id);
+  if (!row) return;
+  rememberTeacherClass(userStore.getUserInfo(), id);
+  classInfo.value = { ...row, class_id: id };
+  topBottomStudents.value = [];
+  classAnalysisData.value = {};
+  studentGradesData.value = [];
+  passLineRateData.value = {};
+  await fetchClassAnalysisData();
 };
 
 // 初始化班级信息
 const initClassInfo = async () => {
   try {
-    const teacherId = getTeacherId();
-    if (!teacherId) {
-      message.error("未获取到教师信息");
-      errorMessage.value = "未获取到教师信息";
-      return;
-    }
-
-    let classData: any[] = [];
-    const classRes = await getClassesApi({ header: teacherId });
-    if (classRes.code === 200 && classRes.data.length > 0) {
-      classData = classRes.data;
-    }
-
-    // 兼容非班主任教师：回退为本校班级（必须按学校过滤，跨校班级没有本校成绩）
-    if (classData.length === 0) {
-      const allClassRes = await getClassesApi({ school_id: getSchoolId() });
-      if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
-        classData = allClassRes.data;
-      }
-      if (classData.length > 0) {
-        // 未绑定班主任的普通教师直接默认第一个班，不弹提示
-        console.warn("未找到班主任绑定班级，已切换为本校第一个班级");
-      }
-    }
-
-    if (classData.length > 0) {
-      classInfo.value = {
-        header: classData[0].header,
-        class_id: classData[0].id,
-        name: classData[0].name,
-        subject_selection: classData[0].subject_selection,
-        school_id: classData[0].school_id
-      };
-      // 获取班级数据分析
-      await fetchClassAnalysisData();
-    } else {
-      const errorMsg = classRes.msg || "未查询到班级信息";
-      message.error(errorMsg);
-      errorMessage.value = errorMsg;
-    }
+    const userInfo = userStore.getUserInfo();
+    classes.value = await loadTeacherClasses(userInfo);
+    const selected = preferredTeacherClass(userInfo, classes.value);
+    if (selected) await selectClass(selected.id);
+    else errorMessage.value = "暂无已绑定的班级，请联系管理员";
   } catch (err: any) {
     const errorMsg = "初始化失败: " + (err?.message || "未知错误");
     message.error(errorMsg);
@@ -346,6 +312,8 @@ onUnmounted(() => {
     <div class="header">
       <h2>{{ classInfo?.name }}班级成绩综合分析</h2>
       <div class="header-actions">
+        <a-select :value="classInfo?.class_id" :options="classes.map(row => ({ value: row.id, label: row.name }))"
+          :disabled="loading || computing" placeholder="请选择班级" style="min-width: 140px" @change="selectClass" />
         <a-button type="primary" @click="refreshData" :loading="loading" :disabled="computing">
           <template #icon>
             <RedoOutlined />

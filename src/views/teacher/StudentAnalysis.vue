@@ -8,6 +8,13 @@
     <!-- 筛选区域 -->
     <div class="filter-section">
       <a-row :gutter="16">
+        <a-col :xs="24" :sm="12" :md="6">
+          <div class="filter-item">
+            <span class="filter-label">选择班级：</span>
+            <a-select :value="classId || undefined" :options="classOptions" @change="selectClass"
+              :disabled="loading" placeholder="请选择班级" style="width: 100%" />
+          </div>
+        </a-col>
         <a-col :xs="24" :sm="12" :md="8">
           <div class="filter-item">
             <span class="filter-label">选择学生：</span>
@@ -353,7 +360,8 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useUserStore } from '@/store';
 import { message } from 'ant-design-vue';
 import { SearchOutlined, UserOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons-vue';
-import { getClassesApi, getClassesDetailApi } from '@/servers/api/classes';
+import { getClassesDetailApi } from '@/servers/api/classes';
+import { loadTeacherClasses, preferredTeacherClass, rememberTeacherClass } from '@/utils/teacherClasses';
 import { getStudentApi } from '@/servers/api/student';
 import { getClassExam } from '@/servers/api/grade';
 import { getGradeApi } from '@/servers/api/grade';
@@ -404,7 +412,7 @@ const allSubjectMap: Record<string, string> = {
 // 状态管理
 const userStore = useUserStore();
 const classId = ref<number>(0);
-const teacherId = ref<string>('');
+const classOptions = ref<{ value: number; label: string }[]>([]);
 const loading = ref(false);
 const searchKeyword = ref('');
 
@@ -1088,46 +1096,13 @@ watch([selectedExamId, selectedStudentId], async () => {
   }
 }, { immediate: true });
 
-// 初始化
-onMounted(async () => {
+const selectClass = async (id: number) => {
   try {
     loading.value = true;
-    const userInfo = userStore.getUserInfo();
-    const header = String(userInfo?.role || userInfo?.teacher?.uid || '').trim();
-    
-    if (!header) {
-      message.error('未获取到教师信息');
-      return;
-    }
-
-    let classes: ClassInfo[] = [];
-    const classRes = await getClassesApi({ header });
-    if (classRes.code === 200 && classRes.data.length > 0) {
-      classes = classRes.data;
-    }
-
-    // 兼容非班主任教师：回退为本校班级（必须按学校过滤，跨校班级没有本校成绩）
-    if (classes.length === 0) {
-      const schoolId = String(userInfo?.school_id || (userInfo?.teacher as any)?.school_id || '');
-      const allClassRes = await getClassesApi({ school_id: schoolId });
-      if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
-        classes = allClassRes.data;
-      }
-      if (classes.length > 0) {
-        // 未绑定班主任的普通教师直接默认第一个班，不弹提示
-        console.warn('未找到班主任绑定班级，已切换为本校第一个班级');
-      }
-    }
-
-    if (classes.length === 0) {
-      message.error('未查询到教师关联的班级信息');
-      return;
-    }
-
-    teacherId.value = String(classes[0].header || '');
-    classId.value = classes[0].id;
-    
-    // 获取班级详细信息(包含选科信息)
+    classId.value = id;
+    rememberTeacherClass(userStore.getUserInfo(), id);
+    selectedStudentId.value = '';
+    selectedComparedExamId.value = undefined;
     await fetchClassInfo(classId.value);
     
     await fetchExamList()
@@ -1138,6 +1113,19 @@ onMounted(async () => {
     console.error(err);
   } finally {
     loading.value = false;
+  }
+};
+
+onMounted(async () => {
+  try {
+    const userInfo = userStore.getUserInfo();
+    const classes = await loadTeacherClasses<ClassInfo>(userInfo);
+    classOptions.value = classes.map(({ id, name }) => ({ value: id, label: name }));
+    const selected = preferredTeacherClass(userInfo, classes);
+    if (selected) await selectClass(selected.id);
+    else message.warning('暂无已绑定的班级，请联系管理员');
+  } catch {
+    message.error('获取班级列表失败');
   }
 });
 

@@ -267,7 +267,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
-import { getClassesApi } from '@/servers/api/classes';
+import { loadTeacherClasses, preferredTeacherClass, rememberTeacherClass } from '@/utils/teacherClasses';
 import { getClassExam } from '@/servers/api/grade';
 import { getCompareWithStudent } from '@/servers/api/analysis';
 import { getStudentApi } from '@/servers/api/student';
@@ -509,6 +509,7 @@ const handleExamChange = (examId: number) => {
 
 const fetchStudentListAndExams = async () => {
   if (!selectedClassId.value) return;
+  rememberTeacherClass(userStore.getUserInfo(), selectedClassId.value);
   try {
     loading.value = true;
     const [studentRes, examRes] = await Promise.all([
@@ -652,7 +653,7 @@ const resetFilters = () => {
     selectedExamId.value = examList.value[0].id;
   }
   if (classList.value.length > 0) {
-    selectedClassId.value = classList.value[0].id;
+    selectedClassId.value = preferredTeacherClass(userStore.getUserInfo(), classList.value).id;
     fetchStudentListAndExams();
   }
   selectedStudent1.value = undefined;
@@ -682,31 +683,14 @@ const init = async () => {
     }
     loading.value = true;
 
-    let classes: ClassInfo[] = [];
-    const classRes = await getClassesApi({ header: teacherId });
-    if (classRes.code === 200 && classRes.data.length > 0) {
-      classes = classRes.data;
-    }
-
-    // 兼容非班主任教师：回退为本校班级（必须按学校过滤，跨校班级没有本校成绩）
-    if (classes.length === 0) {
-      const schoolId = String(userInfo?.school_id || (userInfo?.teacher as any)?.school_id || '');
-      const allClassRes = await getClassesApi({ school_id: schoolId });
-      if (allClassRes.code === 200 && Array.isArray(allClassRes.data)) {
-        classes = allClassRes.data;
-      }
-      if (classes.length > 0) {
-        // 未绑定班主任的普通教师直接默认第一个班，不弹提示
-        console.warn('未找到班主任绑定班级，已切换为本校第一个班级');
-      }
-    }
+    const classes = await loadTeacherClasses<ClassInfo>(userInfo);
 
     if (classes.length > 0) {
       classList.value = classes;
-      selectedClassId.value = classList.value[0].id;
+      selectedClassId.value = preferredTeacherClass(userInfo, classes).id;
       await fetchStudentListAndExams();
     } else {
-      message.warning(classRes.msg || '未找到可用班级');
+      message.warning('暂无已绑定的班级，请联系管理员');
     }
   } catch (err) {
     message.error('初始化失败');

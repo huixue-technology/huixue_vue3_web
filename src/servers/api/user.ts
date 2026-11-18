@@ -124,7 +124,7 @@ export async function postWechatUnbindApi(options?: { [key: string]: any }) {
 
 /** 教师注册：手机号 + 邀请码开通账号 POST /api/auth/teacher-register */
 export async function postTeacherRegisterApi(
-  body: { phone: string; invite_code: string },
+  body: { phone: string; invite_code: string; class_ids: number[]; school?: string },
   options?: { [key: string]: any }
 ) {
   return request<any>("/api/auth/teacher-register", {
@@ -134,5 +134,16 @@ export async function postTeacherRegisterApi(
     },
     data: body,
     ...(options || {}),
+  });
+}
+
+export function getTeacherRegistrationOptions(invite_code: string, school?: string) {
+  return request<{
+    code: number;
+    msg?: string;
+    data: { requires_class_selection: boolean; classes: { id: number; name: string; grade?: string }[] };
+  }>("/api/auth/teacher-register/options", {
+    method: "POST",
+    data: { invite_code, school },
   });
 }

@@ -260,6 +260,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
 import { getClassesApi } from "@/servers/api/classes";
+import { preferredTeacherClass, rememberTeacherClass } from '@/utils/teacherClasses';
 import { useUserStore } from "@/store";
 import { getStudentApi } from "@/servers/api/student";
 import { class_info } from "@/views/teacher/types";
@@ -320,7 +321,6 @@ const filteredClassList = ref<ClassItem[]>([]); // 筛选后的班级列表
 const classExamList = ref<any[]>([]);
 const selectedClassId = ref<number>(0); // 选中的班级ID
 const selectedExamId = ref<number>(0);
-const teacherId = ref<number>(0);
 const scoreList = ref<ScoreItem[]>([]);
 const rawScoreList = ref<ScoreItem[]>([]); // 保存原始成绩数据
 const loading = ref(false);
@@ -794,6 +794,7 @@ const resetAllFiltersExceptClass = () => {
 
 // 班级选择变更处理
 const handleClassChange = async (classId: number) => {
+  rememberTeacherClass(user.getUserInfo(), classId);
   if (!classId) return;
   
   // 重置所有筛选条件（除班级外）
@@ -1098,21 +1099,8 @@ const fetchAllClasses = async (schoolId: string) => {
 };
 
 // 获取教师自己的班级
-const fetchTeacherClasses = async (teacherId: string) => {
-  try {
-    const res = await getClassesApi({ header: teacherId });
-    if (res.code === 200 && res.data.length > 0) {
-      return res.data;
-    }
-  } catch (err) {
-    console.error('获取教师班级列表失败:', err);
-  }
-  return [];
-};
-
 onMounted(async () => {
   const userInfo = user.getUserInfo();
-  teacherId.value = userInfo.role;
   const schoolId = String(userInfo.school_id || (userInfo.teacher as any)?.school_id || '');
   if (!schoolId) {
     message.error('登录信息缺少学校，请重新扫码登录');
@@ -1124,37 +1112,14 @@ onMounted(async () => {
     // 先获取本校班级（跨校班级里没有本校成绩，会表现为整页空白）
     const allClasses = await fetchAllClasses(schoolId);
     if (allClasses.length === 0) {
-      message.error('本校还没有班级数据，请先在后台导入班级');
+      message.warning('暂无已绑定的班级，请联系管理员');
       loadingPassLine.value = false;
       return;
     }
 
-    // 获取教师自己的班级
-    let teacherClasses = [];
-    if (teacherId.value) {
-      teacherClasses = await fetchTeacherClasses(String(teacherId.value));
-    }
-
-    // 默认选择教师的第一个班级，如果没有则选择所有班级中的第一个
-    if (teacherClasses.length > 0) {
-      selectedClassId.value = teacherClasses[0].id;
-      classInfo.value = {
-        header: teacherClasses[0].header,
-        class_id: teacherClasses[0].id,
-        name: teacherClasses[0].name,
-        subject_selection: teacherClasses[0].subject_selection,
-        school_id: teacherClasses[0].school_id
-      };
-    } else if (allClasses.length > 0) {
-      selectedClassId.value = allClasses[0].id;
-      classInfo.value = {
-        header: allClasses[0].header,
-        class_id: allClasses[0].id,
-        name: allClasses[0].name,
-        subject_selection: allClasses[0].subject_selection,
-        school_id: allClasses[0].school_id
-      };
-    }
+    const defaultClass = preferredTeacherClass<ClassItem>(userInfo, allClasses);
+    selectedClassId.value = defaultClass.id;
+    classInfo.value = { ...defaultClass, class_id: defaultClass.id };
 
     // 加载班级考试列表
     if (selectedClassId.value) {
