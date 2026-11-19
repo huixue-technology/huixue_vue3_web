@@ -59,7 +59,7 @@
         <template #title>
           <div class="list-title">
             <span>试卷列表</span>
-            <small>点击操作栏可下载试卷文件</small>
+            <small>点击操作栏可下载原卷文档</small>
           </div>
         </template>
 
@@ -74,7 +74,7 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'action'">
               <a-button type="link" class="download-link" @click.stop="downloadPaperFile(record)">
-                查看/下载
+                下载原卷
               </a-button>
             </template>
           </template>
@@ -99,6 +99,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
+import { downloadOriginalPaper } from "./paperDownload";
 import router from "@/router";
 import {
   getStudentTestPaper,
@@ -132,7 +133,7 @@ type PaperItem = {
   semester?: string;
   name: string;
   subject?: string;
-  file_path?: string;
+  pdf_file_path?: string | null;
   create_time?: string;
   [key: string]: any;
 };
@@ -263,19 +264,6 @@ const pagination = reactive({
   size: 20,
   total: 0,
 });
-const getTestPaperFileUrl = (path: string) => `/api/tp/file?path=${encodeURIComponent(path || "")}`;
-// 只下载平台整理好的 xlsx 试卷表；上传的 PDF/Word 原卷仅供解析，不对外提供。
-const getPaperFilePath = (paper: PaperItem) => String(paper.file_path || "").trim();
-const getPaperDownloadName = (paper: PaperItem, path: string) => {
-  const rawName = (path.split(/[\\/]/).pop() || "").split("?")[0].trim();
-  let fileName = rawName;
-  try {
-    fileName = decodeURIComponent(rawName);
-  } catch (_error) {
-    fileName = rawName;
-  }
-  return fileName || paper.name || `试卷${paper.id}`;
-};
 const getStudentTestPaperApi = (student_uid: string, params: Record<string, any>) =>
   getStudentTestPaper({ student_uid, ...params });
 const getTestPaperQuestionsApi = (test_paper_id: number) =>
@@ -1124,18 +1112,9 @@ const rowClassName = (record: PaperItem) => {
 };
 
 const downloadPaperFile = (paper: PaperItem) => {
-  const filePath = getPaperFilePath(paper);
-  if (!filePath) {
-    message.warning("该试卷暂无可下载文件");
-    return;
+  if (!downloadOriginalPaper(paper)) {
+    message.warning("该试卷尚未上传原卷文档");
   }
-  const link = document.createElement("a");
-  link.href = getTestPaperFileUrl(filePath);
-  link.download = getPaperDownloadName(paper, filePath);
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 };
 
 const handlePageChange = async (page: number) => {

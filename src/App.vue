@@ -13,10 +13,16 @@
 
 <script setup lang="ts">
 import NavBar from '@/layout/NavBar.vue';
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
+
+const syncLogin = (event: StorageEvent) => {
+  if (event.key === 'token' && event.newValue !== event.oldValue) window.location.reload();
+};
+onMounted(() => window.addEventListener('storage', syncLogin));
+onUnmounted(() => window.removeEventListener('storage', syncLogin));
 
 const showNavBar = computed(() => {
   const hideNavRoutes = ['/user/login', '/user/admin-login', '/user/register', '/user/teacher-register'];

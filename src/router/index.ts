@@ -1,5 +1,7 @@
 import { createRouter, createWebHashHistory } from "vue-router";
-import { routeAllowed } from "@/utils/school";
+import { loadSchoolConfig, routeAllowed } from "@/utils/school";
+import { useUserStore } from "@/store/modules/user";
+import { getCurrentUser } from "@/servers/api/user";
 import common from "./common";
 import modules from "./modules";
 
@@ -25,21 +27,34 @@ const whiteList = [
 const teacherOnlyRoutes = ["/teacher_info", "/student_analysis", "/student_compare", "/wrong_question"];
 const studentOnlyRoutes = ["/student_wrong_question"];
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   if (whiteList.includes(to.path)) {
     next();
     return;
   }
 
-  const userStr = localStorage.getItem("user");
-  if (!userStr) {
+  const token = localStorage.getItem("token");
+  if (!token) {
     next("/user/login");
     return;
   }
 
   try {
-    const user = JSON.parse(userStr);
-    const isTeacher = user.teacher !== undefined;
+    const store = useUserStore();
+    let user = JSON.parse(localStorage.getItem("user") || "null");
+    if (user?.token !== token) {
+      const response = await getCurrentUser({ headers: { Authorization: `Bearer ${token}` } });
+      if (response?.code !== 200 || !response.data || localStorage.getItem("token") !== token) {
+        next("/user/login");
+        return;
+      }
+      user = { ...response.data, token };
+      store.setUserInfo(user);
+      await loadSchoolConfig(token);
+    } else if (store.userInfo.token !== token) {
+      store.setUserInfo(user);
+    }
+    const isTeacher = user.role_type === "teacher";
 
     // 身份选择页：管理员本人，或已保留管理员凭证的代进入会话，才能回到这里。
     if (to.path === "/admin/entry") {

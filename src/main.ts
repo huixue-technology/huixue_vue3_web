@@ -3,7 +3,6 @@ import Antd from 'ant-design-vue';
 import App from './App.vue'
 import router from './router'
 import 'ant-design-vue/dist/reset.css';
-import { initStore } from './store';
 import { createPinia } from 'pinia'
 
 
@@ -21,17 +20,6 @@ const pinia = createPinia()
 const app = createApp(App)
 app.use(pinia)
 app.component('e-charts', Echarts)
-
-// 检查当前路由是否为登录或注册页面
-const isAuthPage = () => {
-  const path = window.location.hash.slice(1); // 获取hash路由路径
-  return path.startsWith('/user/login') || path.startsWith('/user/admin-login') || path.startsWith('/user/register') || path.startsWith('/user/teacher-register');
-};
-
-// 只有在非登录/注册页面才初始化store
-if (!isAuthPage()) {
-  initStore();
-}
 
 // 全局挂载echarts
 app.config.globalProperties.$echarts = echarts
