@@ -1084,7 +1084,7 @@ onMounted(async () => {
     allClassList.value = await loadTeacherClasses<ClassItem>();
     filteredClassList.value = [...allClassList.value];
     if (allClassList.value.length === 0) {
-      message.warning('暂无可查看的班级，请在后台个人设置选择班级');
+      message.warning('本校暂无班级');
       loadingPassLine.value = false;
       return;
     }

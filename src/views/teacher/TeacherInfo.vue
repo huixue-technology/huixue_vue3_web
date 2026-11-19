@@ -32,7 +32,8 @@ const loadFailed = ref(false);
 
 onMounted(async () => {
   try {
-    classes.value = await loadTeacherClasses();
+    const schoolClasses = await loadTeacherClasses<{ id: number; name: string }>();
+    classes.value = schoolClasses.filter((row) => row.is_bound);
   } catch {
     loadFailed.value = true;
   } finally {

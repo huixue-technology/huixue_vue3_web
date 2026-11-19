@@ -10,6 +10,23 @@ const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind
 const ticket = 'aaaaaaaaaaaaaaaaaaaaaa';
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
+test('成绩页优先使用绑定班级，仍可选其他班级，无绑定时使用上次选择', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../src/utils/teacherClasses.ts'), 'utf8');
+  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  let stored = '11';
+  const module = { exports: {} };
+  vm.runInNewContext(code, {
+    module, exports: module.exports, require: () => ({}),
+    localStorage: { getItem: () => stored },
+  });
+  const { preferredTeacherClass } = module.exports;
+  const classes = [{ id: 11, is_bound: false }, { id: 12, is_bound: true }, { id: 13, is_bound: true }];
+  assert.equal(preferredTeacherClass({ role: 'T' }, classes).id, 12);
+  stored = '13';
+  assert.equal(preferredTeacherClass({ role: 'T' }, classes).id, 13);
+  assert.equal(preferredTeacherClass({ role: 'T' }, [{ id: 11 }, { id: 13 }]).id, 13);
+});
+
 function setup(client = 'portal', onSuccess) {
   const calls = [];
   const timers = new Map();
