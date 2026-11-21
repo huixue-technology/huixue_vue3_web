@@ -59,7 +59,7 @@
         <template #title>
           <div class="list-title">
             <span>试卷列表</span>
-            <small>点击操作栏可下载原卷文档</small>
+            <small>点击操作栏可下载原卷和解析文档</small>
           </div>
         </template>
 
@@ -75,6 +75,14 @@
             <template v-if="column.key === 'action'">
               <a-button type="link" class="download-link" @click.stop="downloadPaperFile(record)">
                 下载原卷
+              </a-button>
+              <a-button
+                v-if="record.pdf_answer_file_path"
+                type="link"
+                class="download-link"
+                @click.stop="downloadPaperAnalysis(record)"
+              >
+                下载解析
               </a-button>
             </template>
           </template>
@@ -99,7 +107,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
-import { downloadOriginalPaper } from "./paperDownload";
+import { downloadOriginalPaper, downloadPaperAnalysis } from "./paperDownload";
 import router from "@/router";
 import {
   getStudentTestPaper,
@@ -134,6 +142,7 @@ type PaperItem = {
   name: string;
   subject?: string;
   pdf_file_path?: string | null;
+  pdf_answer_file_path?: string | null;
   create_time?: string;
   [key: string]: any;
 };

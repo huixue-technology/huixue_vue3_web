@@ -66,7 +66,12 @@
               </div>
               <div class="paper-footer">
                 <span>{{ paper.create_time || "-" }}</span>
-                <a-button type="primary" size="small" @click="downloadPaperFile(paper)">下载原卷</a-button>
+                <a-space wrap>
+                  <a-button type="primary" size="small" @click="downloadPaperFile(paper)">下载原卷</a-button>
+                  <a-button v-if="paper.pdf_answer_file_path" size="small" @click="downloadPaperAnalysis(paper)">
+                    下载解析
+                  </a-button>
+                </a-space>
               </div>
             </article>
           </div>
@@ -91,7 +96,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
-import { downloadOriginalPaper } from "./paperDownload";
+import { downloadOriginalPaper, downloadPaperAnalysis } from "./paperDownload";
 import {
   getStudentTestPaper,
   getTestPaperQuestion,
@@ -111,6 +116,7 @@ type PaperItem = {
   name: string;
   subject?: string;
   pdf_file_path?: string | null;
+  pdf_answer_file_path?: string | null;
   create_time?: string;
   [key: string]: any;
 };

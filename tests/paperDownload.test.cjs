@@ -19,7 +19,7 @@ function setup() {
     body: { appendChild() {} },
   };
   vm.runInNewContext(outputText, { module, exports: module.exports, document });
-  return { download: module.exports.downloadOriginalPaper, downloads };
+  return { download: module.exports.downloadOriginalPaper, downloadAnalysis: module.exports.downloadPaperAnalysis, downloads };
 }
 
 test('下载原卷 Word 文档，保留文件名和扩展名', () => {
@@ -39,4 +39,12 @@ test('没有原卷时不下载 Excel 或解析文档', () => {
   const { download, downloads } = setup();
   assert.equal(download({ pdf_file_path: '  ', file_path: '题目.xlsx', pdf_answer_file_path: '解析.docx' }), false);
   assert.deepEqual(downloads, []);
+});
+
+test('下载解析时使用独立的解析 Word 文件', () => {
+  const { downloadAnalysis, downloads } = setup();
+  const analysis = 'uploads/%E8%A7%A3%E6%9E%90.docx';
+  assert.equal(downloadAnalysis({ pdf_file_path: '原卷.docx', pdf_answer_file_path: analysis }), true);
+  assert.equal(downloadAnalysis({ pdf_file_path: '原卷.docx' }), false);
+  assert.deepEqual(downloads, [[`/api/tp/file?path=${encodeURIComponent(analysis)}`, '解析.docx']]);
 });

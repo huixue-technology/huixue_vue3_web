@@ -1,6 +1,5 @@
-export const downloadOriginalPaper = (paper: { pdf_file_path?: string | null }): boolean => {
-  // 历史字段名包含 pdf，实际保存原卷的 Word 或 PDF 文件。
-  const filePath = paper.pdf_file_path?.trim();
+const downloadPaperDocument = (path?: string | null): boolean => {
+  const filePath = path?.trim();
   if (!filePath) return false;
 
   const rawName = filePath.split(/[?#]/, 1)[0].split(/[\\/]/).pop() || "试卷";
@@ -20,3 +19,10 @@ export const downloadOriginalPaper = (paper: { pdf_file_path?: string | null }):
   link.remove();
   return true;
 };
+
+// 历史字段名包含 pdf，实际可能保存 Word 或 PDF 文件。
+export const downloadOriginalPaper = (paper: { pdf_file_path?: string | null }): boolean =>
+  downloadPaperDocument(paper.pdf_file_path);
+
+export const downloadPaperAnalysis = (paper: { pdf_answer_file_path?: string | null }): boolean =>
+  downloadPaperDocument(paper.pdf_answer_file_path);

@@ -30,5 +30,5 @@ export const createPaperColumns = (): PaperColumn[] => [
   },
   { title: "科目", dataIndex: "subject", width: 90 },
   { title: "创建时间", dataIndex: "create_time", width: 170 },
-  { title: "操作", key: "action", width: 90 },
+  { title: "操作", key: "action", width: 164 },
 ];
