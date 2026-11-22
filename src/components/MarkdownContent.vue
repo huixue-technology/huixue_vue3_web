@@ -120,7 +120,19 @@ const html = computed(() => renderRichText(props.content));
     vertical-align: -0.45em;
   }
 
-  // 语文标注：Word 的波浪线/双线/点线/虚线要按原样画出来
+  // 语文标注：Word 的着重号/波浪线/双线/点线/虚线要按原样画出来
+  :deep(u.em-dot) {
+    text-decoration: none;
+    -webkit-text-emphasis: filled dot;
+    -webkit-text-emphasis-position: under;
+    text-emphasis: filled dot;
+    text-emphasis-position: under;
+  }
+
+  :deep(u.em-dot.u-line) {
+    text-decoration: underline;
+  }
+
   :deep(u.wavy) {
     text-decoration: underline wavy;
     text-decoration-skip-ink: none;
