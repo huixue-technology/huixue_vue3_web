@@ -112,6 +112,10 @@ const html = computed(() => renderRichText(props.content));
     max-width: 100%;
   }
 
+  :deep(img[alt="公式"]) {
+    vertical-align: middle;
+  }
+
   // 历史落库的公式图缺 width/height：PNG 是 Word 显示尺寸的数倍渲染图，
   // 不兜底会按自然尺寸撑爆行高；按正文字号约束成行内公式高度
   :deep(img[alt="公式"]:not([width]):not([height])) {
